@@ -13,15 +13,24 @@ import pool from './config/db';
 
 const app = express();
 app.use(express.json());
+
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://211.188.55.145',
+  'http://211.188.55.145:5173',
+];
+
 app.use(
   cors({
-    origin: [
-      'http://localhost:5173', // 개발용
-      'http://211.188.55.145', // 배포용
-      'http://211.188.55.145:5173', // 필요시 포트 포함
-      // 필요하다면 https도 추가
-    ],
-    credentials: true, // withCredentials 허용
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true); // 서버-서버 통신 등
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      } else {
+        return callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true,
   })
 );
 app.use('/api/auth', authRoutes);
