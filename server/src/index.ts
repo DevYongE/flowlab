@@ -13,10 +13,14 @@ import pool from './config/db';
 
 const app = express();
 app.use(express.json());
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://211.188.55.145', // 추가!
+];
 app.use(
   cors({
-    origin: 'http://localhost:5173', // * 대신 클라이언트 주소 명시
-    credentials: true, // withCredentials 허용
+    origin: allowedOrigins,
+          credentials: true, // withCredentials 허용
   })
 );
 app.use('/api/auth', authRoutes);
