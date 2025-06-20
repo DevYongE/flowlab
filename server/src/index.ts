@@ -13,14 +13,15 @@ import pool from './config/db';
 
 const app = express();
 app.use(express.json());
-// const allowedOrigins = [
-//   'http://localhost:5173',
-//   'http://211.188.55.145', // 추가!
-// ];
 app.use(
   cors({
-    origin: 'http://211.188.55.145',
-          credentials: true, // withCredentials 허용
+    origin: [
+      'http://localhost:5173', // 개발용
+      'http://211.188.55.145', // 배포용
+      'http://211.188.55.145:5173', // 필요시 포트 포함
+      // 필요하다면 https도 추가
+    ],
+    credentials: true, // withCredentials 허용
   })
 );
 app.use('/api/auth', authRoutes);
