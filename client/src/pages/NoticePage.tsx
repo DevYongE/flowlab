@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
-import axios from 'axios';
+import axios from '../lib/axios';
 import { isAdmin } from '../lib/auth';
 
 interface Notice {
@@ -45,7 +45,7 @@ const NoticePage: React.FC = () => {
 
   useEffect(() => {
     axios
-      .get(`http://localhost:4000/api/notices?limit=${pageSize}`)
+      .get(`/notices?limit=${pageSize}`)
       .then((res) => setNotices(res.data))
       .catch(() => alert('공지사항을 불러오지 못했습니다.'));
   }, [pageSize]);
@@ -54,9 +54,7 @@ const NoticePage: React.FC = () => {
   const handleDelete = async (id: number) => {
     if (!window.confirm('정말 삭제하시겠습니까?')) return;
     try {
-      await axios.delete(`http://localhost:4000/api/notices/${id}`, {
-        headers: { Authorization: `Bearer ${sessionStorage.getItem('token')}` },
-      });
+      await axios.delete(`/notices/${id}`);
       setNotices(notices.filter(n => n.notice_id !== id));
     } catch {
       alert('삭제 실패');
