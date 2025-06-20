@@ -13,13 +13,13 @@ import pool from './config/db';
 
 const app = express();
 app.use(express.json());
-const allowedOrigins = [
-  'http://localhost:5173',
-  'http://211.188.55.145', // 추가!
-];
+// const allowedOrigins = [
+//   'http://localhost:5173',
+//   'http://211.188.55.145', // 추가!
+// ];
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: 'http://211.188.55.145',
           credentials: true, // withCredentials 허용
   })
 );
