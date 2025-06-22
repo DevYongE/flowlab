@@ -16,8 +16,10 @@ app.use(express.json());
 
 const allowedOrigins = [
   'http://localhost:5173', // 로컬 개발용
+  'https://flowlab.vercel.app', // Vercel 고정 도메인
   'https://flowlab-g0rikkpld-yonges-projects.vercel.app', // 이전 Vercel 배포 주소
-  'https://flowlab-rtia1bcb6-yonges-projects.vercel.app'  // 새로운 Vercel 배포 주소 (오타 수정)
+  'https://flowlab-rtia1bcb6-yonges-projects.vercel.app',  // 이전 Vercel 배포 주소
+  'https://flowlab-acanbs8tk-yonges-projects.vercel.app'  // 최신 Vercel 배포 주소
 ];
 
 // 🕵️‍♂️ CORS 디버깅용 로그 추가
