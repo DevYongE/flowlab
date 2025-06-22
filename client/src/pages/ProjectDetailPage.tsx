@@ -1,11 +1,9 @@
 // pages/ProjectDetailPage.tsx
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
-import { Card, CardContent } from '../components/ui/card';
 import axios from '../lib/axios';
 import { getCurrentUser, isAdmin } from '../lib/auth';
-import { Button } from '../components/ui/button';
 
 interface DevNote {
   id: number;

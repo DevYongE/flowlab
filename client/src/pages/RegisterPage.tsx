@@ -1,5 +1,5 @@
 // client/src/pages/RegisterPage.tsx
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
@@ -18,7 +18,6 @@ const RegisterPage: React.FC = () => {
     joinDate: '',
   });
   const [positions, setPositions] = useState<{ position_code: string; name: string }[]>([]);
-  const [error, setError] = useState('');
 
   useEffect(() => {
     axios.get('/positions')
@@ -96,7 +95,6 @@ const handleRegister = async () => {
           </select>
           <Input name="department" placeholder="부서명" value={form.department} onChange={handleChange} />
           <Input name="joinDate" placeholder="입사일자 (YYYY-MM)" value={form.joinDate} onChange={handleChange} />
-          {error && <div className="text-sm text-red-500">{error}</div>}
           <Button className="w-full rounded-xl text-lg" onClick={handleRegister}>가입하기</Button>
         </CardContent>
       </Card>

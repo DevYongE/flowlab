@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import MainLayout from '../components/layout/MainLayout';
 import WbsBoard from '../components/wbs/WbsBoard';
 import axios from '../lib/axios';
