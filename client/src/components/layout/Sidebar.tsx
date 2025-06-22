@@ -1,6 +1,4 @@
-import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { isAdmin, getCurrentUser } from '../../lib/auth';
 
 interface SidebarProps {
   isMini: boolean;
@@ -47,7 +45,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isMini }) => {
       </div>
       <div className="flex-1 flex flex-col justify-start">
         <ul className={`space-y-2 ${isMini ? 'text-xl mt-8' : 'text-base mt-8'}`}>
-          {menu.map((item, idx) => (
+          {menu.map((item) => (
             <li key={item.label} className="flex justify-center">
               <Link
                 to={item.to}

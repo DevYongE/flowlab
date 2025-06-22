@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { DragDropContext, Droppable, Draggable, type DropResult } from 'react-beautiful-dnd';
-import { v4 as uuidv4 } from 'uuid';
 import axios from '../../lib/axios';
 
 // 타입 정의
