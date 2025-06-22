@@ -20,6 +20,9 @@ const allowedOrigins = [
   'https://flowlab-rtia1bcb6-yonges-projects.vercel.app'  // 새로운 Vercel 배포 주소 (오타 수정)
 ];
 
+// 🕵️‍♂️ CORS 디버깅용 로그 추가
+console.log('Server starting with allowedOrigins:', allowedOrigins);
+
 app.use(
   cors({
     origin: function (origin, callback) {
