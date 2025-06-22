@@ -107,7 +107,7 @@ export const forgotPassword = async (req: Request, res: Response) => {
         pass: process.env.EMAIL_PASS,
       },
     });
-    const resetUrl = `${process.env.FRONTEND_URL || 'http://211.188.55.145'}/reset-password?token=${token}`;
+    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${token}`;
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: user.email,

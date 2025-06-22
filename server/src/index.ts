@@ -14,22 +14,9 @@ import pool from './config/db';
 const app = express();
 app.use(express.json());
 
-const allowedOrigins = [
-  'http://localhost:5173',
-  'http://211.188.55.145',
-  'http://211.188.55.145:5173',
-];
-
 app.use(
   cors({
-    origin: function (origin, callback) {
-      if (!origin) return callback(null, true); // 서버-서버 통신 등
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      } else {
-        return callback(new Error('Not allowed by CORS'));
-      }
-    },
+    origin: 'http://localhost:5173',
     credentials: true,
   })
 );

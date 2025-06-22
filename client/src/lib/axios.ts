@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 const instance = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://211.188.55.145:4000/api',
+  baseURL: 'http://localhost:4000/api',
   withCredentials: true, // 중요
 });
 
