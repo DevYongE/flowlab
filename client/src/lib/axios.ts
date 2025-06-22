@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 const instance = axios.create({
-  baseURL: 'https://flowlab-api.onrender.com/api',
+  baseURL: import.meta.env.VITE_API_URL || 'https://flowlab-api.onrender.com/api',
   withCredentials: true, // 중요
 });
 
