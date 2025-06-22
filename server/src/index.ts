@@ -17,12 +17,14 @@ app.use(express.json());
 const allowedOrigins = [
   'http://localhost:5173', // 로컬 개발용
   'https://flowlab-g0rikkpld-yonges-projects.vercel.app', // 이전 Vercel 배포 주소
-  'https://flowlab-rtial1bcb6-yonges-projects.vercel.app'  // 새로운 Vercel 배포 주소
+  'https://flowlab-rtia1bcb6-yonges-projects.vercel.app'  // 새로운 Vercel 배포 주소 (오타 수정)
 ];
 
 app.use(
   cors({
     origin: function (origin, callback) {
+      console.log('Request Origin:', origin);
+
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
