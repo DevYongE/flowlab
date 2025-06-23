@@ -201,11 +201,9 @@ const ProjectDetailPage = () => {
       setIsAnalyzing(true);
       const res = await axios.post(`/ai/analyze-dev-note`, { text });
       
-      // AI가 여러 요구사항을 배열로 반환한다고 가정
-      const newDevNotes = res.data; 
+      const newDevNotes = res.data.requirements; 
 
       if (Array.isArray(newDevNotes)) {
-        // 여러 요구사항을 순차적으로 생성
         for (const note of newDevNotes) {
           await axios.post(`/projects/${id}/notes`, {
             content: note.content,
@@ -215,13 +213,7 @@ const ProjectDetailPage = () => {
           });
         }
       } else {
-        // 단일 요구사항 생성 (기존 로직)
-         await axios.post(`/projects/${id}/notes`, {
-          content: newDevNotes.content,
-          deadline: newDevNotes.deadline ? new Date(newDevNotes.deadline) : null,
-          status: '미완료',
-          progress: 0,
-        });
+        console.error('AI 분석 결과가 배열이 아닙니다:', res.data);
       }
 
       setAIInputText('');
