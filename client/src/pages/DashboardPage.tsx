@@ -35,7 +35,6 @@ interface WbsItem {
 const DashboardPage: React.FC = () => {
   const [statusSummary, setStatusSummary] = useState<StatusSummary[]>([]);
   const [notices, setNotices] = useState<LatestNotice[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
   const [wbsItems, setWbsItems] = useState<WbsItem[]>([]);
   const [loadingWbs, setLoadingWbs] = useState(false);
   const navigate = useNavigate();
