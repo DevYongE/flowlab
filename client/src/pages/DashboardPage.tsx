@@ -115,7 +115,7 @@ const DashboardPage: React.FC = () => {
                   <button onClick={() => setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth(), calendarDate.getDate() + 7))} className="px-2 py-1 rounded hover:bg-gray-200">▶</button>
                 </div>
                 <div className="grid grid-cols-7 gap-2">
-                  {['일', '월', '화', '수', '목', '금', '토'].map((d, i) => (
+                  {['일', '월', '화', '수', '목', '금', '토'].map((d) => (
                     <div key={d} className="text-center text-xs font-semibold text-gray-500">{d}</div>
                   ))}
                   {weekDates.map((d, i) => {
