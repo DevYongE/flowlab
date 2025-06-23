@@ -132,9 +132,6 @@ const DashboardPage: React.FC = () => {
                   })}
                 </div>
               </div>
-              <div className="flex-1 h-64 bg-gray-100 border border-dashed rounded-xl flex items-center justify-center text-gray-500">
-                여기에 WBS 구성 요소를 추가할 수 있습니다.
-              </div>
             </div>
           </CardContent>
         </Card>
