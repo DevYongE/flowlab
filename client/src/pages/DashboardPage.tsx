@@ -16,9 +16,28 @@ interface LatestNotice {
   createdAt: string;
 }
 
+interface Project {
+  id: number;
+  name: string;
+}
+
+interface WbsItem {
+  id: number | string;
+  name?: string;
+  content?: string;
+  assignee_name?: string;
+  startDate?: string;
+  endDate?: string;
+  status?: string;
+  children?: WbsItem[];
+}
+
 const DashboardPage: React.FC = () => {
   const [statusSummary, setStatusSummary] = useState<StatusSummary[]>([]);
   const [notices, setNotices] = useState<LatestNotice[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [wbsItems, setWbsItems] = useState<WbsItem[]>([]);
+  const [loadingWbs, setLoadingWbs] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -39,6 +58,23 @@ const DashboardPage: React.FC = () => {
     axios.get('/notices/latest')
       .then(res => setNotices(res.data))
       .catch(err => console.error('최신 공지사항 로딩 실패:', err));
+
+    // 프로젝트 목록 및 첫 번째 프로젝트의 WBS 불러오기
+    axios.get<Project[]>('/projects')
+      .then(res => {
+        setProjects(res.data);
+        if (res.data.length > 0) {
+          const firstProjectId = res.data[0].id;
+          setLoadingWbs(true);
+          axios.get(`/projects/${firstProjectId}/wbs`)
+            .then(wbsRes => {
+              setWbsItems(wbsRes.data);
+            })
+            .catch(() => setWbsItems([]))
+            .finally(() => setLoadingWbs(false));
+        }
+      })
+      .catch(() => setProjects([]));
   }, []);
 
   const getWeekDates = (date: Date) => {
@@ -50,6 +86,27 @@ const DashboardPage: React.FC = () => {
       return d;
     });
   };
+
+  // WBS 트리 -> flat 일정 배열로 변환
+  function flattenWbs(items: WbsItem[]): WbsItem[] {
+    let arr: WbsItem[] = [];
+    items.forEach(item => {
+      arr.push(item);
+      if (item.children && item.children.length > 0) {
+        arr = arr.concat(flattenWbs(item.children));
+      }
+    });
+    return arr;
+  }
+
+  // 날짜별 WBS 일정 매핑
+  function getWbsForDate(date: Date): WbsItem[] {
+    const dayStr = date.toISOString().slice(0, 10);
+    return flattenWbs(wbsItems).filter(item => {
+      if (!item.startDate || !item.endDate) return false;
+      return dayStr >= item.startDate && dayStr <= item.endDate;
+    });
+  }
 
   const [calendarDate, setCalendarDate] = useState<Date>(new Date());
   const weekDates = getWeekDates(calendarDate);
@@ -120,13 +177,26 @@ const DashboardPage: React.FC = () => {
                   ))}
                   {weekDates.map((d, i) => {
                     const isToday = d.toDateString() === new Date().toDateString();
+                    const wbsForDay = getWbsForDate(d);
                     return (
                       <div
                         key={i}
-                        className={`h-14 flex flex-col items-center justify-center rounded-lg border ${isToday ? 'bg-blue-100 border-blue-400 text-blue-700 font-bold' : 'bg-white border-gray-200'}`}
+                        className={`min-h-20 flex flex-col items-center justify-start rounded-lg border px-1 py-1 ${isToday ? 'bg-blue-100 border-blue-400 text-blue-700 font-bold' : 'bg-white border-gray-200'}`}
                       >
-                        <span>{d.getDate()}</span>
-                        {/* WBS 일정이 들어갈 공간 (예: <div>작업명</div>) */}
+                        <span className="mb-1">{d.getDate()}</span>
+                        {loadingWbs ? (
+                          <span className="text-xs text-gray-400">로딩...</span>
+                        ) : wbsForDay.length === 0 ? (
+                          <span className="text-xs text-gray-300">-</span>
+                        ) : (
+                          wbsForDay.map(wbs => (
+                            <div key={wbs.id} className="w-full mb-1 px-1 py-0.5 rounded bg-blue-50 border border-blue-200 text-xs text-blue-800 flex flex-col items-start">
+                              <span className="font-semibold truncate w-full">{wbs.name || wbs.content}</span>
+                              {wbs.assignee_name && <span className="text-[10px] text-blue-500">담당: {wbs.assignee_name}</span>}
+                              {wbs.status && <span className="text-[10px]">[{wbs.status}]</span>}
+                            </div>
+                          ))
+                        )}
                       </div>
                     );
                   })}
