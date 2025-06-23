@@ -245,7 +245,7 @@ const ProjectDetailPage = () => {
         {/* Todo List */}
         <div className="bg-white p-6 rounded-lg shadow-lg">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-bold">Todo List</h2>
+            <h2 className="text-2xl font-bold">요구 사항 리스트</h2>
             <div className="flex gap-2">
               <button
                 onClick={() => navigate(`/projects/${id}/wbs`)}
