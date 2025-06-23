@@ -4,8 +4,6 @@ import { Card, CardContent } from '../components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import axios from '../lib/axios';
 import { useNavigate } from 'react-router-dom';
-import Calendar from 'react-calendar';
-import 'react-calendar/dist/Calendar.css';
 
 interface StatusSummary {
   status: string;
@@ -22,7 +20,6 @@ const DashboardPage: React.FC = () => {
   const [statusSummary, setStatusSummary] = useState<StatusSummary[]>([]);
   const [notices, setNotices] = useState<LatestNotice[]>([]);
   const navigate = useNavigate();
-  const [calendarDate, setCalendarDate] = useState<Date | null>(new Date());
 
   useEffect(() => {
     // 프로젝트 현황 데이터 가져오기
@@ -43,6 +40,19 @@ const DashboardPage: React.FC = () => {
       .then(res => setNotices(res.data))
       .catch(err => console.error('최신 공지사항 로딩 실패:', err));
   }, []);
+
+  const getWeekDates = (date: Date) => {
+    const start = new Date(date);
+    start.setDate(date.getDate() - date.getDay()); // 일요일
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      return d;
+    });
+  };
+
+  const [calendarDate, setCalendarDate] = useState<Date>(new Date());
+  const weekDates = getWeekDates(calendarDate);
 
   return (
     <MainLayout>
@@ -96,29 +106,31 @@ const DashboardPage: React.FC = () => {
 
         <Card>
           <CardContent className="p-6">
-            <h2 className="text-xl font-semibold mb-2">🗂️ WBS (추후 구현 예정)</h2>
+            <h2 className="text-xl font-semibold mb-2">🗂️ WBS (주간 일정)</h2>
             <div className="flex flex-col md:flex-row gap-6 items-start">
-              <div className="bg-white rounded-lg shadow p-4">
-                <Calendar
-                  value={calendarDate}
-                  onChange={date => setCalendarDate(date as Date)}
-                  calendarType="gregory"
-                  showNeighboringMonth={false}
-                  tileClassName={({ date, view }) => {
-                    // 이번 주에 해당하는 날짜만 강조
-                    if (view === 'month') {
-                      const now = new Date();
-                      const startOfWeek = new Date(now);
-                      startOfWeek.setDate(now.getDate() - now.getDay());
-                      const endOfWeek = new Date(startOfWeek);
-                      endOfWeek.setDate(startOfWeek.getDate() + 6);
-                      if (date >= startOfWeek && date <= endOfWeek) {
-                        return 'bg-blue-100 font-bold';
-                      }
-                    }
-                    return '';
-                  }}
-                />
+              <div className="w-full">
+                <div className="flex justify-between items-center mb-2">
+                  <button onClick={() => setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth(), calendarDate.getDate() - 7))} className="px-2 py-1 rounded hover:bg-gray-200">◀</button>
+                  <span className="font-bold text-lg">{weekDates[0].getFullYear()}년 {weekDates[0].getMonth() + 1}월 {weekDates[0].getDate()}일 ~ {weekDates[6].getMonth() + 1}월 {weekDates[6].getDate()}일</span>
+                  <button onClick={() => setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth(), calendarDate.getDate() + 7))} className="px-2 py-1 rounded hover:bg-gray-200">▶</button>
+                </div>
+                <div className="grid grid-cols-7 gap-2">
+                  {['일', '월', '화', '수', '목', '금', '토'].map((d, i) => (
+                    <div key={d} className="text-center text-xs font-semibold text-gray-500">{d}</div>
+                  ))}
+                  {weekDates.map((d, i) => {
+                    const isToday = d.toDateString() === new Date().toDateString();
+                    return (
+                      <div
+                        key={i}
+                        className={`h-14 flex flex-col items-center justify-center rounded-lg border ${isToday ? 'bg-blue-100 border-blue-400 text-blue-700 font-bold' : 'bg-white border-gray-200'}`}
+                      >
+                        <span>{d.getDate()}</span>
+                        {/* WBS 일정이 들어갈 공간 (예: <div>작업명</div>) */}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
               <div className="flex-1 h-64 bg-gray-100 border border-dashed rounded-xl flex items-center justify-center text-gray-500">
                 여기에 WBS 구성 요소를 추가할 수 있습니다.
