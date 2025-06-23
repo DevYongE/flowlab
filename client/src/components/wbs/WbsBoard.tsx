@@ -22,6 +22,8 @@ interface WbsBoardProps {
     projectId: string;
 }
 
+const SafeTree = Tree as any;
+
 const WbsBoard: React.FC<WbsBoardProps> = ({ projectId }) => {
     const [treeData, setTreeData] = useState<NodeModel[]>([]);
     const [users, setUsers] = useState<User[]>([]);
@@ -36,6 +38,7 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId }) => {
         parent: 0 as number
     });
     const [loading, setLoading] = useState(false);
+    const [openIds, setOpenIds] = useState<number[]>([]);
 
     // 트리형 WBS 데이터를 flat 구조로 변환
     function flattenTree(nodes: WbsItem[], parentId: number = 0): NodeModel[] {
@@ -139,9 +142,16 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId }) => {
     };
 
     // 트리 노드 렌더링
-    const renderNode = (node: NodeModel) => (
+    const renderNode = (node: NodeModel, { depth, isOpen, onToggle }: any) => (
         <div className="flex items-center justify-between w-full p-2 border rounded bg-white my-1">
-            <span>{node.text}</span>
+            <div className="flex items-center gap-2">
+                {node.droppable && (
+                    <button type="button" onClick={onToggle} className="focus:outline-none">
+                        {isOpen ? '▼' : '▶'}
+                    </button>
+                )}
+                <span>{node.text}</span>
+            </div>
             <div className="flex gap-2">
                 <button className="text-xs text-gray-500 hover:text-gray-800" onClick={() => handleAddClick(node.id)}>추가</button>
                 <button className="text-xs text-gray-500 hover:text-gray-800">수정</button>
@@ -157,12 +167,17 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId }) => {
                     + 최상위 작업 추가
                 </button>
             </div>
-            <Tree
+            <SafeTree
                 tree={treeData}
                 rootId={0}
                 render={renderNode}
                 dragPreviewRender={monitor => <div>{monitor.item.text}</div>}
                 onDrop={handleDrop}
+                controlledProps={{
+                    openIds,
+                    onExpand: (id: number) => setOpenIds(ids => [...ids, id]),
+                    onCollapse: (id: number) => setOpenIds(ids => ids.filter(openId => openId !== id)),
+                }}
                 classes={{
                     root: 'bg-gray-50 p-4 rounded-lg min-h-[300px]',
                     dropTarget: 'bg-blue-50',
