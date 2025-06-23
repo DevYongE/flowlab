@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css'; // Quill 에디터의 Snow 테마 CSS
 import MainLayout from '../components/layout/MainLayout';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -62,10 +60,6 @@ const NoticeFormPage: React.FC = () => {
     } else {
       setForm(prev => ({ ...prev, [name]: value }));
     }
-  };
-
-  const handleContentChange = (content: string) => {
-    setForm(prev => ({ ...prev, content }));
   };
 
   const handleSubmit = async () => {
@@ -146,22 +140,12 @@ const NoticeFormPage: React.FC = () => {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               내용 *
             </label>
-            <ReactQuill
-              theme="snow"
+            <textarea
+              name="content"
               value={form.content}
-              onChange={handleContentChange}
+              onChange={handleChange}
               placeholder="공지사항 내용을 입력하세요"
-              className="bg-white"
-              modules={{
-                toolbar: [
-                  [{ 'header': [1, 2, 3, false] }],
-                  ['bold', 'italic', 'underline', 'strike'],
-                  [{'list': 'ordered'}, {'list': 'bullet'}],
-                  ['link', 'image'],
-                  [{ 'color': [] }, { 'background': [] }],
-                  ['clean']
-                ],
-              }}
+              className="w-full h-64 p-3 border border-gray-300 rounded-md resize-none"
             />
           </div>
 

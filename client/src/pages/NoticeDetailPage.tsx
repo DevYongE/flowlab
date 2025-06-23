@@ -145,10 +145,11 @@ const NoticeDetailPage: React.FC = () => {
             </div>
           </div>
 
-          <div 
-            className="prose max-w-none ql-editor"
-            dangerouslySetInnerHTML={{ __html: notice.content }} 
-          />
+          <div className="prose max-w-none">
+            <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">
+              {notice.content}
+            </div>
+          </div>
         </CardContent>
       </Card>
     </MainLayout>
