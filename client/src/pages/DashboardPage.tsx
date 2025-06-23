@@ -19,24 +19,15 @@ interface LatestNotice {
 interface Project {
   id: number;
   name: string;
-}
-
-interface WbsItem {
-  id: number | string;
-  name?: string;
-  content?: string;
-  assignee_name?: string;
-  startDate?: string;
-  endDate?: string;
-  status?: string;
-  children?: WbsItem[];
+  startDate: string;
+  endDate: string;
 }
 
 const DashboardPage: React.FC = () => {
   const [statusSummary, setStatusSummary] = useState<StatusSummary[]>([]);
   const [notices, setNotices] = useState<LatestNotice[]>([]);
-  const [wbsItems, setWbsItems] = useState<WbsItem[]>([]);
-  const [loadingWbs, setLoadingWbs] = useState(false);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loadingProjects, setLoadingProjects] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -59,19 +50,11 @@ const DashboardPage: React.FC = () => {
       .catch(err => console.error('최신 공지사항 로딩 실패:', err));
 
     // 프로젝트 목록 및 첫 번째 프로젝트의 WBS 불러오기
+    setLoadingProjects(true);
     axios.get<Project[]>('/projects')
-      .then(res => {
-        if (res.data.length > 0) {
-          const firstProjectId = res.data[0].id;
-          setLoadingWbs(true);
-          axios.get(`/projects/${firstProjectId}/wbs`)
-            .then(wbsRes => {
-              setWbsItems(wbsRes.data);
-            })
-            .catch(() => setWbsItems([]))
-            .finally(() => setLoadingWbs(false));
-        }
-      });
+      .then(res => setProjects(res.data))
+      .catch(() => setProjects([]))
+      .finally(() => setLoadingProjects(false));
   }, []);
 
   const getWeekDates = (date: Date) => {
@@ -84,24 +67,11 @@ const DashboardPage: React.FC = () => {
     });
   };
 
-  // WBS 트리 -> flat 일정 배열로 변환
-  function flattenWbs(items: WbsItem[]): WbsItem[] {
-    let arr: WbsItem[] = [];
-    items.forEach(item => {
-      arr.push(item);
-      if (item.children && item.children.length > 0) {
-        arr = arr.concat(flattenWbs(item.children));
-      }
-    });
-    return arr;
-  }
-
-  // 날짜별 WBS 일정 매핑
-  function getWbsForDate(date: Date): WbsItem[] {
+  // 날짜별 프로젝트 일정 매핑
+  function getProjectsForDate(date: Date): Project[] {
     const dayStr = date.toISOString().slice(0, 10);
-    return flattenWbs(wbsItems).filter(item => {
-      if (!item.startDate || !item.endDate) return false;
-      return dayStr >= item.startDate && dayStr <= item.endDate;
+    return projects.filter(proj => {
+      return dayStr >= proj.startDate && dayStr <= proj.endDate;
     });
   }
 
@@ -174,23 +144,22 @@ const DashboardPage: React.FC = () => {
                   ))}
                   {weekDates.map((d, i) => {
                     const isToday = d.toDateString() === new Date().toDateString();
-                    const wbsForDay = getWbsForDate(d);
+                    const projectsForDay = getProjectsForDate(d);
                     return (
                       <div
                         key={i}
                         className={`min-h-20 flex flex-col items-center justify-start rounded-lg border px-1 py-1 ${isToday ? 'bg-blue-100 border-blue-400 text-blue-700 font-bold' : 'bg-white border-gray-200'}`}
                       >
                         <span className="mb-1">{d.getDate()}</span>
-                        {loadingWbs ? (
+                        {loadingProjects ? (
                           <span className="text-xs text-gray-400">로딩...</span>
-                        ) : wbsForDay.length === 0 ? (
+                        ) : projectsForDay.length === 0 ? (
                           <span className="text-xs text-gray-300">-</span>
                         ) : (
-                          wbsForDay.map(wbs => (
-                            <div key={wbs.id} className="w-full mb-1 px-1 py-0.5 rounded bg-blue-50 border border-blue-200 text-xs text-blue-800 flex flex-col items-start">
-                              <span className="font-semibold truncate w-full">{wbs.name || wbs.content}</span>
-                              {wbs.assignee_name && <span className="text-[10px] text-blue-500">담당: {wbs.assignee_name}</span>}
-                              {wbs.status && <span className="text-[10px]">[{wbs.status}]</span>}
+                          projectsForDay.map(proj => (
+                            <div key={proj.id} className="w-full mb-1 px-1 py-0.5 rounded bg-green-50 border border-green-200 text-xs text-green-800 flex flex-col items-start">
+                              <span className="font-semibold truncate w-full">{proj.name}</span>
+                              <span className="text-[10px] text-gray-500">{proj.startDate} ~ {proj.endDate}</span>
                             </div>
                           ))
                         )}
