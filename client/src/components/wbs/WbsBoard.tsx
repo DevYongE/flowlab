@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { DragDropContext, Droppable, Draggable, type DropResult } from 'react-beautiful-dnd';
+import { Tree, NodeModel } from '@minoru/react-dnd-treeview';
 import axios from '../../lib/axios';
 
 // 타입 정의
@@ -7,7 +7,8 @@ interface WbsItem {
     id: number | string;
     name: string;
     content?: string;
-    children: WbsItem[];
+    parent_id?: number | string | null;
+    children?: WbsItem[];
     // TODO: assignee_name, start_date, end_date 등 추가 필드
 }
 
@@ -21,7 +22,7 @@ interface WbsBoardProps {
 }
 
 const WbsBoard: React.FC<WbsBoardProps> = ({ projectId }) => {
-    const [wbsData, setWbsData] = useState<WbsItem[]>([]);
+    const [treeData, setTreeData] = useState<NodeModel[]>([]);
     const [users, setUsers] = useState<User[]>([]);
     const [showAddModal, setShowAddModal] = useState(false);
     const [addForm, setAddForm] = useState({
@@ -30,15 +31,34 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId }) => {
         startDate: '',
         endDate: '',
         status: '미완료',
-        progress: 0
+        progress: 0,
+        parent: 0
     });
     const [loading, setLoading] = useState(false);
+
+    // 트리형 WBS 데이터를 flat 구조로 변환
+    function flattenTree(nodes: WbsItem[], parentId: number | string | null = 0): NodeModel[] {
+        let arr: NodeModel[] = [];
+        nodes.forEach((node) => {
+            arr.push({
+                id: node.id,
+                parent: parentId,
+                text: node.name || node.content || '',
+                droppable: true,
+                data: node
+            });
+            if (node.children && node.children.length > 0) {
+                arr = arr.concat(flattenTree(node.children, node.id));
+            }
+        });
+        return arr;
+    }
 
     const fetchWbsData = useCallback(async () => {
         if (!projectId) return;
         try {
             const wbsRes = await axios.get(`/projects/${projectId}/wbs`);
-            setWbsData(wbsRes.data);
+            setTreeData(flattenTree(wbsRes.data));
         } catch (error) {
             console.error(`WBS 데이터 로딩 실패 (Project ID: ${projectId}):`, error);
             alert("WBS 데이터를 불러오는데 실패했습니다.");
@@ -59,105 +79,33 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId }) => {
         fetchUsers();
     }, [fetchWbsData, fetchUsers]);
 
-    // 트리 구조에서 아이템을 이동시키는 유틸 함수
-    function moveItemInTree(tree: WbsItem[], source: { droppableId: string, index: number }, destination: { droppableId: string, index: number }) {
-        // 1. source에서 아이템 꺼내기
-        let item: WbsItem | null = null;
-        let newTree = [...tree];
-        function removeItem(nodes: WbsItem[], id: string | number): WbsItem | null {
-            for (let i = 0; i < nodes.length; i++) {
-                if (String(nodes[i].id) === String(id)) {
-                    return nodes.splice(i, 1)[0];
-                }
-                if (nodes[i].children) {
-                    const found = removeItem(nodes[i].children, id);
-                    if (found) return found;
-                }
-            }
-            return null;
-        }
-        // source droppableId에서 source.index의 아이템 id 찾기
-        let sourceList = newTree;
-        if (source.droppableId !== 'droppable-root') {
-            const parentId = source.droppableId.replace('droppable-', '');
-            const findParent = (nodes: WbsItem[], id: string | number): WbsItem | null => {
-                for (const n of nodes) {
-                    if (String(n.id) === String(id)) return n;
-                    if (n.children) {
-                        const found = findParent(n.children, id);
-                        if (found) return found;
-                    }
-                }
-                return null;
-            };
-            const parent = findParent(newTree, parentId);
-            if (parent) sourceList = parent.children;
-        }
-        item = sourceList[source.index];
-        if (!item) return newTree;
-        // 2. 아이템 제거
-        removeItem(newTree, item.id);
-        // 3. destination에 삽입
-        let destList = newTree;
-        if (destination.droppableId !== 'droppable-root') {
-            const parentId = destination.droppableId.replace('droppable-', '');
-            const findParent = (nodes: WbsItem[], id: string | number): WbsItem | null => {
-                for (const n of nodes) {
-                    if (String(n.id) === String(id)) return n;
-                    if (n.children) {
-                        const found = findParent(n.children, id);
-                        if (found) return found;
-                    }
-                }
-                return null;
-            };
-            const parent = findParent(newTree, parentId);
-            if (parent) destList = parent.children;
-        }
-        destList.splice(destination.index, 0, item);
-        return newTree;
-    }
-
-    // 트리 구조를 서버에 보낼 평탄화(flat) 구조로 변환
-    function flattenTree(nodes: WbsItem[], parentId: string | number | null = null): any[] {
-        let arr: any[] = [];
-        nodes.forEach((node, idx) => {
-            arr.push({ id: node.id, parent_id: parentId, order: idx });
-            if (node.children && node.children.length > 0) {
-                arr = arr.concat(flattenTree(node.children, node.id));
-            }
-        });
-        return arr;
-    }
-
-    const handleOnDragEnd = async (result: DropResult) => {
-        if (!result.destination) return;
-        if (
-            result.source.droppableId === result.destination.droppableId &&
-            result.source.index === result.destination.index
-        ) {
-            return;
-        }
-        // 1. 트리에서 아이템 이동
-        const newTree = moveItemInTree(wbsData, result.source, result.destination);
-        // 2. 평탄화 구조로 변환
-        const flat = flattenTree(newTree);
+    // 트리뷰 드래그앤드롭 핸들러
+    const handleDrop = async (newTree: NodeModel[]) => {
+        setTreeData(newTree);
+        // 서버에 구조 저장
+        // parent, order 정보만 추출해서 평탄화 구조로 보냄
+        const structure = newTree.map((n, idx) => ({
+            id: n.id,
+            parent_id: n.parent === 0 ? null : n.parent,
+            order: idx
+        }));
         try {
-            await axios.patch(`/projects/notes/structure/${projectId}`, { structure: flat });
+            await axios.patch(`/projects/notes/structure/${projectId}`, { structure });
             fetchWbsData();
         } catch (e) {
             alert('순서/계층 변경 실패');
         }
     };
 
-    const handleAddClick = () => {
+    const handleAddClick = (parent: number | string = 0) => {
         setAddForm({
             name: '',
             assignee: '',
             startDate: '',
             endDate: '',
             status: '미완료',
-            progress: 0
+            progress: 0,
+            parent
         });
         setShowAddModal(true);
     };
@@ -174,10 +122,11 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId }) => {
             await axios.post(`/projects/${projectId}/notes`, {
                 content: addForm.name,
                 assignee: addForm.assignee,
-                start_date: addForm.startDate,
-                end_date: addForm.endDate,
+                start_id: addForm.startDate,
+                end_id: addForm.endDate,
                 status: addForm.status,
-                progress: Number(addForm.progress)
+                progress: Number(addForm.progress),
+                parent_id: addForm.parent === 0 ? null : addForm.parent
             });
             setShowAddModal(false);
             fetchWbsData();
@@ -188,109 +137,84 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId }) => {
         }
     };
 
-    const renderWbsItem = (item: WbsItem, index: number) => (
-        <Draggable key={item.id} draggableId={String(item.id)} index={index}>
-            {(provided, snapshot) => (
-                <div>
-                    <div
-                        ref={provided.innerRef}
-                        {...provided.draggableProps}
-                        {...provided.dragHandleProps}
-                        className={`p-3 my-2 rounded-md shadow-sm ${snapshot.isDragging ? 'bg-blue-100' : 'bg-white'} border flex justify-between items-center`}
-                    >
-                        <span>{item.name || item.content}</span>
-                        <div className="flex gap-2">
-                            <button className="text-xs text-gray-500 hover:text-gray-800">추가</button>
-                            <button className="text-xs text-gray-500 hover:text-gray-800">수정</button>
-                            <button className="text-xs text-red-500 hover:text-red-800">삭제</button>
-                        </div>
-                    </div>
-                    {item.children && item.children.length > 0 && (
-                        <div className="ml-6 border-l-2 pl-4">
-                            <Droppable droppableId={`droppable-${item.id}`} type="ITEM">
-                                {(provided) => (
-                                    <div ref={provided.innerRef} {...provided.droppableProps}>
-                                        {item.children.map((child, childIndex) => renderWbsItem(child, childIndex))}
-                                        {provided.placeholder}
-                                    </div>
-                                )}
-                            </Droppable>
-                        </div>
-                    )}
-                </div>
-            )}
-        </Draggable>
+    // 트리 노드 렌더링
+    const renderNode = (node: NodeModel) => (
+        <div className="flex items-center justify-between w-full p-2 border rounded bg-white my-1">
+            <span>{node.text}</span>
+            <div className="flex gap-2">
+                <button className="text-xs text-gray-500 hover:text-gray-800" onClick={() => handleAddClick(node.id)}>추가</button>
+                <button className="text-xs text-gray-500 hover:text-gray-800">수정</button>
+                <button className="text-xs text-red-500 hover:text-red-800">삭제</button>
+            </div>
+        </div>
     );
 
     return (
         <>
-        <DragDropContext onDragEnd={handleOnDragEnd}>
             <div className="flex justify-end mb-4">
-                 <button className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600" onClick={handleAddClick}>
+                <button className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600" onClick={() => handleAddClick(0)}>
                     + 최상위 작업 추가
                 </button>
             </div>
-            <Droppable droppableId="droppable-root" type="ITEM">
-                {(provided) => (
-                    <div ref={provided.innerRef} {...provided.droppableProps} className="bg-gray-50 p-4 rounded-lg min-h-[300px]">
-                        {wbsData.length > 0 ? (
-                            wbsData.map((item, index) => renderWbsItem(item, index))
-                        ) : (
-                            <div className="text-center text-gray-500 py-10">
-                                WBS가 비어있습니다. 작업을 추가해주세요.
-                            </div>
-                        )}
-                        {provided.placeholder}
-                    </div>
-                )}
-            </Droppable>
-        </DragDropContext>
-        {showAddModal && (
-            <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-                <form onSubmit={handleAddSubmit} className="bg-white p-6 rounded-lg shadow-lg min-w-[350px] space-y-4">
-                    <h2 className="text-lg font-bold mb-2">작업 추가</h2>
-                    <div>
-                        <label className="block text-sm mb-1">이름 *</label>
-                        <input name="name" value={addForm.name} onChange={handleAddFormChange} className="w-full border rounded p-2" required />
-                    </div>
-                    <div>
-                        <label className="block text-sm mb-1">담당자</label>
-                        <select name="assignee" value={addForm.assignee} onChange={handleAddFormChange} className="w-full border rounded p-2">
-                            <option value="">선택</option>
-                            {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-                        </select>
-                    </div>
-                    <div className="flex gap-2">
-                        <div className="flex-1">
-                            <label className="block text-sm mb-1">시작일</label>
-                            <input type="date" name="startDate" value={addForm.startDate} onChange={handleAddFormChange} className="w-full border rounded p-2" />
+            <Tree
+                tree={treeData}
+                rootId={0}
+                render={renderNode}
+                dragPreviewRender={node => <div>{node.text}</div>}
+                onDrop={handleDrop}
+                classes={{
+                    root: 'bg-gray-50 p-4 rounded-lg min-h-[300px]',
+                    dropTarget: 'bg-blue-50',
+                    draggingSource: 'opacity-50',
+                    placeholder: 'bg-blue-100'
+                }}
+            />
+            {showAddModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+                    <form onSubmit={handleAddSubmit} className="bg-white p-6 rounded-lg shadow-lg min-w-[350px] space-y-4">
+                        <h2 className="text-lg font-bold mb-2">작업 추가</h2>
+                        <div>
+                            <label className="block text-sm mb-1">이름 *</label>
+                            <input name="name" value={addForm.name} onChange={handleAddFormChange} className="w-full border rounded p-2" required />
                         </div>
-                        <div className="flex-1">
-                            <label className="block text-sm mb-1">마감일</label>
-                            <input type="date" name="endDate" value={addForm.endDate} onChange={handleAddFormChange} className="w-full border rounded p-2" />
-                        </div>
-                    </div>
-                    <div className="flex gap-2">
-                        <div className="flex-1">
-                            <label className="block text-sm mb-1">상태</label>
-                            <select name="status" value={addForm.status} onChange={handleAddFormChange} className="w-full border rounded p-2">
-                                <option value="미완료">미완료</option>
-                                <option value="진행중">진행중</option>
-                                <option value="완료">완료</option>
+                        <div>
+                            <label className="block text-sm mb-1">담당자</label>
+                            <select name="assignee" value={addForm.assignee} onChange={handleAddFormChange} className="w-full border rounded p-2">
+                                <option value="">선택</option>
+                                {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
                             </select>
                         </div>
-                        <div className="flex-1">
-                            <label className="block text-sm mb-1">진척률(%)</label>
-                            <input type="number" name="progress" value={addForm.progress} onChange={handleAddFormChange} min={0} max={100} className="w-full border rounded p-2" />
+                        <div className="flex gap-2">
+                            <div className="flex-1">
+                                <label className="block text-sm mb-1">시작일</label>
+                                <input type="date" name="startDate" value={addForm.startDate} onChange={handleAddFormChange} className="w-full border rounded p-2" />
+                            </div>
+                            <div className="flex-1">
+                                <label className="block text-sm mb-1">마감일</label>
+                                <input type="date" name="endDate" value={addForm.endDate} onChange={handleAddFormChange} className="w-full border rounded p-2" />
+                            </div>
                         </div>
-                    </div>
-                    <div className="flex justify-end gap-2 pt-2">
-                        <button type="button" onClick={() => setShowAddModal(false)} className="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400">취소</button>
-                        <button type="submit" className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" disabled={loading}>{loading ? '저장중...' : '저장'}</button>
-                    </div>
-                </form>
-            </div>
-        )}
+                        <div className="flex gap-2">
+                            <div className="flex-1">
+                                <label className="block text-sm mb-1">상태</label>
+                                <select name="status" value={addForm.status} onChange={handleAddFormChange} className="w-full border rounded p-2">
+                                    <option value="미완료">미완료</option>
+                                    <option value="진행중">진행중</option>
+                                    <option value="완료">완료</option>
+                                </select>
+                            </div>
+                            <div className="flex-1">
+                                <label className="block text-sm mb-1">진척률(%)</label>
+                                <input type="number" name="progress" value={addForm.progress} onChange={handleAddFormChange} min={0} max={100} className="w-full border rounded p-2" />
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-2 pt-2">
+                            <button type="button" onClick={() => setShowAddModal(false)} className="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400">취소</button>
+                            <button type="submit" className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" disabled={loading}>{loading ? '저장중...' : '저장'}</button>
+                        </div>
+                    </form>
+                </div>
+            )}
         </>
     );
 };
