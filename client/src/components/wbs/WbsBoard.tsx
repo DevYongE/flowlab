@@ -59,11 +59,95 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId }) => {
         fetchUsers();
     }, [fetchWbsData, fetchUsers]);
 
-    const handleOnDragEnd = (result: DropResult) => {
+    // 트리 구조에서 아이템을 이동시키는 유틸 함수
+    function moveItemInTree(tree: WbsItem[], source: { droppableId: string, index: number }, destination: { droppableId: string, index: number }) {
+        // 1. source에서 아이템 꺼내기
+        let item: WbsItem | null = null;
+        let newTree = [...tree];
+        function removeItem(nodes: WbsItem[], id: string | number): WbsItem | null {
+            for (let i = 0; i < nodes.length; i++) {
+                if (String(nodes[i].id) === String(id)) {
+                    return nodes.splice(i, 1)[0];
+                }
+                if (nodes[i].children) {
+                    const found = removeItem(nodes[i].children, id);
+                    if (found) return found;
+                }
+            }
+            return null;
+        }
+        // source droppableId에서 source.index의 아이템 id 찾기
+        let sourceList = newTree;
+        if (source.droppableId !== 'droppable-root') {
+            const parentId = source.droppableId.replace('droppable-', '');
+            const findParent = (nodes: WbsItem[], id: string | number): WbsItem | null => {
+                for (const n of nodes) {
+                    if (String(n.id) === String(id)) return n;
+                    if (n.children) {
+                        const found = findParent(n.children, id);
+                        if (found) return found;
+                    }
+                }
+                return null;
+            };
+            const parent = findParent(newTree, parentId);
+            if (parent) sourceList = parent.children;
+        }
+        item = sourceList[source.index];
+        if (!item) return newTree;
+        // 2. 아이템 제거
+        removeItem(newTree, item.id);
+        // 3. destination에 삽입
+        let destList = newTree;
+        if (destination.droppableId !== 'droppable-root') {
+            const parentId = destination.droppableId.replace('droppable-', '');
+            const findParent = (nodes: WbsItem[], id: string | number): WbsItem | null => {
+                for (const n of nodes) {
+                    if (String(n.id) === String(id)) return n;
+                    if (n.children) {
+                        const found = findParent(n.children, id);
+                        if (found) return found;
+                    }
+                }
+                return null;
+            };
+            const parent = findParent(newTree, parentId);
+            if (parent) destList = parent.children;
+        }
+        destList.splice(destination.index, 0, item);
+        return newTree;
+    }
+
+    // 트리 구조를 서버에 보낼 평탄화(flat) 구조로 변환
+    function flattenTree(nodes: WbsItem[], parentId: string | number | null = null): any[] {
+        let arr: any[] = [];
+        nodes.forEach((node, idx) => {
+            arr.push({ id: node.id, parent_id: parentId, order: idx });
+            if (node.children && node.children.length > 0) {
+                arr = arr.concat(flattenTree(node.children, node.id));
+            }
+        });
+        return arr;
+    }
+
+    const handleOnDragEnd = async (result: DropResult) => {
         if (!result.destination) return;
-        // TODO: 드래그앤드롭 로직 구현
-        console.log('Drag ended:', result);
-        alert('드래그앤드롭 기능은 구현 중입니다.');
+        if (
+            result.source.droppableId === result.destination.droppableId &&
+            result.source.index === result.destination.index
+        ) {
+            return;
+        }
+        // 1. 트리에서 아이템 이동
+        const newTree = moveItemInTree(wbsData, result.source, result.destination);
+        // 2. 평탄화 구조로 변환
+        const flat = flattenTree(newTree);
+        try {
+            await axios.patch(`/projects/notes/structure/${projectId}`, { structure: flat });
+            fetchWbsData();
+        } catch (e) {
+            alert('순서/계층 변경 실패');
+        }
     };
 
     const handleAddClick = () => {
