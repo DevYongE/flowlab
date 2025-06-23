@@ -12,7 +12,8 @@ export const analyzeRequirement = async (req: Request, res: Response) => {
   const { text } = req.body;
 
   if (!text) {
-    return res.status(400).json({ message: '분석할 텍스트가 필요합니다.' });
+    res.status(400).json({ message: '분석할 텍스트가 필요합니다.' });
+    return;
   }
 
   try {
