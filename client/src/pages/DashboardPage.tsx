@@ -62,7 +62,6 @@ const DashboardPage: React.FC = () => {
     // 프로젝트 목록 및 첫 번째 프로젝트의 WBS 불러오기
     axios.get<Project[]>('/projects')
       .then(res => {
-        setProjects(res.data);
         if (res.data.length > 0) {
           const firstProjectId = res.data[0].id;
           setLoadingWbs(true);
@@ -73,8 +72,7 @@ const DashboardPage: React.FC = () => {
             .catch(() => setWbsItems([]))
             .finally(() => setLoadingWbs(false));
         }
-      })
-      .catch(() => setProjects([]));
+      });
   }, []);
 
   const getWeekDates = (date: Date) => {
