@@ -9,6 +9,9 @@ const menu = [
   { icon: '📢', label: '공지사항', to: '/notices' },
   { icon: '🧱', label: '프로젝트', to: '/projects' },
   { icon: '🗂️', label: 'WBS보드', to: '/wbs' },
+];
+
+const adminMenu = [
   { icon: '👤', label: '회원관리', to: '/admin/users' },
   { icon: '🛡️', label: '권한관리', to: '/admin/roles' },
   { icon: '🏢', label: '부서관리', to: '/admin/departments' },
@@ -47,36 +50,31 @@ const Sidebar: React.FC<SidebarProps> = ({ isMini }) => {
         )}
       </div>
       <div className="flex-1 flex flex-col justify-start">
-        <ul className={`space-y-2 ${isMini ? 'text-xl mt-8' : 'text-base mt-8'}`}>
-          {menu.map((item) => (
-            <li key={item.label} className="flex justify-center">
-              <Link
-                to={item.to}
-                className={`flex items-center gap-4 w-full px-4 py-2 rounded-lg transition-colors
-                  ${location.pathname.startsWith(item.to) ? 'bg-blue-600 text-white font-bold' : 'hover:bg-blue-800/70 hover:text-blue-100'}
-                  ${isMini ? 'justify-center' : ''}`}
-              >
-                <span>{item.icon}</span>
-                {!isMini && <span>{item.label}</span>}
-              </Link>
-            </li>
-          ))}
-        </ul>
+        {/* 일반 메뉴 */}
+        {menu.map((item) => (
+          <div
+            key={item.to}
+            className={`flex items-center gap-3 py-2 px-2 rounded cursor-pointer hover:bg-blue-800/40 transition-colors ${location.pathname.startsWith(item.to) ? 'bg-blue-800/60' : ''}`}
+            onClick={() => navigate(item.to)}
+          >
+            <span className="text-lg">{item.icon}</span>
+            {!isMini && <span>{item.label}</span>}
+          </div>
+        ))}
+        {/* 관리자 메뉴 그룹 */}
         {isAdmin && !isMini && (
           <>
-            <hr className="my-6 border-gray-700" />
-            <div className="px-4 text-xs text-gray-400 mb-2">관리자 메뉴</div>
-            <ul className="space-y-2 text-base">
-              <li className="flex justify-center">
-                <Link
-                  to="/admin"
-                  className={`flex items-center gap-4 w-full px-4 py-2 rounded-lg transition-colors hover:bg-blue-800/70 hover:text-blue-100 ${isMini ? 'justify-center' : ''}`}
-                >
-                  <span>⚙️</span>
-                  {!isMini && <span>관리자 설정</span>}
-                </Link>
-              </li>
-            </ul>
+            <div className="mt-8 mb-2 text-xs text-gray-400 font-bold">관리자</div>
+            {adminMenu.map((item) => (
+              <div
+                key={item.to}
+                className={`flex items-center gap-3 py-2 px-2 rounded cursor-pointer hover:bg-red-800/30 transition-colors ${location.pathname.startsWith(item.to) ? 'bg-red-800/60' : ''}`}
+                onClick={() => navigate(item.to)}
+              >
+                <span className="text-lg">{item.icon}</span>
+                <span>{item.label}</span>
+              </div>
+            ))}
           </>
         )}
       </div>

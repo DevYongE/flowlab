@@ -13,6 +13,9 @@ import WbsPage from './pages/WbsPage';
 import WbsMainPage from './pages/WbsMainPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import AdminUserPage from './pages/admin/AdminUserPage';
+import AdminRolePage from './pages/admin/AdminRolePage';
+import AdminDepartmentPage from './pages/admin/AdminDepartmentPage';
 
 export default function App() {
   // ✅ sessionStorage의 토큰 유무로 초기값 설정
@@ -38,6 +41,9 @@ export default function App() {
           <Route path="/projects/:id" element={<ProjectDetailPage />} />
           <Route path="/projects/:id/wbs" element={<WbsPage />} />
           <Route path="/wbs" element={<WbsMainPage />} />
+          <Route path="/admin/users" element={<AdminUserPage />} />
+          <Route path="/admin/roles" element={<AdminRolePage />} />
+          <Route path="/admin/departments" element={<AdminDepartmentPage />} />
         </>
       ) : (
         <Route path="*" element={<Navigate to="/login" replace />} />
