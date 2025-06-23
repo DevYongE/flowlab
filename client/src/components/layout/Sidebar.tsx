@@ -9,6 +9,9 @@ const menu = [
   { icon: '📢', label: '공지사항', to: '/notices' },
   { icon: '🧱', label: '프로젝트', to: '/projects' },
   { icon: '🗂️', label: 'WBS보드', to: '/wbs' },
+  { icon: '👤', label: '회원관리', to: '/admin/users' },
+  { icon: '🛡️', label: '권한관리', to: '/admin/roles' },
+  { icon: '🏢', label: '부서관리', to: '/admin/departments' },
 ];
 
 const Sidebar: React.FC<SidebarProps> = ({ isMini }) => {
