@@ -6,6 +6,7 @@ import axios from '../../lib/axios';
 interface WbsItem {
     id: number | string;
     name: string;
+    content?: string;
     children: WbsItem[];
     // TODO: assignee_name, start_date, end_date 등 추가 필드
 }
@@ -113,7 +114,7 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId }) => {
                         {...provided.dragHandleProps}
                         className={`p-3 my-2 rounded-md shadow-sm ${snapshot.isDragging ? 'bg-blue-100' : 'bg-white'} border flex justify-between items-center`}
                     >
-                        <span>{item.name}</span>
+                        <span>{item.name || item.content}</span>
                         <div className="flex gap-2">
                             <button className="text-xs text-gray-500 hover:text-gray-800">추가</button>
                             <button className="text-xs text-gray-500 hover:text-gray-800">수정</button>
