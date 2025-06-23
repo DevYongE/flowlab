@@ -203,24 +203,36 @@ const ProjectDetailPage = () => {
     }
     setIsAnalyzing(true);
     try {
-      const res = await axios.post('/ai/analyze-requirement', { text: aiInputText });
-      const { content, deadline } = res.data;
+      // 1. AI에게 내용 분석 요청
+      const analyzeRes = await axios.post('/ai/analyze-requirement', { text: aiInputText });
+      const { content, deadline } = analyzeRes.data;
 
-      // 분석된 결과로 새 노트 폼 채우기
-      setNewNote({
-        content: content || '',
-        deadline: deadline || '',
+      if (!content) {
+        alert('AI가 요구사항 내용을 추출하지 못했습니다. 내용을 조금 더 자세히 작성해주세요.');
+        setIsAnalyzing(false);
+        return;
+      }
+      
+      const newAINote = {
+        content: content,
+        deadline: deadline || null,
         status: 'TODO',
         progress: 0,
-      });
+      };
 
+      // 2. 분석된 결과로 새 요구사항 바로 저장
+      await axios.post(`/projects/${id}/notes`, newAINote);
+
+      // 3. 모달 닫고 목록 새로고침
       setShowAIModal(false);
-      openAddModal(); // 미리 채워진 추가 모달 열기
       setAIInputText('');
+      fetchProject(); // 목록을 다시 불러와 화면에 반영
+      
+      alert('AI가 분석한 요구사항을 목록에 추가했습니다.');
 
     } catch (error) {
-      console.error('AI 분석 실패:', error);
-      alert('AI 분석 중 오류가 발생했습니다.');
+      console.error('AI 분석 및 저장 실패:', error);
+      alert('AI 분석 또는 저장 중 오류가 발생했습니다.');
     } finally {
       setIsAnalyzing(false);
     }
@@ -772,7 +784,7 @@ const ProjectDetailPage = () => {
                 AI로 요구사항 분석하기
               </h3>
               <p className="text-sm text-gray-600 mb-4">
-                요구사항에 대한 내용을 자유롭게 작성하거나 문서를 붙여넣으세요. AI가 핵심 내용과 마감일을 추출하여 정리해줍니다.
+                요구사항에 대한 내용을 자유롭게 작성하거나 문서를 붙여넣으세요. AI가 핵심 내용과 마감일을 추출하여 요구사항 목록에 바로 추가합니다.
               </p>
               <textarea
                 value={aiInputText}
