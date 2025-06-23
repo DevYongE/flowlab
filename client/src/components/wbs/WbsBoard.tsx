@@ -142,8 +142,11 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId }) => {
     };
 
     // 트리 노드 렌더링
-    const renderNode = (node: NodeModel, { isOpen, onToggle }: any) => (
-        <div className="flex items-center justify-between w-full p-2 border rounded bg-white my-1">
+    const renderNode = (node: NodeModel, { isOpen, onToggle, depth }: any) => (
+        <div
+            className="flex items-center justify-between w-full p-2 border rounded bg-white my-1"
+            style={{ paddingLeft: `${depth * 24}px` }}
+        >
             <div className="flex items-center gap-2">
                 {node.droppable && (
                     <button type="button" onClick={onToggle} className="focus:outline-none">
