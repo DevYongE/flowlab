@@ -24,7 +24,7 @@ router.get('/ongoing', authenticate, getOngoingProjects);
 router.get('/status-summary', authenticate, getProjectStatusSummary);
 router.get('/:id', authenticate, getProjectById);
 router.get('/:projectId/wbs', authenticate, getDevNotesAsWbs);
-router.post('/', authenticate, requireAdmin, createProject);
+router.post('/', authenticate, createProject);
 router.put('/:id', authenticate, updateProject);
 router.delete('/:id', authenticate, deleteProject);
 

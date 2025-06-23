@@ -34,12 +34,24 @@ const buildDevNotesTree = (items: any[]): any[] => {
 
 // 프로젝트 목록 조회
 export const getProjects = async (req: Request, res: Response) => {
+  const currentUserId = req.user?.id;
+  const currentUserRole = req.user?.role;
+
   try {
-    const result = await pool.query(`
+    let query = `
       SELECT id, category, type, name, TO_CHAR(start_date, 'YYYY-MM-DD') as "startDate", TO_CHAR(end_date, 'YYYY-MM-DD') as "endDate", progress
       FROM projects
-      ORDER BY start_date DESC
-    `);
+    `;
+    const params = [];
+
+    if (currentUserRole !== 'ADMIN') {
+      query += ' WHERE author_id = $1';
+      params.push(currentUserId);
+    }
+
+    query += ' ORDER BY start_date DESC';
+    
+    const result = await pool.query(query, params);
     res.json(result.rows);
   } catch (error) {
     res.status(500).json({ message: '프로젝트 목록 조회 실패', error });
@@ -49,6 +61,9 @@ export const getProjects = async (req: Request, res: Response) => {
 // 프로젝트 상세 조회
 export const getProjectById = async (req: Request, res: Response) => {
   const { id } = req.params;
+  const currentUserId = req.user?.id;
+  const currentUserRole = req.user?.role;
+
   try {
     const projectRes = await pool.query('SELECT *, TO_CHAR(start_date, \'YYYY-MM-DD\') as "startDate", TO_CHAR(end_date, \'YYYY-MM-DD\') as "endDate" FROM projects WHERE id = $1', [id]);
     if (projectRes.rowCount === 0) {
@@ -56,6 +71,11 @@ export const getProjectById = async (req: Request, res: Response) => {
       return;
     }
     const project = projectRes.rows[0];
+
+    if (currentUserRole !== 'ADMIN' && currentUserId !== project.author_id) {
+      res.status(403).json({ message: '프로젝트에 접근할 권한이 없습니다.' });
+      return;
+    }
 
     const detailsRes = await pool.query('SELECT * FROM project_details WHERE project_id = $1', [id]);
     project.details = detailsRes.rows[0] || {};
@@ -97,8 +117,11 @@ export const getDevNotesAsWbs = async (req: Request, res: Response) => {
 
 // 프로젝트 상태별 개수 조회
 export const getProjectStatusSummary = async (req: Request, res: Response) => {
+  const currentUserId = req.user?.id;
+  const currentUserRole = req.user?.role;
+
   try {
-    const result = await pool.query(`
+    let query = `
       SELECT
         CASE
           WHEN progress = 0 THEN '미완료'
@@ -107,8 +130,17 @@ export const getProjectStatusSummary = async (req: Request, res: Response) => {
         END as status,
         COUNT(id)::int as count
       FROM projects
-      GROUP BY status
-    `);
+    `;
+    const params = [];
+
+    if (currentUserRole !== 'ADMIN') {
+      query += ' WHERE author_id = $1';
+      params.push(currentUserId);
+    }
+
+    query += ' GROUP BY status';
+
+    const result = await pool.query(query, params);
     res.json(result.rows);
   } catch (error) {
     console.error('프로젝트 상태 요약 조회 실패:', error);
@@ -226,19 +258,35 @@ export const deleteProject = async (req: Request, res: Response) => {
 
 // 진행중인 프로젝트 목록 조회
 export const getOngoingProjects = async (req: Request, res: Response) => {
+  const currentUserId = req.user?.id;
+  const currentUserRole = req.user?.role;
+
     try {
-        const result = await pool.query(`
+        let query = `
             SELECT 
                 p.id, 
                 p.name, 
                 COALESCE(ROUND(AVG(dn.progress)), 0) as progress
             FROM projects p
             LEFT JOIN dev_notes dn ON p.id = dn.project_id
-            WHERE p.type = '추가' OR p.type = '신규'
+        `;
+        const params: (string | number | undefined)[] = [];
+
+        if (currentUserRole !== 'ADMIN') {
+            query += ' WHERE p.author_id = $1';
+            params.push(currentUserId);
+        } else {
+            query += ' WHERE 1=1'; // Always true, to allow appending "AND"
+        }
+
+        query += `
+            AND (p.type = '추가' OR p.type = '신규')
             GROUP BY p.id
             ORDER BY p.start_date DESC
             LIMIT 3
-        `);
+        `;
+
+        const result = await pool.query(query, params);
         res.json(result.rows);
     } catch (error) {
         res.status(500).json({ message: '진행중인 프로젝트 목록 조회 실패', error });
@@ -248,26 +296,29 @@ export const getOngoingProjects = async (req: Request, res: Response) => {
 // 개발 노트 생성
 export const createDevNote = async (req: Request, res: Response) => {
     const { projectId } = req.params;
-    const { content, deadline, status, progress, parent_id } = req.body;
+    const { content, deadline, status, progress, parent_id, order } = req.body;
     const authorId = req.user?.id;
+    const currentUserRole = req.user?.role;
 
     try {
-        const deadlineValue = deadline ? deadline : null;
-
-        // 같은 부모 아래의 마지막 order 값을 찾기
-        const orderRes = await pool.query(
-          'SELECT MAX("order") as max_order FROM dev_notes WHERE project_id = $1 AND (parent_id = $2 OR (parent_id IS NULL AND $2 IS NULL))',
-          [projectId, parent_id]
-        );
-        const newOrder = (orderRes.rows[0].max_order || 0) + 1;
+        const projectRes = await pool.query('SELECT author_id FROM projects WHERE id = $1', [projectId]);
+        if (projectRes.rowCount === 0) {
+            res.status(404).json({ message: '프로젝트를 찾을 수 없습니다.' });
+            return;
+        }
+        
+        const projectAuthorId = projectRes.rows[0].author_id;
+        if (currentUserRole !== 'ADMIN' && authorId !== projectAuthorId) {
+            res.status(403).json({ message: '이 프로젝트에 요구사항을 추가할 권한이 없습니다.' });
+            return;
+        }
         
         const result = await pool.query(
             'INSERT INTO dev_notes (project_id, content, deadline, status, progress, author_id, parent_id, "order") VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
-            [projectId, content, deadlineValue, status, progress, authorId, parent_id, newOrder]
+            [projectId, content, deadline, status, progress, authorId, parent_id, order]
         );
         res.status(201).json(result.rows[0]);
     } catch (error) {
-        console.error('개발 노트 생성 오류:', error);
         res.status(500).json({ message: '개발 노트 생성 실패', error });
     }
 };
@@ -285,20 +336,19 @@ export const updateDevNote = async (req: Request, res: Response) => {
             res.status(404).json({ message: '노트를 찾을 수 없습니다.' });
             return;
         }
-        
-        if (currentUserRole !== 'ADMIN' && currentUserId !== noteRes.rows[0].author_id) {
-            res.status(403).json({ message: '수정 권한이 없습니다.' });
+        const noteAuthorId = noteRes.rows[0].author_id;
+
+        if (currentUserRole !== 'ADMIN' && currentUserId !== noteAuthorId) {
+            res.status(403).json({ message: '노트를 수정할 권한이 없습니다.' });
             return;
         }
 
-        const deadlineValue = deadline ? deadline : null;
         const result = await pool.query(
             'UPDATE dev_notes SET content=$1, deadline=$2, status=$3, progress=$4 WHERE id=$5 RETURNING *',
-            [content, deadlineValue, status, progress, noteId]
+            [content, deadline, status, progress, noteId]
         );
         res.json(result.rows[0]);
     } catch (error) {
-        console.error('개발 노트 수정 오류:', error);
         res.status(500).json({ message: '개발 노트 수정 실패', error });
     }
 };
@@ -315,16 +365,16 @@ export const deleteDevNote = async (req: Request, res: Response) => {
             res.status(404).json({ message: '노트를 찾을 수 없습니다.' });
             return;
         }
+        const noteAuthorId = noteRes.rows[0].author_id;
 
-        if (currentUserRole !== 'ADMIN' && currentUserId !== noteRes.rows[0].author_id) {
-            res.status(403).json({ message: '삭제 권한이 없습니다.' });
+        if (currentUserRole !== 'ADMIN' && currentUserId !== noteAuthorId) {
+            res.status(403).json({ message: '노트를 삭제할 권한이 없습니다.' });
             return;
         }
 
         await pool.query('DELETE FROM dev_notes WHERE id = $1', [noteId]);
         res.json({ message: '개발 노트가 성공적으로 삭제되었습니다.' });
     } catch (error) {
-        console.error('개발 노트 삭제 오류:', error);
         res.status(500).json({ message: '개발 노트 삭제 실패', error });
     }
 };

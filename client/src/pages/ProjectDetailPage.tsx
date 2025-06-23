@@ -44,6 +44,10 @@ const ProjectDetailPage = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingNote, setEditingNote] = useState<DevNote | null>(null);
   const [newNote, setNewNote] = useState({ content: '', deadline: '', status: 'TODO', progress: 0 });
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [editingProgressNoteId, setEditingProgressNoteId] = useState<number | null>(null);
+  const [inlineProgressValue, setInlineProgressValue] = useState(0);
   const currentUser = getCurrentUser();
 
   const fetchProject = async () => {
@@ -60,11 +64,42 @@ const ProjectDetailPage = () => {
   }, [id]);
 
   const handleNoteChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
+    const { name, value: rawValue } = e.target;
+    
+    const getUpdatedValues = (prev: DevNote) => {
+      let value: string | number = rawValue;
+      if (name === 'progress') {
+        value = parseInt(rawValue, 10);
+        if (isNaN(value)) value = 0;
+      }
+
+      let newStatus = name === 'status' ? String(value) : prev.status;
+      let newProgress = name === 'progress' ? Number(value) : prev.progress;
+
+      if (name === 'status') {
+        if (value === 'DONE') newProgress = 100;
+        else if (value === 'TODO') newProgress = 0;
+      } else if (name === 'progress') {
+        if (value === 100) newStatus = 'DONE';
+        else if (Number(value) > 0 && prev.status === 'TODO') newStatus = 'IN_PROGRESS';
+        else if (value === 0 && prev.status !== 'TODO') newStatus = 'TODO';
+      }
+      
+      const updatedNote = { ...prev, [name]: value, status: newStatus, progress: newProgress };
+      
+      // Ensure correct types before returning
+      return {
+        ...updatedNote,
+        status: String(updatedNote.status),
+        progress: Number(updatedNote.progress),
+        [name]: name === 'progress' ? Number(value) : String(value)
+      };
+    };
+
     if (editingNote) {
-      setEditingNote(prev => prev ? { ...prev, [name]: value } : null);
+      setEditingNote(prev => prev ? getUpdatedValues(prev) : null);
     } else {
-      setNewNote(prev => ({ ...prev, [name]: value }));
+      setNewNote(prev => getUpdatedValues(prev as any) as any);
     }
   };
   
@@ -102,7 +137,7 @@ const ProjectDetailPage = () => {
   };
   
   const handleDeleteNote = async (noteId: number) => {
-    if (window.confirm('정말로 이 노트를 삭제하시겠습니까?')) {
+    if (window.confirm('정말로 이 요구사항을 삭제하시겠습니까?')) {
       try {
         await axios.delete(`/projects/notes/${noteId}`);
         fetchProject();
@@ -141,6 +176,11 @@ const ProjectDetailPage = () => {
     setEditingNote(null);
   };
 
+  const handleAIAssist = () => {
+    // AI 기능 구현 예정
+    alert('AI 요구사항 생성 기능이 곧 추가될 예정입니다.');
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'TODO': return 'bg-gray-500';
@@ -152,16 +192,125 @@ const ProjectDetailPage = () => {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'TODO': return 'Todo';
-      case 'IN_PROGRESS': return 'In Progress';
-      case 'DONE': return 'Done';
+      case 'TODO': return '미완료';
+      case 'IN_PROGRESS': return '진행중';
+      case 'DONE': return '완료';
       default: return status;
+    }
+  };
+
+  // 필터링 및 정렬된 요구사항 목록
+  const getFilteredAndSortedNotes = () => {
+    if (!project) return [];
+    
+    let filteredNotes = project.devNotes.filter(note => {
+      // 검색어 필터링
+      const matchesSearch = note.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           note.authorName.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      // 상태 필터링
+      const matchesStatus = statusFilter === 'ALL' || note.status === statusFilter;
+      
+      return matchesSearch && matchesStatus;
+    });
+
+    // 정렬: 진행중 -> 미완료 -> 완료 순서
+    filteredNotes.sort((a, b) => {
+      const statusOrder = { 'IN_PROGRESS': 0, 'TODO': 1, 'DONE': 2 };
+      return statusOrder[a.status as keyof typeof statusOrder] - statusOrder[b.status as keyof typeof statusOrder];
+    });
+
+    return filteredNotes;
+  };
+
+  const cycleStatus = (status: string): string => {
+    const statusOrder = ['TODO', 'IN_PROGRESS', 'DONE'];
+    const currentIndex = statusOrder.indexOf(status);
+    const nextIndex = (currentIndex + 1) % statusOrder.length;
+    return statusOrder[nextIndex];
+  };
+
+  const handleStatusClick = async (note: DevNote) => {
+    const newStatus = cycleStatus(note.status);
+    let newProgress = note.progress;
+
+    if (newStatus === 'DONE') {
+      newProgress = 100;
+    } else if (newStatus === 'TODO') {
+      newProgress = 0;
+    } else if (newStatus === 'IN_PROGRESS' && note.status === 'DONE') {
+      // Not a standard cycle, but handle it sanely
+      newProgress = 50; // Or some other default
+    }
+    
+    const updatedNote = { ...note, status: newStatus, progress: newProgress };
+    await handleNoteUpdate(updatedNote);
+  };
+
+  const handleProgressBarClick = async (e: React.MouseEvent<HTMLDivElement>, note: DevNote) => {
+    const bar = e.currentTarget;
+    const rect = bar.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    let newProgress = Math.round((x / rect.width) * 100);
+    newProgress = Math.max(0, Math.min(100, newProgress)); // 0-100 범위 유지
+
+    let newStatus = note.status;
+    if (newProgress === 100) newStatus = 'DONE';
+    else if (newProgress === 0) newStatus = 'TODO';
+    else newStatus = 'IN_PROGRESS';
+
+    const updatedNote = { ...note, progress: newProgress, status: newStatus };
+    await handleNoteUpdate(updatedNote);
+  };
+
+  const handleProgressTextClick = (note: DevNote) => {
+    setEditingProgressNoteId(note.id);
+    setInlineProgressValue(note.progress);
+  };
+
+  const handleInlineProgressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value, 10);
+    setInlineProgressValue(Math.max(0, Math.min(100, isNaN(value) ? 0 : value)));
+  };
+
+  const handleInlineProgressUpdate = async () => {
+    if (editingProgressNoteId === null) return;
+    
+    const note = project?.devNotes.find(n => n.id === editingProgressNoteId);
+    if (!note) return;
+
+    const newProgress = inlineProgressValue;
+    let newStatus = note.status;
+
+    if (newProgress === 100) newStatus = 'DONE';
+    else if (newProgress === 0) newStatus = 'TODO';
+    else newStatus = 'IN_PROGRESS';
+    
+    const updatedNote = { ...note, progress: newProgress, status: newStatus };
+    await handleNoteUpdate(updatedNote);
+
+    setEditingProgressNoteId(null);
+  };
+
+  const handleNoteUpdate = async (note: DevNote) => {
+    try {
+      await axios.put(`/projects/notes/${note.id}`, note);
+      setProject(prev => {
+        if (!prev) return null;
+        const updatedNotes = prev.devNotes.map(n => n.id === note.id ? note : n);
+        return { ...prev, devNotes: updatedNotes };
+      });
+    } catch (error) {
+      console.error('노트 업데이트 실패:', error);
+      alert('노트 업데이트에 실패했습니다.');
+      fetchProject(); // 에러 발생 시 데이터 다시 동기화
     }
   };
 
   if (!project) return <div>로딩 중...</div>;
   
   const canEditProject = isAdmin() || currentUser?.id === project.author_id;
+  const filteredNotes = getFilteredAndSortedNotes();
 
   return (
     <MainLayout>
@@ -242,7 +391,7 @@ const ProjectDetailPage = () => {
           </div>
         </div>
 
-        {/* Todo List */}
+        {/* 요구사항 리스트 */}
         <div className="bg-white p-6 rounded-lg shadow-lg">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-bold">요구 사항 리스트</h2>
@@ -254,12 +403,40 @@ const ProjectDetailPage = () => {
                 WBS 보기
               </button>
               <button onClick={openAddModal} className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-                Todo 추가
+                요구사항 추가
+              </button>
+              <button onClick={handleAIAssist} className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+                AI
               </button>
             </div>
           </div>
+
+          {/* 검색 및 필터 */}
+          <div className="mb-4 flex flex-col md:flex-row gap-4 justify-end">
+            <div className="md:w-80">
+              <input
+                type="text"
+                placeholder="요구사항 내용이나 작성자로 검색..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full border border-gray-300 rounded-md shadow-sm p-2"
+              />
+            </div>
+            <div className="flex gap-2">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="border border-gray-300 rounded-md shadow-sm p-2"
+              >
+                <option value="ALL">전체</option>
+                <option value="IN_PROGRESS">진행중</option>
+                <option value="TODO">미완료</option>
+                <option value="DONE">완료</option>
+              </select>
+            </div>
+          </div>
           
-          {/* Todo 목록 테이블 */}
+          {/* 요구사항 목록 테이블 */}
           <div className="overflow-x-auto">
             <table className="min-w-full bg-white">
               <thead className="bg-gray-100">
@@ -274,57 +451,91 @@ const ProjectDetailPage = () => {
                 </tr>
               </thead>
               <tbody>
-                {project.devNotes.map((note) => {
-                  const canEditNote = isAdmin() || currentUser?.id === note.author_id;
-                  return (
-                    <tr key={note.id} className="hover:bg-gray-50">
-                      <td className="py-3 px-4 border-b">
-                        <div className="max-w-xs truncate" title={note.content}>
-                          {note.content}
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 border-b text-center text-sm">{note.registeredAt}</td>
-                      <td className="py-3 px-4 border-b text-center text-sm">
-                        {note.deadline ? note.deadline.split('T')[0] : '-'}
-                      </td>
-                      <td className="py-3 px-4 border-b text-center text-sm">{note.authorName}</td>
-                      <td className="py-3 px-4 border-b text-center">
-                        <span className={`inline-block px-2 py-1 text-xs font-semibold text-white rounded ${getStatusColor(note.status)}`}>
-                          {getStatusText(note.status)}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 border-b">
-                        <div className="flex items-center">
-                          <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
+                {filteredNotes.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center text-gray-500">
+                      {searchTerm || statusFilter !== 'ALL' ? '검색 결과가 없습니다.' : '요구사항이 없습니다.'}
+                    </td>
+                  </tr>
+                ) : (
+                  filteredNotes.map((note) => {
+                    const canEditNote = isAdmin() || currentUser?.id === note.author_id;
+                    return (
+                      <tr key={note.id} className="hover:bg-gray-50">
+                        <td className="py-3 px-4 border-b">
+                          <div className="max-w-xs truncate" title={note.content}>
+                            {note.content}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 border-b text-center text-sm">{note.registeredAt}</td>
+                        <td className="py-3 px-4 border-b text-center text-sm">
+                          {note.deadline ? note.deadline.split('T')[0] : '-'}
+                        </td>
+                        <td className="py-3 px-4 border-b text-center text-sm">{note.authorName}</td>
+                        <td className="py-3 px-4 border-b text-center">
+                          <span 
+                            className={`inline-block px-2 py-1 text-xs font-semibold text-white rounded cursor-pointer ${getStatusColor(note.status)}`}
+                            onClick={() => handleStatusClick(note)}
+                          >
+                            {getStatusText(note.status)}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 border-b">
+                          <div className="flex items-center">
                             <div 
-                              className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
-                              style={{ width: `${note.progress}%` }}
-                            ></div>
-                          </div>
-                          <span className="text-sm text-gray-600">{note.progress}%</span>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 border-b text-center">
-                        {canEditNote && (
-                          <div className="flex gap-1 justify-center">
-                            <button 
-                              onClick={() => openEditModal(note)} 
-                              className="text-sm bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600"
+                              className="w-24 bg-gray-200 rounded-full h-4 mr-2 cursor-pointer relative"
+                              onClick={(e) => handleProgressBarClick(e, note)}
                             >
-                              수정
-                            </button>
-                            <button 
-                              onClick={() => handleDeleteNote(note.id)} 
-                              className="text-sm bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
-                            >
-                              삭제
-                            </button>
+                              <div 
+                                className="bg-blue-600 h-4 rounded-full transition-all duration-100" 
+                                style={{ width: `${note.progress}%` }}
+                              ></div>
+                            </div>
+                            {editingProgressNoteId === note.id ? (
+                              <input
+                                type="number"
+                                value={inlineProgressValue}
+                                onChange={handleInlineProgressChange}
+                                onBlur={handleInlineProgressUpdate}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') handleInlineProgressUpdate();
+                                  if (e.key === 'Escape') setEditingProgressNoteId(null);
+                                }}
+                                className="w-14 text-center border border-gray-300 rounded"
+                                autoFocus
+                              />
+                            ) : (
+                              <span 
+                                className="text-sm text-gray-600 w-14 text-center cursor-pointer"
+                                onClick={() => handleProgressTextClick(note)}
+                              >
+                                {note.progress}%
+                              </span>
+                            )}
                           </div>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
+                        </td>
+                        <td className="py-3 px-4 border-b text-center">
+                          {canEditNote && (
+                            <div className="flex gap-1 justify-center">
+                              <button 
+                                onClick={() => openEditModal(note)} 
+                                className="text-sm bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600"
+                              >
+                                수정
+                              </button>
+                              <button 
+                                onClick={() => handleDeleteNote(note.id)} 
+                                className="text-sm bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
+                              >
+                                삭제
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
@@ -335,7 +546,7 @@ const ProjectDetailPage = () => {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
               <h3 className="text-lg font-semibold mb-4">
-                {editingNote ? 'Todo 수정' : 'Todo 추가'}
+                {editingNote ? '요구사항 수정' : '요구사항 추가'}
               </h3>
               <form onSubmit={editingNote ? handleUpdateNote : handleAddNote}>
                 <div className="space-y-4">
@@ -368,9 +579,9 @@ const ProjectDetailPage = () => {
                       onChange={handleNoteChange} 
                       className="w-full border border-gray-300 rounded-md shadow-sm p-2"
                     >
-                      <option value="TODO">Todo</option>
-                      <option value="IN_PROGRESS">In Progress</option>
-                      <option value="DONE">Done</option>
+                      <option value="TODO">미완료</option>
+                      <option value="IN_PROGRESS">진행중</option>
+                      <option value="DONE">완료</option>
                     </select>
                   </div>
                   <div>
