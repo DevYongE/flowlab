@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Tree, NodeModel } from '@minoru/react-dnd-treeview';
+import { Tree } from '@minoru/react-dnd-treeview';
+import type { NodeModel } from '@minoru/react-dnd-treeview';
 import axios from '../../lib/axios';
 
 // 타입 정의
@@ -32,12 +33,12 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId }) => {
         endDate: '',
         status: '미완료',
         progress: 0,
-        parent: 0
+        parent: 0 as number
     });
     const [loading, setLoading] = useState(false);
 
     // 트리형 WBS 데이터를 flat 구조로 변환
-    function flattenTree(nodes: WbsItem[], parentId: number | string | null = 0): NodeModel[] {
+    function flattenTree(nodes: WbsItem[], parentId: number = 0): NodeModel[] {
         let arr: NodeModel[] = [];
         nodes.forEach((node) => {
             arr.push({
@@ -48,7 +49,7 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId }) => {
                 data: node
             });
             if (node.children && node.children.length > 0) {
-                arr = arr.concat(flattenTree(node.children, node.id));
+                arr = arr.concat(flattenTree(node.children, Number(node.id)));
             }
         });
         return arr;
@@ -105,7 +106,7 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId }) => {
             endDate: '',
             status: '미완료',
             progress: 0,
-            parent
+            parent: Number(parent)
         });
         setShowAddModal(true);
     };
@@ -160,7 +161,7 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId }) => {
                 tree={treeData}
                 rootId={0}
                 render={renderNode}
-                dragPreviewRender={node => <div>{node.text}</div>}
+                dragPreviewRender={monitor => <div>{monitor.item.text}</div>}
                 onDrop={handleDrop}
                 classes={{
                     root: 'bg-gray-50 p-4 rounded-lg min-h-[300px]',
