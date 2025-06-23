@@ -404,4 +404,55 @@ export const updateDevNotesStructure = async (req: Request, res: Response) => {
     } finally {
         client.release();
     }
+};
+
+// 특정 노트의 댓글 조회
+export const getDevNoteComments = async (req: Request, res: Response) => {
+    const { noteId } = req.params;
+    try {
+        const result = await pool.query(
+            `SELECT c.*, u.name as "authorName", TO_CHAR(c.created_at, 'YYYY-MM-DD HH24:MI') as "createdAt"
+             FROM dev_note_comments c
+             LEFT JOIN users u ON c.author_id = u.id
+             WHERE c.note_id = $1
+             ORDER BY c.created_at ASC`,
+            [noteId]
+        );
+        res.json(result.rows);
+    } catch (error) {
+        console.error('댓글 조회 오류:', error);
+        res.status(500).json({ message: '댓글을 불러오는데 실패했습니다.' });
+    }
+};
+
+// 특정 노트에 댓글 생성
+export const createDevNoteComment = async (req: Request, res: Response) => {
+    const { noteId } = req.params;
+    const { content } = req.body;
+    const authorId = req.user?.id;
+
+    if (!content) {
+        return res.status(400).json({ message: '댓글 내용이 필요합니다.' });
+    }
+
+    try {
+        const result = await pool.query(
+            'INSERT INTO dev_note_comments (note_id, author_id, content) VALUES ($1, $2, $3) RETURNING *',
+            [noteId, authorId, content]
+        );
+        
+        // 방금 생성된 댓글 정보를 더 자세히 조회해서 반환
+        const newComment = await pool.query(
+            `SELECT c.*, u.name as "authorName", TO_CHAR(c.created_at, 'YYYY-MM-DD HH24:MI') as "createdAt"
+             FROM dev_note_comments c
+             LEFT JOIN users u ON c.author_id = u.id
+             WHERE c.id = $1`,
+            [result.rows[0].id]
+        );
+
+        res.status(201).json(newComment.rows[0]);
+    } catch (error) {
+        console.error('댓글 생성 오류:', error);
+        res.status(500).json({ message: '댓글 작성에 실패했습니다.' });
+    }
 }; 

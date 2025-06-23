@@ -1,6 +1,7 @@
 // pages/ProjectDetailPage.tsx
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { Sparkles, MessageSquare } from 'lucide-react';
 import MainLayout from '../components/layout/MainLayout';
 import axios from '../lib/axios';
 import { getCurrentUser, isAdmin } from '../lib/auth';
@@ -14,6 +15,13 @@ interface DevNote {
   progress: number;
   authorName: string;
   author_id: string;
+}
+
+interface Comment {
+  id: number;
+  content: string;
+  authorName: string;
+  createdAt: string;
 }
 
 interface Project {
@@ -48,6 +56,11 @@ const ProjectDetailPage = () => {
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [editingProgressNoteId, setEditingProgressNoteId] = useState<number | null>(null);
   const [inlineProgressValue, setInlineProgressValue] = useState(0);
+  const [showCommentModal, setShowCommentModal] = useState(false);
+  const [selectedNote, setSelectedNote] = useState<DevNote | null>(null);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [newComment, setNewComment] = useState('');
+  const commentInputRef = useRef<HTMLInputElement>(null);
   const currentUser = getCurrentUser();
 
   const fetchProject = async () => {
@@ -307,6 +320,42 @@ const ProjectDetailPage = () => {
     }
   };
 
+  const openCommentModal = async (note: DevNote) => {
+    setSelectedNote(note);
+    setShowCommentModal(true);
+    try {
+      const res = await axios.get(`/projects/notes/${note.id}/comments`);
+      setComments(res.data);
+      setTimeout(() => commentInputRef.current?.focus(), 100);
+    } catch (error) {
+      console.error("댓글 로딩 실패:", error);
+      alert("댓글을 불러오는데 실패했습니다.");
+    }
+  };
+
+  const closeCommentModal = () => {
+    setShowCommentModal(false);
+    setSelectedNote(null);
+    setComments([]);
+    setNewComment('');
+  };
+
+  const handleCommentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newComment.trim() || !selectedNote) return;
+
+    try {
+      const res = await axios.post(`/projects/notes/${selectedNote.id}/comments`, {
+        content: newComment,
+      });
+      setComments(prev => [...prev, res.data]);
+      setNewComment('');
+    } catch (error) {
+      console.error("댓글 작성 실패:", error);
+      alert("댓글 작성에 실패했습니다.");
+    }
+  };
+
   if (!project) return <div>로딩 중...</div>;
   
   const canEditProject = isAdmin() || currentUser?.id === project.author_id;
@@ -395,18 +444,22 @@ const ProjectDetailPage = () => {
         <div className="bg-white p-6 rounded-lg shadow-lg">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-bold">요구 사항 리스트</h2>
-            <div className="flex gap-2">
+            <div className="flex gap-2 items-center">
               <button
                 onClick={() => navigate(`/projects/${id}/wbs`)}
-                className="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600"
+                className="bg-indigo-500 text-white px-4 py-2 rounded hover:bg-indigo-600"
               >
                 WBS 보기
               </button>
               <button onClick={openAddModal} className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
                 요구사항 추가
               </button>
-              <button onClick={handleAIAssist} className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
-                AI
+              <button 
+                onClick={handleAIAssist} 
+                className="bg-purple-600 text-white p-2 rounded-full hover:bg-purple-700 flex items-center justify-center transition-transform transform hover:scale-110"
+                title="AI로 요구사항 생성"
+              >
+                <Sparkles className="h-5 w-5" />
               </button>
             </div>
           </div>
@@ -517,6 +570,13 @@ const ProjectDetailPage = () => {
                         <td className="py-3 px-4 border-b text-center">
                           {canEditNote && (
                             <div className="flex gap-1 justify-center">
+                              <button
+                                onClick={() => openCommentModal(note)}
+                                className="text-sm bg-gray-500 text-white p-1 rounded hover:bg-gray-600"
+                                title="코멘트 보기/작성"
+                              >
+                                <MessageSquare className="h-4 w-4" />
+                              </button>
                               <button 
                                 onClick={() => openEditModal(note)} 
                                 className="text-sm bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600"
@@ -613,6 +673,60 @@ const ProjectDetailPage = () => {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* 코멘트 모달 */}
+        {showCommentModal && selectedNote && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-lg flex flex-col" style={{ height: '70vh' }}>
+              <h3 className="text-lg font-semibold mb-2">
+                코멘트: <span className="font-normal text-gray-700">{selectedNote.content}</span>
+              </h3>
+              <div className="flex-1 overflow-y-auto mb-4 pr-2">
+                {comments.length > 0 ? (
+                  <ul className="space-y-4">
+                    {comments.map(comment => (
+                      <li key={comment.id} className="flex flex-col items-start">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-sm">{comment.authorName}</span>
+                          <span className="text-xs text-gray-500">{comment.createdAt}</span>
+                        </div>
+                        <p className="bg-gray-100 p-2 rounded-md mt-1 text-sm">{comment.content}</p>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-center text-gray-500 pt-8">작성된 코멘트가 없습니다.</p>
+                )}
+              </div>
+              <form onSubmit={handleCommentSubmit}>
+                <div className="flex gap-2">
+                  <input
+                    ref={commentInputRef}
+                    type="text"
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    placeholder="코멘트를 입력하세요..."
+                    className="flex-1 border border-gray-300 rounded-md shadow-sm p-2"
+                  />
+                  <button
+                    type="submit"
+                    className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:bg-gray-400"
+                    disabled={!newComment.trim()}
+                  >
+                    작성
+                  </button>
+                </div>
+              </form>
+              <button 
+                type="button" 
+                onClick={closeCommentModal} 
+                className="mt-4 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 w-full"
+              >
+                닫기
+              </button>
             </div>
           </div>
         )}
