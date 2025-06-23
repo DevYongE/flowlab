@@ -2,8 +2,6 @@ import { useState, useEffect } from 'react';
 import MainLayout from '../components/layout/MainLayout';
 import WbsBoard from '../components/wbs/WbsBoard';
 import axios from '../lib/axios';
-import Calendar from 'react-calendar';
-import 'react-calendar/dist/Calendar.css';
 
 interface Project {
     id: string;
@@ -13,7 +11,6 @@ interface Project {
 const WbsMainPage: React.FC = () => {
     const [projects, setProjects] = useState<Project[]>([]);
     const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
-    const [calendarDate, setCalendarDate] = useState<Date | null>(new Date());
 
     useEffect(() => {
         axios.get('/projects')
@@ -35,32 +32,6 @@ const WbsMainPage: React.FC = () => {
         <MainLayout>
             <div className="container mx-auto p-4">
                 <h1 className="text-3xl font-bold mb-6">🗂️ WBS 보드</h1>
-
-                {/* 주간 달력 추가 */}
-                <div className="mb-6 flex justify-center">
-                    <div className="bg-white rounded-lg shadow p-4">
-                        <Calendar
-                            value={calendarDate}
-                            onChange={date => setCalendarDate(date as Date)}
-                            calendarType="gregory"
-                            showNeighboringMonth={false}
-                            tileClassName={({ date, view }) => {
-                                // 이번 주에 해당하는 날짜만 강조
-                                if (view === 'month') {
-                                    const now = new Date();
-                                    const startOfWeek = new Date(now);
-                                    startOfWeek.setDate(now.getDate() - now.getDay());
-                                    const endOfWeek = new Date(startOfWeek);
-                                    endOfWeek.setDate(startOfWeek.getDate() + 6);
-                                    if (date >= startOfWeek && date <= endOfWeek) {
-                                        return 'bg-blue-100 font-bold';
-                                    }
-                                }
-                                return '';
-                            }}
-                        />
-                    </div>
-                </div>
 
                 <div className="flex border-b mb-6">
                     {projects.map(project => (
