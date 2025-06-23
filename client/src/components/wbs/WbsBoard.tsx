@@ -142,7 +142,7 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId }) => {
     };
 
     // 트리 노드 렌더링
-    const renderNode = (node: NodeModel, { depth, isOpen, onToggle }: any) => (
+    const renderNode = (node: NodeModel, { isOpen, onToggle }: any) => (
         <div className="flex items-center justify-between w-full p-2 border rounded bg-white my-1">
             <div className="flex items-center gap-2">
                 {node.droppable && (
@@ -171,7 +171,7 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId }) => {
                 tree={treeData}
                 rootId={0}
                 render={renderNode}
-                dragPreviewRender={monitor => <div>{monitor.item.text}</div>}
+                dragPreviewRender={(monitor: { item: NodeModel }) => <div>{monitor.item.text}</div>}
                 onDrop={handleDrop}
                 controlledProps={{
                     openIds,
