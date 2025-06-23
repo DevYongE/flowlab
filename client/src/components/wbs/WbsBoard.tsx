@@ -145,7 +145,7 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId }) => {
     const renderNode = (node: NodeModel, { isOpen, onToggle, depth }: any) => (
         <div
             className="flex items-center justify-between w-full p-2 border rounded bg-white my-1"
-            style={{ paddingLeft: `${depth * 24}px` }}
+            style={{ paddingLeft: depth > 0 ? `${depth * 24}px` : 0 }}
         >
             <div className="flex items-center gap-2">
                 {node.droppable && (
