@@ -1,11 +1,13 @@
 // client/src/pages/RegisterPage.tsx
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import axios from '../lib/axios'; 
 
 const RegisterPage: React.FC = () => {
+  const navigate = useNavigate();
   const [form, setForm] = useState({
     id: '',
     password: '',
@@ -63,8 +65,8 @@ const handleRegister = async () => {
       join_date: joinDate,
       position_code: position,
     });
-    alert('회원가입 완료!');
-    // ✅ 회원가입 완료 후 이동 또는 초기화 추가 가능
+    alert('회원가입 완료! 로그인 페이지로 이동합니다.');
+    navigate('/login');
   } catch (err: any) {
     console.error('회원가입 실패:', err);
     alert(err.response?.data?.message || '회원가입 실패');
