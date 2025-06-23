@@ -432,7 +432,8 @@ export const createDevNoteComment = async (req: Request, res: Response) => {
     const authorId = req.user?.id;
 
     if (!content) {
-        return res.status(400).json({ message: '댓글 내용이 필요합니다.' });
+        res.status(400).json({ message: '댓글 내용이 필요합니다.' });
+        return;
     }
 
     try {
