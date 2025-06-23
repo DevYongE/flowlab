@@ -18,7 +18,7 @@ export const analyzeRequirement = async (req: Request, res: Response) => {
 
   try {
     const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo-0125", // 또는 gpt-4
+      model: "gpt-4o", // 또는 gpt-4
       messages: [
         { 
           role: "system", 
