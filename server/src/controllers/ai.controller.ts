@@ -22,7 +22,8 @@ export const analyzeRequirement = async (req: Request, res: Response) => {
       messages: [
         { 
           role: "system", 
-          content: `You are a proficient project manager. Your task is to analyze the user's requirement text and extract key information. The output must be in JSON format with two keys: 'content' and 'deadline'. The 'content' should be a concise summary of the requirement. The 'deadline' should be in YYYY-MM-DD format. If no deadline is mentioned, return null for the 'deadline'.`
+          content: `You are a proficient project manager. Based on the user's text, identify all individual requirements. For each requirement, extract a 'content' (summary) and a 'deadline' (in YYYY-MM-DD format). If no deadline is specified for a requirement, the deadline should be null. The final output must be a JSON array, where each object has 'content' and 'deadline' keys. If the original text is in Korean, the 'content' must also be in Korean. For example, if the user provides text for three requirements, the output should be an array of three objects.
+Example output: [{ "content": "로그인 기능 구현", "deadline": "2024-08-15" }, { "content": "게시판 UI 디자인", "deadline": null }]`
         },
         { 
           role: "user", 

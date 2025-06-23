@@ -196,43 +196,40 @@ const ProjectDetailPage = () => {
     setShowAIModal(true);
   };
 
-  const handleAnalyzeRequirement = async () => {
-    if (!aiInputText.trim()) {
-      alert('분석할 내용을 입력해주세요.');
-      return;
-    }
-    setIsAnalyzing(true);
+  const handleAiAnalysis = async (text: string) => {
     try {
-      // 1. AI에게 내용 분석 요청
-      const analyzeRes = await axios.post('/ai/analyze-requirement', { text: aiInputText });
-      const { content, deadline } = analyzeRes.data;
+      setIsAnalyzing(true);
+      const res = await axios.post(`/ai/analyze-dev-note`, { text });
+      
+      // AI가 여러 요구사항을 배열로 반환한다고 가정
+      const newDevNotes = res.data; 
 
-      if (!content) {
-        alert('AI가 요구사항 내용을 추출하지 못했습니다. 내용을 조금 더 자세히 작성해주세요.');
-        setIsAnalyzing(false);
-        return;
+      if (Array.isArray(newDevNotes)) {
+        // 여러 요구사항을 순차적으로 생성
+        for (const note of newDevNotes) {
+          await axios.post(`/projects/${id}/notes`, {
+            content: note.content,
+            deadline: note.deadline ? new Date(note.deadline) : null,
+            status: '미완료',
+            progress: 0,
+          });
+        }
+      } else {
+        // 단일 요구사항 생성 (기존 로직)
+         await axios.post(`/projects/${id}/notes`, {
+          content: newDevNotes.content,
+          deadline: newDevNotes.deadline ? new Date(newDevNotes.deadline) : null,
+          status: '미완료',
+          progress: 0,
+        });
       }
-      
-      const newAINote = {
-        content: content,
-        deadline: deadline || null,
-        status: 'TODO',
-        progress: 0,
-      };
 
-      // 2. 분석된 결과로 새 요구사항 바로 저장
-      await axios.post(`/projects/${id}/notes`, newAINote);
-
-      // 3. 모달 닫고 목록 새로고침
-      setShowAIModal(false);
       setAIInputText('');
-      fetchProject(); // 목록을 다시 불러와 화면에 반영
-      
-      alert('AI가 분석한 요구사항을 목록에 추가했습니다.');
-
+      setShowAIModal(false);
+      fetchProject();
     } catch (error) {
-      console.error('AI 분석 및 저장 실패:', error);
-      alert('AI 분석 또는 저장 중 오류가 발생했습니다.');
+      console.error('AI 분석 또는 요구사항 생성 실패:', error);
+      // 사용자에게 에러 알림 UI 추가하면 좋음
     } finally {
       setIsAnalyzing(false);
     }
@@ -803,7 +800,7 @@ const ProjectDetailPage = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={handleAnalyzeRequirement}
+                  onClick={() => handleAiAnalysis(aiInputText)}
                   className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 disabled:bg-purple-400 flex items-center"
                   disabled={isAnalyzing}
                 >
