@@ -4,6 +4,6 @@ import { authenticate } from '../middlewares/auth.middleware';
 
 const router = express.Router();
 
-router.post('/analyze-requirement', authenticate, analyzeRequirement);
+router.post('/analyze-dev-note', authenticate, analyzeRequirement);
 
 export default router; 
