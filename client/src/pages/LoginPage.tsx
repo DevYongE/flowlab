@@ -22,7 +22,6 @@ const LoginPage: React.FC<Props> = ({ onLogin }) => {
 
   const handleLogin = async () => {
     try {
-      console.log(form);
       const res = await axios.post('/auth/login', form);
       const { token, user } = res.data;
       sessionStorage.setItem('token', token); // ✅ 로그인 유지: 브라우저 살아있을 동안만
