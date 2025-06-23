@@ -57,6 +57,9 @@ const ProjectDetailPage = () => {
   const [editingProgressNoteId, setEditingProgressNoteId] = useState<number | null>(null);
   const [inlineProgressValue, setInlineProgressValue] = useState(0);
   const [showCommentModal, setShowCommentModal] = useState(false);
+  const [showAIModal, setShowAIModal] = useState(false);
+  const [aiInputText, setAIInputText] = useState('');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [selectedNote, setSelectedNote] = useState<DevNote | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
@@ -190,8 +193,37 @@ const ProjectDetailPage = () => {
   };
 
   const handleAIAssist = () => {
-    // AI 기능 구현 예정
-    alert('AI 요구사항 생성 기능이 곧 추가될 예정입니다.');
+    setShowAIModal(true);
+  };
+
+  const handleAnalyzeRequirement = async () => {
+    if (!aiInputText.trim()) {
+      alert('분석할 내용을 입력해주세요.');
+      return;
+    }
+    setIsAnalyzing(true);
+    try {
+      const res = await axios.post('/ai/analyze-requirement', { text: aiInputText });
+      const { content, deadline } = res.data;
+
+      // 분석된 결과로 새 노트 폼 채우기
+      setNewNote({
+        content: content || '',
+        deadline: deadline || '',
+        status: 'TODO',
+        progress: 0,
+      });
+
+      setShowAIModal(false);
+      openAddModal(); // 미리 채워진 추가 모달 열기
+      setAIInputText('');
+
+    } catch (error) {
+      console.error('AI 분석 실패:', error);
+      alert('AI 분석 중 오류가 발생했습니다.');
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -727,6 +759,50 @@ const ProjectDetailPage = () => {
               >
                 닫기
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* AI 요구사항 분석 모달 */}
+        {showAIModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl">
+              <h3 className="text-lg font-semibold mb-4 flex items-center">
+                <Sparkles className="h-5 w-5 mr-2 text-purple-600" />
+                AI로 요구사항 분석하기
+              </h3>
+              <p className="text-sm text-gray-600 mb-4">
+                요구사항에 대한 내용을 자유롭게 작성하거나 문서를 붙여넣으세요. AI가 핵심 내용과 마감일을 추출하여 정리해줍니다.
+              </p>
+              <textarea
+                value={aiInputText}
+                onChange={(e) => setAIInputText(e.target.value)}
+                placeholder="예: 다음 주 수요일까지 사용자 인증 기능을 개발해야 합니다. JWT 토큰 기반으로 로그인, 로그아웃 API를 구현해주세요."
+                className="w-full h-40 border border-gray-300 rounded-md shadow-sm p-3 mb-4"
+              />
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAIModal(false)}
+                  className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+                  disabled={isAnalyzing}
+                >
+                  취소
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAnalyzeRequirement}
+                  className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 disabled:bg-purple-400 flex items-center"
+                  disabled={isAnalyzing}
+                >
+                  {isAnalyzing ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      분석 중...
+                    </>
+                  ) : '분석하기'}
+                </button>
+              </div>
             </div>
           </div>
         )}
