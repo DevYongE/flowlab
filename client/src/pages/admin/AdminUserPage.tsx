@@ -49,7 +49,7 @@ const AdminUserPage = () => {
   };
   const fetchRoles = async () => {
     try {
-      const res = await axios.get('/api/roles');
+      const res = await axios.get('/roles');
       setRoles(res.data);
     } catch (err) {
       setRoles([]);
