@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import axios from '../../lib/axios';
-import MainLayout from '../../components/layout/MainLayout';
 
 interface Company {
   company_id: string;
@@ -119,71 +118,69 @@ const AdminCompanyPage: React.FC = () => {
   );
 
   return (
-    <MainLayout>
-      <div className="container mx-auto p-6">
-        <h1 className="text-2xl font-bold mb-6">🏢 기업관리</h1>
-        {/* 탭 버튼 (기업관리 단일 탭) */}
-        <div className="flex gap-2 mb-6">
-          {TABS.map(t => (
-            <button
-              key={t.key}
-              className={`px-4 py-2 rounded-t-md font-semibold border-b-2 ${tab === t.key ? 'border-blue-600 text-blue-700 bg-white' : 'border-transparent text-gray-400 bg-gray-100'}`}
-              disabled
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-        {/* 검색/필터 영역 */}
-        <div className="mb-4 flex gap-2">
-          <input className="border p-2 rounded w-64" placeholder="기업명, 업종 검색" value={search} onChange={e => setSearch(e.target.value)} />
-          <button className="bg-blue-500 text-white px-4 py-2 rounded" onClick={fetchCompanies}>새로고침</button>
-          <button className="bg-green-500 text-white px-4 py-2 rounded" onClick={() => { setSelectedCompany(null); setShowModal(true); }}>기업 등록</button>
-        </div>
-        {/* 기업 목록 테이블 */}
-        <div className="bg-white rounded shadow p-4">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-gray-50">
-                <th className="py-2 px-3 text-center">이름</th>
-                <th className="py-2 px-3 text-center">업종</th>
-                <th className="py-2 px-3 text-center">설립일</th>
-                <th className="py-2 px-3 text-center">활성</th>
-                <th className="py-2 px-3 text-center">관리</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredCompanies.length === 0 ? (
-                <tr><td colSpan={5} className="text-center text-gray-400 py-8">기업이 없습니다.</td></tr>
-              ) : filteredCompanies.map(c => (
-                <tr key={c.company_id} className="hover:bg-gray-50">
-                  <td className="py-2 px-3 text-center">{c.company_name}</td>
-                  <td className="py-2 px-3 text-center">{c.industry_type}</td>
-                  <td className="py-2 px-3 text-center">{c.founded_at}</td>
-                  <td className="py-2 px-3 text-center">{c.is_active ? 'Y' : 'N'}</td>
-                  <td className="py-2 px-3 text-center">
-                    <button className="text-green-500 hover:text-green-700 mx-1" onClick={() => { setSelectedCompany(c); setShowModal(true); }}>수정</button>
-                    <button className="text-red-500 hover:text-red-700 mx-1" onClick={() => handleDelete(c.company_id)}>삭제</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {/* 등록/수정 모달 */}
-        {showModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded-lg shadow-lg min-w-[350px] space-y-4">
-              <CompanyForm
-                onSuccess={fetchCompanies}
-                onClose={() => setShowModal(false)}
-                initial={selectedCompany}
-              />
-            </div>
-          </div>
-        )}
+    <div className="container mx-auto p-6">
+      <h1 className="text-2xl font-bold mb-6">🏢 기업관리</h1>
+      {/* 탭 버튼 (기업관리 단일 탭) */}
+      <div className="flex gap-2 mb-6">
+        {TABS.map(t => (
+          <button
+            key={t.key}
+            className={`px-4 py-2 rounded-t-md font-semibold border-b-2 ${tab === t.key ? 'border-blue-600 text-blue-700 bg-white' : 'border-transparent text-gray-400 bg-gray-100'}`}
+            disabled
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
-    </MainLayout>
+      {/* 검색/필터 영역 */}
+      <div className="mb-4 flex gap-2">
+        <input className="border p-2 rounded w-64" placeholder="기업명, 업종 검색" value={search} onChange={e => setSearch(e.target.value)} />
+        <button className="bg-blue-500 text-white px-4 py-2 rounded" onClick={fetchCompanies}>새로고침</button>
+        <button className="bg-green-500 text-white px-4 py-2 rounded" onClick={() => { setSelectedCompany(null); setShowModal(true); }}>기업 등록</button>
+      </div>
+      {/* 기업 목록 테이블 */}
+      <div className="bg-white rounded shadow p-4">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-gray-50">
+              <th className="py-2 px-3 text-center">이름</th>
+              <th className="py-2 px-3 text-center">업종</th>
+              <th className="py-2 px-3 text-center">설립일</th>
+              <th className="py-2 px-3 text-center">활성</th>
+              <th className="py-2 px-3 text-center">관리</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredCompanies.length === 0 ? (
+              <tr><td colSpan={5} className="text-center text-gray-400 py-8">기업이 없습니다.</td></tr>
+            ) : filteredCompanies.map(c => (
+              <tr key={c.company_id} className="hover:bg-gray-50">
+                <td className="py-2 px-3 text-center">{c.company_name}</td>
+                <td className="py-2 px-3 text-center">{c.industry_type}</td>
+                <td className="py-2 px-3 text-center">{c.founded_at}</td>
+                <td className="py-2 px-3 text-center">{c.is_active ? 'Y' : 'N'}</td>
+                <td className="py-2 px-3 text-center">
+                  <button className="text-green-500 hover:text-green-700 mx-1" onClick={() => { setSelectedCompany(c); setShowModal(true); }}>수정</button>
+                  <button className="text-red-500 hover:text-red-700 mx-1" onClick={() => handleDelete(c.company_id)}>삭제</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {/* 등록/수정 모달 */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg min-w-[350px] space-y-4">
+            <CompanyForm
+              onSuccess={fetchCompanies}
+              onClose={() => setShowModal(false)}
+              initial={selectedCompany}
+            />
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 
