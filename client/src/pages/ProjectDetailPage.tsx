@@ -210,6 +210,9 @@ const ProjectDetailPage = () => {
             deadline: note.deadline ? new Date(note.deadline) : null,
             status: '미완료',
             progress: 0,
+            parent_id: null,
+            order: 0,
+            author_id: currentUser?.id || ''
           });
         }
       } else {
