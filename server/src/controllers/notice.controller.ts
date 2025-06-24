@@ -32,8 +32,11 @@ export const getNotice = async (req: Request, res: Response) => {
        LEFT JOIN users u ON n.author_id = u.id 
        WHERE n.notice_id = :id`,
       { replacements: { id }, type: QueryTypes.SELECT }
-    );
-    const notice = notices[0];
+    ) as any[];
+    let notice: any = undefined;
+    if (Array.isArray(notices) && notices.length > 0) {
+      notice = notices[0];
+    }
     if (!notice) {
       res.status(404).json({ message: '공지사항 없음' });
       return;
@@ -102,8 +105,12 @@ export const deleteNotice = async (req: Request, res: Response) => {
     const deleted = await sequelize.query('DELETE FROM notices WHERE notice_id = :id RETURNING *', {
       replacements: { id },
       type: QueryTypes.DELETE,
-    });
-    if (!deleted[0]) {
+    }) as any[];
+    let deletedRow: any = undefined;
+    if (Array.isArray(deleted) && deleted.length > 0) {
+      deletedRow = deleted[0];
+    }
+    if (!deletedRow) {
       res.status(404).json({ message: '공지사항 없음' });
       return;
     }
