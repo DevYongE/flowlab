@@ -20,6 +20,7 @@ const RegisterPage: React.FC = () => {
     joinDate: '',
   });
   const [positions, setPositions] = useState<{ position_code: string; name: string }[]>([]);
+  const [idCheck, setIdCheck] = useState<{ checked: boolean; exists: boolean }>({ checked: false, exists: false });
 
   useEffect(() => {
     axios.get('/positions')
@@ -29,6 +30,20 @@ const RegisterPage: React.FC = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleIdChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setForm({ ...form, id: value });
+    setIdCheck({ checked: false, exists: false });
+    if (value) {
+      try {
+        const res = await axios.get(`/users/check-id?id=${value}`);
+        setIdCheck({ checked: true, exists: res.data.exists });
+      } catch {
+        setIdCheck({ checked: true, exists: false });
+      }
+    }
   };
 
 const handleRegister = async () => {
@@ -78,7 +93,10 @@ const handleRegister = async () => {
       <Card className="w-[500px] shadow-2xl rounded-2xl">
         <CardContent className="p-8 space-y-4">
           <h1 className="text-2xl font-bold text-center">📝 회원가입</h1>
-          <Input name="id" placeholder="아이디" value={form.id} onChange={handleChange} />
+          <Input name="id" placeholder="아이디" value={form.id} onChange={handleIdChange} />
+          {idCheck.checked && idCheck.exists && (
+            <div className="text-red-500 text-sm">이미 사용 중인 아이디입니다.</div>
+          )}
           <Input name="password" type="password" placeholder="비밀번호" value={form.password} onChange={handleChange} />
           <Input name="confirmPassword" type="password" placeholder="비밀번호 확인" value={form.confirmPassword} onChange={handleChange} />
           <Input name="email" placeholder="이메일" value={form.email} onChange={handleChange} />
@@ -97,7 +115,7 @@ const handleRegister = async () => {
           </select>
           <Input name="department" placeholder="부서명" value={form.department} onChange={handleChange} />
           <Input name="joinDate" placeholder="입사일자 (YYYY-MM)" value={form.joinDate} onChange={handleChange} />
-          <Button className="w-full rounded-xl text-lg" onClick={handleRegister}>가입하기</Button>
+          <Button className="w-full rounded-xl text-lg" onClick={handleRegister} disabled={idCheck.exists}>가입하기</Button>
         </CardContent>
       </Card>
     </div>
