@@ -13,8 +13,6 @@ const menu = [
 
 const adminMenu = [
   { icon: '👤', label: '회원관리', to: '/admin/users' },
-  { icon: '🛡️', label: '권한관리', to: '/admin/roles' },
-  { icon: '🏢', label: '부서관리', to: '/admin/departments' },
 ];
 
 const Sidebar: React.FC<SidebarProps> = ({ isMini }) => {
