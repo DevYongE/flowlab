@@ -51,8 +51,8 @@ export const getProjects = async (req: Request, res: Response) => {
     }
 
     query += ' ORDER BY start_date DESC';
-    const [projects, meta] = await sequelize.query(query, { replacements: params, type: QueryTypes.SELECT });
-    res.json(projects);
+    const projects = await sequelize.query(query, { replacements: params, type: QueryTypes.SELECT });
+    res.json(Array.isArray(projects) ? projects : []);
   } catch (error) {
     res.status(500).json({ message: '프로젝트 목록 조회 실패', error });
   }
