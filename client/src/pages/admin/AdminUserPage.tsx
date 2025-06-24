@@ -2,12 +2,14 @@ import MainLayout from '../../components/layout/MainLayout';
 import { useState, useEffect } from 'react';
 import axios from '../../lib/axios';
 import { FaUserEdit, FaTrash, FaKey, FaExchangeAlt, FaUserTie, FaInfoCircle, FaPlus } from 'react-icons/fa';
+import AdminCompanyPage from './AdminCompanyPage';
 
 const TABS = [
   { key: 'users', label: '회원관리' },
   { key: 'positions', label: '직급관리' },
   { key: 'roles', label: '권한관리' },
   { key: 'departments', label: '부서관리' },
+  { key: 'companies', label: '기업관리' },
 ];
 
 const AdminUserPage = () => {
@@ -284,6 +286,12 @@ const AdminUserPage = () => {
               </div>
             )}
           </>
+        )}
+        {/* 기업관리 탭 내용 */}
+        {tab === 'companies' && (
+          <div className="bg-white rounded shadow p-4">
+            <AdminCompanyPage />
+          </div>
         )}
         {tab === 'positions' && (
           <div className="bg-white rounded shadow p-4 mb-4">
