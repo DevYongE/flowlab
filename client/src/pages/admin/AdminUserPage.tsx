@@ -213,9 +213,20 @@ const AdminUserPage = () => {
             {/* 권한 부여 모달 */}
             {showRole && selectedUser && (
               <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-                <form className="bg-white p-6 rounded-lg shadow-lg min-w-[350px] space-y-4">
+                <form className="bg-white p-6 rounded-lg shadow-lg min-w-[350px] space-y-4" onSubmit={async (e) => {
+                  e.preventDefault();
+                  const form = e.target as HTMLFormElement;
+                  const role_code = (form.elements.namedItem('role_code') as HTMLSelectElement).value;
+                  try {
+                    await axios.patch(`/users/${selectedUser.id}/role`, { role_code });
+                    await fetchUsers();
+                    handleClose();
+                  } catch (err) {
+                    alert('권한 변경 실패');
+                  }
+                }}>
                   <h2 className="text-lg font-bold mb-2">권한 부여</h2>
-                  <select className="w-full border rounded p-2" defaultValue={selectedUser.role_code || selectedUser.role}>
+                  <select name="role_code" className="w-full border rounded p-2" defaultValue={selectedUser.role_code || selectedUser.role}>
                     {roles.map((role: any) => (
                       <option key={role.role_code} value={role.role_code}>{role.name}</option>
                     ))}
@@ -247,9 +258,20 @@ const AdminUserPage = () => {
             {/* 직급 관리 모달 */}
             {showPosition && selectedUser && (
               <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-                <form className="bg-white p-6 rounded-lg shadow-lg min-w-[350px] space-y-4">
+                <form className="bg-white p-6 rounded-lg shadow-lg min-w-[350px] space-y-4" onSubmit={async (e) => {
+                  e.preventDefault();
+                  const form = e.target as HTMLFormElement;
+                  const position_code = (form.elements.namedItem('position_code') as HTMLSelectElement).value;
+                  try {
+                    await axios.patch(`/users/${selectedUser.id}/position`, { position_code });
+                    await fetchUsers();
+                    handleClose();
+                  } catch (err) {
+                    alert('직급 변경 실패');
+                  }
+                }}>
                   <h2 className="text-lg font-bold mb-2">직급 관리</h2>
-                  <select className="w-full border rounded p-2" defaultValue={selectedUser.position_code || selectedUser.position || selectedUser.position_name}>
+                  <select name="position_code" className="w-full border rounded p-2" defaultValue={selectedUser.position_code || selectedUser.position || selectedUser.position_name}>
                     {positions.map((pos: any) => (
                       <option key={pos.position_code} value={pos.position_code}>{pos.name}</option>
                     ))}
