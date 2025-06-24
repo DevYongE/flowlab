@@ -1,6 +1,7 @@
 import MainLayout from '../../components/layout/MainLayout';
 import { useState, useEffect } from 'react';
 import axios from '../../lib/axios';
+import { FaUserEdit, FaTrash, FaKey, FaExchangeAlt, FaUserTie, FaInfoCircle } from 'react-icons/fa';
 
 const AdminUserPage = () => {
   const [users, setUsers] = useState<any[]>([]);
@@ -72,34 +73,34 @@ const AdminUserPage = () => {
         <div className="bg-white rounded shadow p-4">
           <table className="w-full text-sm">
             <thead>
-              <tr>
-                <th>이름</th>
-                <th>이메일</th>
-                <th>부서</th>
-                <th>직급</th>
-                <th>권한</th>
-                <th>상태</th>
-                <th>관리</th>
+              <tr className="bg-gray-50">
+                <th className="py-2 px-3 text-center">이름</th>
+                <th className="py-2 px-3 text-center">이메일</th>
+                <th className="py-2 px-3 text-center">부서</th>
+                <th className="py-2 px-3 text-center">직급</th>
+                <th className="py-2 px-3 text-center">권한</th>
+                <th className="py-2 px-3 text-center">상태</th>
+                <th className="py-2 px-3 text-center">관리</th>
               </tr>
             </thead>
             <tbody>
               {filteredUsers.length === 0 ? (
                 <tr><td colSpan={7} className="text-center text-gray-400 py-8">회원이 없습니다.</td></tr>
               ) : filteredUsers.map(user => (
-                <tr key={user.id}>
-                  <td>{user.name}</td>
-                  <td>{user.email}</td>
-                  <td>{user.department || user.department_name}</td>
-                  <td>{user.position || user.position_name}</td>
-                  <td>{user.role || user.role_code}</td>
-                  <td>{user.status || (user.is_active ? '활성' : '비활성')}</td>
-                  <td>
-                    <button className="text-blue-500 mr-2" onClick={() => handleOpen('detail', user)}>상세</button>
-                    <button className="text-green-500 mr-2" onClick={() => handleOpen('edit', user)}>수정</button>
-                    <button className="text-red-500 mr-2" onClick={() => handleDelete(user)}>삭제</button>
-                    <button className="text-purple-500 mr-2" onClick={() => handleOpen('role', user)}>권한부여</button>
-                    <button className="text-yellow-600 mr-2" onClick={() => handleOpen('dept', user)}>부서이동</button>
-                    <button className="text-pink-500" onClick={() => handleOpen('position', user)}>직급관리</button>
+                <tr key={user.id} className="hover:bg-gray-50">
+                  <td className="py-2 px-3 text-center">{user.name}</td>
+                  <td className="py-2 px-3 text-center">{user.email}</td>
+                  <td className="py-2 px-3 text-center">{user.department || user.department_name}</td>
+                  <td className="py-2 px-3 text-center">{user.position || user.position_name}</td>
+                  <td className="py-2 px-3 text-center">{user.role || user.role_code}</td>
+                  <td className="py-2 px-3 text-center">{user.status || (user.is_active ? '활성' : '비활성')}</td>
+                  <td className="py-2 px-3 text-center">
+                    <button title="상세" className="text-blue-500 hover:text-blue-700 mx-1" onClick={() => handleOpen('detail', user)}><FaInfoCircle /></button>
+                    <button title="수정" className="text-green-500 hover:text-green-700 mx-1" onClick={() => handleOpen('edit', user)}><FaUserEdit /></button>
+                    <button title="삭제" className="text-red-500 hover:text-red-700 mx-1" onClick={() => handleDelete(user)}><FaTrash /></button>
+                    <button title="권한부여" className="text-purple-500 hover:text-purple-700 mx-1" onClick={() => handleOpen('role', user)}><FaKey /></button>
+                    <button title="부서이동" className="text-yellow-600 hover:text-yellow-800 mx-1" onClick={() => handleOpen('dept', user)}><FaExchangeAlt /></button>
+                    <button title="직급관리" className="text-pink-500 hover:text-pink-700 mx-1" onClick={() => handleOpen('position', user)}><FaUserTie /></button>
                   </td>
                 </tr>
               ))}
