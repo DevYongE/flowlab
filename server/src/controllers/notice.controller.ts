@@ -26,21 +26,24 @@ export const getNotice = async (req: Request, res: Response) => {
       type: QueryTypes.UPDATE,
     });
     // 공지사항 조회 (작성자 이름도 함께 가져오기)
-    const [results] = await sequelize.query(
+    const result = await sequelize.query(
       `SELECT n.*, u.name as author_name 
        FROM notices n 
        LEFT JOIN users u ON n.author_id = u.id 
        WHERE n.notice_id = :id`,
       { replacements: { id }, type: QueryTypes.SELECT }
-    ) as [any[], any];
-    let notice: any = undefined;
-    if (Array.isArray(results) && results.length > 0) {
-      notice = results[0];
+    );
+    let rows: any[] = [];
+    if (Array.isArray(result) && Array.isArray(result[0])) {
+      rows = result[0];
+    } else if (Array.isArray(result)) {
+      rows = result as any[];
     }
-    if (!notice) {
+    if (!rows.length) {
       res.status(404).json({ message: '공지사항 없음' });
       return;
     }
+    const notice = rows[0] as any;
     res.json(notice);
   } catch (err) {
     res.status(500).json({ message: '공지사항 조회 실패', error: err });
@@ -102,15 +105,17 @@ export const updateNotice = async (req: Request, res: Response) => {
 export const deleteNotice = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const [deletedRows] = await sequelize.query('DELETE FROM notices WHERE notice_id = :id RETURNING *', {
+    const resultDel = await sequelize.query('DELETE FROM notices WHERE notice_id = :id RETURNING *', {
       replacements: { id },
       type: QueryTypes.DELETE,
-    }) as [any[], any];
-    let deletedRow: any = undefined;
-    if (Array.isArray(deletedRows) && deletedRows.length > 0) {
-      deletedRow = deletedRows[0];
+    });
+    let rowsDel: any[] = [];
+    if (Array.isArray(resultDel) && Array.isArray(resultDel[0])) {
+      rowsDel = resultDel[0];
+    } else if (Array.isArray(resultDel)) {
+      rowsDel = resultDel as any[];
     }
-    if (!deletedRow) {
+    if (!rowsDel.length) {
       res.status(404).json({ message: '공지사항 없음' });
       return;
     }

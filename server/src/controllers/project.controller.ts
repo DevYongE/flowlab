@@ -65,15 +65,18 @@ export const getProjectById = async (req: Request, res: Response) => {
   const currentUserRole = req.user?.role;
 
   try {
-    const [results] = await sequelize.query('SELECT *, TO_CHAR(start_date, \'YYYY-MM-DD\') as "startDate", TO_CHAR(end_date, \'YYYY-MM-DD\') as "endDate" FROM projects WHERE id = :id', { replacements: { id }, type: QueryTypes.SELECT }) as [any[], any];
-    let project: any = undefined;
-    if (Array.isArray(results) && results.length > 0) {
-      project = results[0];
+    const result = await sequelize.query('SELECT *, TO_CHAR(start_date, \'YYYY-MM-DD\') as "startDate", TO_CHAR(end_date, \'YYYY-MM-DD\') as "endDate" FROM projects WHERE id = :id', { replacements: { id }, type: QueryTypes.SELECT });
+    let rows: any[] = [];
+    if (Array.isArray(result) && Array.isArray(result[0])) {
+      rows = result[0];
+    } else if (Array.isArray(result)) {
+      rows = result as any[];
     }
-    if (!project) {
+    if (!rows.length) {
       res.status(404).json({ message: '프로젝트를 찾을 수 없습니다.' });
       return;
     }
+    const project = rows[0] as any;
 
     if (currentUserRole !== 'ADMIN' && currentUserId !== project.author_id) {
       res.status(403).json({ message: '프로젝트에 접근할 권한이 없습니다.' });
