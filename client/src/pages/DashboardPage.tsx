@@ -52,7 +52,14 @@ const DashboardPage: React.FC = () => {
     // 프로젝트 목록 및 첫 번째 프로젝트의 WBS 불러오기
     setLoadingProjects(true);
     axios.get<Project[]>('/projects')
-      .then(res => setProjects(res.data))
+      .then(res => {
+        if (Array.isArray(res.data)) {
+          setProjects(res.data);
+        } else {
+          setProjects([]);
+          console.error('프로젝트 목록 응답이 배열이 아님:', res.data);
+        }
+      })
       .catch(() => setProjects([]))
       .finally(() => setLoadingProjects(false));
   }, []);
@@ -70,9 +77,9 @@ const DashboardPage: React.FC = () => {
   // 날짜별 프로젝트 일정 매핑
   function getProjectsForDate(date: Date): Project[] {
     const dayStr = date.toISOString().slice(0, 10);
-    return projects.filter(proj => {
-      return dayStr >= proj.startDate && dayStr <= proj.endDate;
-    });
+    return Array.isArray(projects)
+      ? projects.filter(proj => dayStr >= proj.startDate && dayStr <= proj.endDate)
+      : [];
   }
 
   const [calendarDate, setCalendarDate] = useState<Date>(new Date());
