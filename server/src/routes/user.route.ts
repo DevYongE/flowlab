@@ -3,15 +3,16 @@ import {
   registerUser, getUsers, updateUser, deleteUser,
   updateUserRole, updateUserDepartment, updateUserPosition
 } from '../controllers/user.controller';
+import { authenticate } from '../middlewares/auth.middleware';
 
 const router = express.Router();
 
-router.get('/', getUsers);
-router.post('/register', registerUser); // 🔥 여기서 더 이상 오류 안 남
-router.put('/:id', updateUser);
-router.delete('/:id', deleteUser);
-router.patch('/:id/role', updateUserRole);
-router.patch('/:id/department', updateUserDepartment);
-router.patch('/:id/position', updateUserPosition);
+router.get('/', authenticate, getUsers);
+router.post('/register', registerUser); // 회원가입은 인증 불필요
+router.put('/:id', authenticate, updateUser);
+router.delete('/:id', authenticate, deleteUser);
+router.patch('/:id/role', authenticate, updateUserRole);
+router.patch('/:id/department', authenticate, updateUserDepartment);
+router.patch('/:id/position', authenticate, updateUserPosition);
 
 export default router;
