@@ -1,7 +1,8 @@
 // server/controllers/user.controller.ts
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
-import sequelize, { QueryTypes } from '../config/db';
+import sequelize from '../config/db';
+import { QueryTypes } from 'sequelize';
 
 // 사용자 전체 조회
 export const getUsers = async (req: Request, res: Response) => {
@@ -40,7 +41,7 @@ export const registerUser = async (req: Request, res: Response) => {
     const prefix = join_date.replace('-', '').slice(2); // '2025-06' => '2506'
 
     const [countRes]: any = await sequelize.query(
-      'SELECT COUNT(*) FROM users WHERE user_code LIKE :prefix',
+      'SELECT COUNT(*) as count FROM users WHERE user_code LIKE :prefix',
       { replacements: { prefix: `${prefix}%` }, type: QueryTypes.SELECT }
     );
 
@@ -82,8 +83,11 @@ export const updateUser = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { name, email, department, position_code } = req.body;
     await sequelize.query(
-      `UPDATE users SET name=$1, email=$2, department=$3, position_code=$4 WHERE id=$5`,
-      [name, email, department, position_code, id]
+      `UPDATE users SET name=:name, email=:email, department=:department, position_code=:position_code WHERE id=:id`,
+      {
+        replacements: { name, email, department, position_code, id },
+        type: QueryTypes.UPDATE,
+      }
     );
     res.status(200).json({ message: '회원 정보가 수정되었습니다.' });
   } catch (err) {
@@ -110,7 +114,13 @@ export const updateUserRole = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { role_code } = req.body;
-    await sequelize.query(`UPDATE users SET role_code=$1 WHERE id=$2`, [role_code, id]);
+    await sequelize.query(
+      `UPDATE users SET role_code=:role_code WHERE id=:id`,
+      {
+        replacements: { role_code, id },
+        type: QueryTypes.UPDATE,
+      }
+    );
     res.status(200).json({ message: '권한이 변경되었습니다.' });
   } catch (err) {
     res.status(500).json({ message: '권한 변경 실패', error: err });
@@ -122,7 +132,13 @@ export const updateUserDepartment = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { department } = req.body;
-    await sequelize.query(`UPDATE users SET department=$1 WHERE id=$2`, [department, id]);
+    await sequelize.query(
+      `UPDATE users SET department=:department WHERE id=:id`,
+      {
+        replacements: { department, id },
+        type: QueryTypes.UPDATE,
+      }
+    );
     res.status(200).json({ message: '부서가 변경되었습니다.' });
   } catch (err) {
     res.status(500).json({ message: '부서 변경 실패', error: err });

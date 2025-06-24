@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
-import pool from '../config/db';
+import sequelize from '../config/db';
+import { QueryTypes } from 'sequelize';
 
 // WBS/DevNotes 데이터를 계층 구조로 변환하는 헬퍼 함수
 const buildDevNotesTree = (items: any[]): any[] => {
@@ -42,17 +43,16 @@ export const getProjects = async (req: Request, res: Response) => {
       SELECT id, category, type, name, TO_CHAR(start_date, 'YYYY-MM-DD') as "startDate", TO_CHAR(end_date, 'YYYY-MM-DD') as "endDate", progress
       FROM projects
     `;
-    const params = [];
+    const params: any = {};
 
     if (currentUserRole !== 'ADMIN') {
-      query += ' WHERE author_id = $1';
-      params.push(currentUserId);
+      query += ' WHERE author_id = :author_id';
+      params.author_id = currentUserId;
     }
 
     query += ' ORDER BY start_date DESC';
-    
-    const result = await pool.query(query, params);
-    res.json(result.rows);
+    const projects = await sequelize.query(query, { replacements: params, type: QueryTypes.SELECT });
+    res.json(projects);
   } catch (error) {
     res.status(500).json({ message: '프로젝트 목록 조회 실패', error });
   }
@@ -65,29 +65,29 @@ export const getProjectById = async (req: Request, res: Response) => {
   const currentUserRole = req.user?.role;
 
   try {
-    const projectRes = await pool.query('SELECT *, TO_CHAR(start_date, \'YYYY-MM-DD\') as "startDate", TO_CHAR(end_date, \'YYYY-MM-DD\') as "endDate" FROM projects WHERE id = $1', [id]);
-    if (projectRes.rowCount === 0) {
+    const projectRes = await sequelize.query('SELECT *, TO_CHAR(start_date, \'YYYY-MM-DD\') as "startDate", TO_CHAR(end_date, \'YYYY-MM-DD\') as "endDate" FROM projects WHERE id = :id', { replacements: { id }, type: QueryTypes.SELECT });
+    if (projectRes.length === 0) {
       res.status(404).json({ message: '프로젝트를 찾을 수 없습니다.' });
       return;
     }
-    const project = projectRes.rows[0];
+    const project = projectRes[0];
 
     if (currentUserRole !== 'ADMIN' && currentUserId !== project.author_id) {
       res.status(403).json({ message: '프로젝트에 접근할 권한이 없습니다.' });
       return;
     }
 
-    const detailsRes = await pool.query('SELECT * FROM project_details WHERE project_id = $1', [id]);
-    project.details = detailsRes.rows[0] || {};
+    const detailsRes = await sequelize.query('SELECT * FROM project_details WHERE project_id = :project_id', { replacements: { project_id: id }, type: QueryTypes.SELECT });
+    project.details = detailsRes[0] || {};
     
-    const notesRes = await pool.query(
+    const notesRes = await sequelize.query(
       `SELECT dn.*, u.name as "authorName", TO_CHAR(dn.registered_at, 'YYYY-MM-DD') as "registeredAt" 
        FROM dev_notes dn
        LEFT JOIN users u ON dn.author_id = u.id
-       WHERE dn.project_id = $1 ORDER BY dn.registered_at DESC`, 
-      [id]
+       WHERE dn.project_id = :project_id ORDER BY dn.registered_at DESC`, 
+      { replacements: { project_id: id }, type: QueryTypes.SELECT }
     );
-    project.devNotes = notesRes.rows;
+    project.devNotes = notesRes;
 
     res.json(project);
   } catch (error) {
@@ -99,15 +99,15 @@ export const getProjectById = async (req: Request, res: Response) => {
 export const getDevNotesAsWbs = async (req: Request, res: Response) => {
   const { projectId } = req.params;
   try {
-    const notesRes = await pool.query(
+    const notesRes = await sequelize.query(
       `SELECT dn.*, u.name as "authorName", TO_CHAR(dn.registered_at, 'YYYY-MM-DD') as "registeredAt" 
        FROM dev_notes dn
        LEFT JOIN users u ON dn.author_id = u.id
-       WHERE dn.project_id = $1 
+       WHERE dn.project_id = :project_id 
        ORDER BY dn.parent_id, dn."order" ASC`,
-      [projectId]
+      { replacements: { project_id: projectId }, type: QueryTypes.SELECT }
     );
-    const tree = buildDevNotesTree(notesRes.rows);
+    const tree = buildDevNotesTree(notesRes);
     res.json(tree);
   } catch (error) {
     console.error('WBS(DevNotes) 조회 오류:', error);
@@ -131,17 +131,17 @@ export const getProjectStatusSummary = async (req: Request, res: Response) => {
         COUNT(id)::int as count
       FROM projects
     `;
-    const params = [];
+    const params: any = {};
 
     if (currentUserRole !== 'ADMIN') {
-      query += ' WHERE author_id = $1';
-      params.push(currentUserId);
+      query += ' WHERE author_id = :author_id';
+      params.author_id = currentUserId;
     }
 
     query += ' GROUP BY status';
 
-    const result = await pool.query(query, params);
-    res.json(result.rows);
+    const result = await sequelize.query(query, { replacements: params, type: QueryTypes.SELECT });
+    res.json(result);
   } catch (error) {
     console.error('프로젝트 상태 요약 조회 실패:', error);
     res.status(500).json({ message: '프로젝트 상태 요약 조회 실패', error });
@@ -153,7 +153,7 @@ export const createProject = async (req: Request, res: Response) => {
   const { category, type, name, startDate, endDate, os, memory, javaVersion, springVersion, reactVersion, vueVersion, tomcatVersion, centricVersion } = req.body;
   const authorId = req.user?.id;
 
-  const client = await pool.connect();
+  const client = await sequelize.getQueryInterface().sequelize;
   try {
     await client.query('BEGIN');
     const projectRes = await client.query(
@@ -172,8 +172,6 @@ export const createProject = async (req: Request, res: Response) => {
   } catch (error) {
     await client.query('ROLLBACK');
     res.status(500).json({ message: '프로젝트 생성 실패', error });
-  } finally {
-    client.release();
   }
 };
 
@@ -184,16 +182,16 @@ export const updateProject = async (req: Request, res: Response) => {
   const currentUserId = req.user?.id;
   const currentUserRole = req.user?.role;
 
-  const client = await pool.connect();
+  const client = await sequelize.getQueryInterface().sequelize;
   try {
     await client.query('BEGIN');
     
-    const projectRes = await client.query('SELECT author_id FROM projects WHERE id = $1', [id]);
-    if (projectRes.rowCount === 0) {
+    const projectRes = await client.query('SELECT author_id FROM projects WHERE id = :id', { replacements: { id } });
+    if (projectRes.length === 0) {
       res.status(404).json({ message: '프로젝트를 찾을 수 없습니다.' });
       return;
     }
-    const projectAuthorId = projectRes.rows[0].author_id;
+    const projectAuthorId = projectRes[0].author_id;
 
     if (currentUserRole !== 'ADMIN' && currentUserId !== projectAuthorId) {
       res.status(403).json({ message: '프로젝트를 수정할 권한이 없습니다.' });
@@ -215,8 +213,6 @@ export const updateProject = async (req: Request, res: Response) => {
   } catch (error) {
     await client.query('ROLLBACK');
     res.status(500).json({ message: '프로젝트 수정 실패', error });
-  } finally {
-    client.release();
   }
 };
 
@@ -226,33 +222,31 @@ export const deleteProject = async (req: Request, res: Response) => {
     const currentUserId = req.user?.id;
     const currentUserRole = req.user?.role;
 
-    const client = await pool.connect();
+    const client = await sequelize.getQueryInterface().sequelize;
     try {
         await client.query('BEGIN');
         
-        const projectRes = await client.query('SELECT author_id FROM projects WHERE id = $1', [id]);
-        if (projectRes.rowCount === 0) {
+        const projectRes = await client.query('SELECT author_id FROM projects WHERE id = :id', { replacements: { id } });
+        if (projectRes.length === 0) {
             res.status(404).json({ message: '프로젝트를 찾을 수 없습니다.' });
             return;
         }
-        const projectAuthorId = projectRes.rows[0].author_id;
+        const projectAuthorId = projectRes[0].author_id;
 
         if (currentUserRole !== 'ADMIN' && currentUserId !== projectAuthorId) {
             res.status(403).json({ message: '프로젝트를 삭제할 권한이 없습니다.' });
             return;
         }
 
-        await client.query('DELETE FROM project_details WHERE project_id = $1', [id]);
-        await client.query('DELETE FROM dev_notes WHERE project_id = $1', [id]);
-        await client.query('DELETE FROM projects WHERE id = $1', [id]);
+        await client.query('DELETE FROM project_details WHERE project_id = :project_id', { replacements: { project_id: id } });
+        await client.query('DELETE FROM dev_notes WHERE project_id = :project_id', { replacements: { project_id: id } });
+        await client.query('DELETE FROM projects WHERE id = :id', { replacements: { id } });
 
         await client.query('COMMIT');
         res.json({ message: '프로젝트가 성공적으로 삭제되었습니다.' });
     } catch (error) {
         await client.query('ROLLBACK');
         res.status(500).json({ message: '프로젝트 삭제 실패', error });
-    } finally {
-        client.release();
     }
 };
 
@@ -286,8 +280,8 @@ export const getOngoingProjects = async (req: Request, res: Response) => {
             LIMIT 3
         `;
 
-        const result = await pool.query(query, params);
-        res.json(result.rows);
+        const result = await sequelize.query(query, { replacements: params, type: QueryTypes.SELECT });
+        res.json(result);
     } catch (error) {
         res.status(500).json({ message: '진행중인 프로젝트 목록 조회 실패', error });
     }
@@ -301,21 +295,21 @@ export const createDevNote = async (req: Request, res: Response) => {
     const currentUserRole = req.user?.role;
 
     try {
-        const projectRes = await pool.query('SELECT author_id FROM projects WHERE id = $1', [projectId]);
-        if (projectRes.rowCount === 0) {
+        const projectRes = await sequelize.query('SELECT author_id FROM projects WHERE id = :project_id', { replacements: { project_id: projectId }, type: QueryTypes.SELECT });
+        if (projectRes.length === 0) {
             res.status(404).json({ message: '프로젝트를 찾을 수 없습니다.' });
             return;
         }
         
-        const projectAuthorId = projectRes.rows[0].author_id;
+        const projectAuthorId = projectRes[0].author_id;
         if (currentUserRole !== 'ADMIN' && authorId !== projectAuthorId) {
             res.status(403).json({ message: '이 프로젝트에 요구사항을 추가할 권한이 없습니다.' });
             return;
         }
         
-        const result = await pool.query(
+        const result = await sequelize.query(
             'INSERT INTO dev_notes (project_id, content, deadline, status, progress, author_id, parent_id, "order") VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
-            [projectId, content, deadline, status, progress, authorId, parent_id, order]
+            { replacements: [projectId, content, deadline, status, progress, authorId, parent_id, order], type: QueryTypes.INSERT }
         );
         res.status(201).json(result.rows[0]);
     } catch (error) {
@@ -331,21 +325,21 @@ export const updateDevNote = async (req: Request, res: Response) => {
     const currentUserRole = req.user?.role;
 
     try {
-        const noteRes = await pool.query('SELECT author_id FROM dev_notes WHERE id = $1', [noteId]);
-        if (noteRes.rowCount === 0) {
+        const noteRes = await sequelize.query('SELECT author_id FROM dev_notes WHERE id = :note_id', { replacements: { note_id: noteId }, type: QueryTypes.SELECT });
+        if (noteRes.length === 0) {
             res.status(404).json({ message: '노트를 찾을 수 없습니다.' });
             return;
         }
-        const noteAuthorId = noteRes.rows[0].author_id;
+        const noteAuthorId = noteRes[0].author_id;
 
         if (currentUserRole !== 'ADMIN' && currentUserId !== noteAuthorId) {
             res.status(403).json({ message: '노트를 수정할 권한이 없습니다.' });
             return;
         }
 
-        const result = await pool.query(
+        const result = await sequelize.query(
             'UPDATE dev_notes SET content=$1, deadline=$2, status=$3, progress=$4 WHERE id=$5 RETURNING *',
-            [content, deadline, status, progress, noteId]
+            { replacements: [content, deadline, status, progress, noteId], type: QueryTypes.UPDATE }
         );
         res.json(result.rows[0]);
     } catch (error) {
@@ -360,19 +354,19 @@ export const deleteDevNote = async (req: Request, res: Response) => {
     const currentUserRole = req.user?.role;
 
     try {
-        const noteRes = await pool.query('SELECT author_id FROM dev_notes WHERE id = $1', [noteId]);
-        if (noteRes.rowCount === 0) {
+        const noteRes = await sequelize.query('SELECT author_id FROM dev_notes WHERE id = :note_id', { replacements: { note_id: noteId }, type: QueryTypes.SELECT });
+        if (noteRes.length === 0) {
             res.status(404).json({ message: '노트를 찾을 수 없습니다.' });
             return;
         }
-        const noteAuthorId = noteRes.rows[0].author_id;
+        const noteAuthorId = noteRes[0].author_id;
 
         if (currentUserRole !== 'ADMIN' && currentUserId !== noteAuthorId) {
             res.status(403).json({ message: '노트를 삭제할 권한이 없습니다.' });
             return;
         }
 
-        await pool.query('DELETE FROM dev_notes WHERE id = $1', [noteId]);
+        await sequelize.query('DELETE FROM dev_notes WHERE id = :note_id', { replacements: { note_id: noteId }, type: QueryTypes.DELETE });
         res.json({ message: '개발 노트가 성공적으로 삭제되었습니다.' });
     } catch (error) {
         res.status(500).json({ message: '개발 노트 삭제 실패', error });
@@ -384,7 +378,7 @@ export const updateDevNotesStructure = async (req: Request, res: Response) => {
     const { projectId } = req.params;
     const { structure } = req.body; // [{ id: 1, parent_id: null, order: 0 }, ...]
 
-    const client = await pool.connect();
+    const client = await sequelize.getQueryInterface().sequelize;
     try {
         await client.query('BEGIN');
 
@@ -401,8 +395,6 @@ export const updateDevNotesStructure = async (req: Request, res: Response) => {
         await client.query('ROLLBACK');
         console.error('DevNotes 구조 업데이트 오류:', error);
         res.status(500).json({ message: 'DevNotes 구조 업데이트 실패', error });
-    } finally {
-        client.release();
     }
 };
 
@@ -410,13 +402,13 @@ export const updateDevNotesStructure = async (req: Request, res: Response) => {
 export const getDevNoteComments = async (req: Request, res: Response) => {
     const { noteId } = req.params;
     try {
-        const result = await pool.query(
+        const result = await sequelize.query(
             `SELECT c.*, u.name as "authorName", TO_CHAR(c.created_at, 'YYYY-MM-DD HH24:MI') as "createdAt"
              FROM dev_note_comments c
              LEFT JOIN users u ON c.author_id = u.id
-             WHERE c.note_id = $1
+             WHERE c.note_id = :note_id
              ORDER BY c.created_at ASC`,
-            [noteId]
+            { replacements: { note_id: noteId }, type: QueryTypes.SELECT }
         );
         res.json(result.rows);
     } catch (error) {
@@ -437,18 +429,18 @@ export const createDevNoteComment = async (req: Request, res: Response) => {
     }
 
     try {
-        const result = await pool.query(
+        const result = await sequelize.query(
             'INSERT INTO dev_note_comments (note_id, author_id, content) VALUES ($1, $2, $3) RETURNING *',
-            [noteId, authorId, content]
+            { replacements: [noteId, authorId, content], type: QueryTypes.INSERT }
         );
         
         // 방금 생성된 댓글 정보를 더 자세히 조회해서 반환
-        const newComment = await pool.query(
+        const newComment = await sequelize.query(
             `SELECT c.*, u.name as "authorName", TO_CHAR(c.created_at, 'YYYY-MM-DD HH24:MI') as "createdAt"
              FROM dev_note_comments c
              LEFT JOIN users u ON c.author_id = u.id
              WHERE c.id = $1`,
-            [result.rows[0].id]
+            { replacements: [result.rows[0].id], type: QueryTypes.SELECT }
         );
 
         res.status(201).json(newComment.rows[0]);
