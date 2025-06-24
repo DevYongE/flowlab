@@ -56,3 +56,65 @@ export const registerUser = async (req: Request, res: Response) => {
     res.status(500).json({ message: '서버 오류', error: err });
   }
 };
+
+// 회원 정보 수정
+export const updateUser = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { name, email, department, position_code } = req.body;
+    await pool.query(
+      `UPDATE users SET name=$1, email=$2, department=$3, position_code=$4 WHERE id=$5`,
+      [name, email, department, position_code, id]
+    );
+    res.status(200).json({ message: '회원 정보가 수정되었습니다.' });
+  } catch (err) {
+    res.status(500).json({ message: '회원 정보 수정 실패', error: err });
+  }
+};
+
+// 회원 삭제
+export const deleteUser = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    await pool.query(`DELETE FROM users WHERE id=$1`, [id]);
+    res.status(200).json({ message: '회원이 삭제되었습니다.' });
+  } catch (err) {
+    res.status(500).json({ message: '회원 삭제 실패', error: err });
+  }
+};
+
+// 권한 변경
+export const updateUserRole = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { role_code } = req.body;
+    await pool.query(`UPDATE users SET role_code=$1 WHERE id=$2`, [role_code, id]);
+    res.status(200).json({ message: '권한이 변경되었습니다.' });
+  } catch (err) {
+    res.status(500).json({ message: '권한 변경 실패', error: err });
+  }
+};
+
+// 부서 변경
+export const updateUserDepartment = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { department } = req.body;
+    await pool.query(`UPDATE users SET department=$1 WHERE id=$2`, [department, id]);
+    res.status(200).json({ message: '부서가 변경되었습니다.' });
+  } catch (err) {
+    res.status(500).json({ message: '부서 변경 실패', error: err });
+  }
+};
+
+// 직급 변경
+export const updateUserPosition = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { position_code } = req.body;
+    await pool.query(`UPDATE users SET position_code=$1 WHERE id=$2`, [position_code, id]);
+    res.status(200).json({ message: '직급이 변경되었습니다.' });
+  } catch (err) {
+    res.status(500).json({ message: '직급 변경 실패', error: err });
+  }
+};
