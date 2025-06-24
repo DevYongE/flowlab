@@ -199,7 +199,7 @@ const ProjectDetailPage = () => {
   const handleAiAnalysis = async (text: string) => {
     try {
       setIsAnalyzing(true);
-      const res = await axios.post(`/ai/analyze-dev-note`, { text });
+      const res = await axios.post(`/api/ai/analyze-dev-note`, { text });
       
       const newDevNotes = res.data.requirements; 
 
