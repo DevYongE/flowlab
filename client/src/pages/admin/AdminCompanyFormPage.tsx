@@ -70,10 +70,6 @@ const AdminCompanyFormPage: React.FC = () => {
           <input name="company_name" value={form.company_name} onChange={handleChange} className="w-full border px-2 py-1" required />
         </div>
         <div>
-          <label className="block mb-1">코드</label>
-          <input name="company_code" value={form.company_code} onChange={handleChange} className="w-full border px-2 py-1" required />
-        </div>
-        <div>
           <label className="block mb-1">업종</label>
           <input name="industry_type" value={form.industry_type} onChange={handleChange} className="w-full border px-2 py-1" />
         </div>

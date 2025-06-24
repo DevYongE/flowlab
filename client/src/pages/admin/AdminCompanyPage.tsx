@@ -55,10 +55,6 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ onSuccess, onClose }) => {
           <input name="company_name" value={form.company_name} onChange={handleChange} className="w-full border px-2 py-1" required />
         </div>
         <div>
-          <label className="block mb-1">코드</label>
-          <input name="company_code" value={form.company_code} onChange={handleChange} className="w-full border px-2 py-1" required />
-        </div>
-        <div>
           <label className="block mb-1">업종</label>
           <input name="industry_type" value={form.industry_type} onChange={handleChange} className="w-full border px-2 py-1" />
         </div>
@@ -132,7 +128,6 @@ const AdminCompanyPage: React.FC = () => {
         <thead>
           <tr>
             <th>이름</th>
-            <th>코드</th>
             <th>업종</th>
             <th>설립일</th>
             <th>활성</th>
@@ -143,7 +138,6 @@ const AdminCompanyPage: React.FC = () => {
           {companies.map((c) => (
             <tr key={c.company_id} className="border-t">
               <td>{c.company_name}</td>
-              <td>{c.company_code}</td>
               <td>{c.industry_type}</td>
               <td>{c.founded_at}</td>
               <td>{c.is_active ? 'Y' : 'N'}</td>
