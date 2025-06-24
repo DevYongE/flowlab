@@ -51,7 +51,7 @@ export const getProjects = async (req: Request, res: Response) => {
     }
 
     query += ' ORDER BY start_date DESC';
-    const projects = await sequelize.query(query, { replacements: params, type: QueryTypes.SELECT });
+    const [projects, meta] = await sequelize.query(query, { replacements: params, type: QueryTypes.SELECT });
     res.json(projects);
   } catch (error) {
     res.status(500).json({ message: '프로젝트 목록 조회 실패', error });
@@ -65,14 +65,8 @@ export const getProjectById = async (req: Request, res: Response) => {
   const currentUserRole = req.user?.role;
 
   try {
-    const result = await sequelize.query('SELECT *, TO_CHAR(start_date, \'YYYY-MM-DD\') as "startDate", TO_CHAR(end_date, \'YYYY-MM-DD\') as "endDate" FROM projects WHERE id = :id', { replacements: { id }, type: QueryTypes.SELECT });
-    let rows: any[] = [];
-    if (Array.isArray(result) && Array.isArray(result[0])) {
-      rows = result[0];
-    } else if (Array.isArray(result)) {
-      rows = result as any[];
-    }
-    if (!rows.length) {
+    const [rows, meta] = await sequelize.query('SELECT *, TO_CHAR(start_date, \'YYYY-MM-DD\') as "startDate", TO_CHAR(end_date, \'YYYY-MM-DD\') as "endDate" FROM projects WHERE id = :id', { replacements: { id }, type: QueryTypes.SELECT });
+    if (!Array.isArray(rows) || rows.length === 0) {
       res.status(404).json({ message: '프로젝트를 찾을 수 없습니다.' });
       return;
     }
