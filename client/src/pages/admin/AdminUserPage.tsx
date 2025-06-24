@@ -5,6 +5,8 @@ import { FaUserEdit, FaTrash, FaKey, FaExchangeAlt, FaUserTie, FaInfoCircle } fr
 
 const AdminUserPage = () => {
   const [users, setUsers] = useState<any[]>([]);
+  const [positions, setPositions] = useState<any[]>([]);
+  const [roles, setRoles] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [showDetail, setShowDetail] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
@@ -13,9 +15,10 @@ const AdminUserPage = () => {
   const [showPosition, setShowPosition] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
 
-  // 실제 회원 목록 불러오기
   useEffect(() => {
     fetchUsers();
+    fetchPositions();
+    fetchRoles();
   }, []);
 
   const fetchUsers = async () => {
@@ -24,6 +27,22 @@ const AdminUserPage = () => {
       setUsers(res.data);
     } catch (err) {
       alert('회원 목록을 불러오지 못했습니다.');
+    }
+  };
+  const fetchPositions = async () => {
+    try {
+      const res = await axios.get('/positions');
+      setPositions(res.data);
+    } catch (err) {
+      setPositions([]);
+    }
+  };
+  const fetchRoles = async () => {
+    try {
+      const res = await axios.get('/api/roles');
+      setRoles(res.data);
+    } catch (err) {
+      setRoles([]);
     }
   };
 
@@ -133,7 +152,11 @@ const AdminUserPage = () => {
               <input className="w-full border rounded p-2" defaultValue={selectedUser.name} placeholder="이름" />
               <input className="w-full border rounded p-2" defaultValue={selectedUser.email} placeholder="이메일" />
               <input className="w-full border rounded p-2" defaultValue={selectedUser.department || selectedUser.department_name} placeholder="부서" />
-              <input className="w-full border rounded p-2" defaultValue={selectedUser.position || selectedUser.position_name} placeholder="직급" />
+              <select className="w-full border rounded p-2" defaultValue={selectedUser.position_code || selectedUser.position || selectedUser.position_name}>
+                {positions.map((pos: any) => (
+                  <option key={pos.position_code} value={pos.position_code}>{pos.name}</option>
+                ))}
+              </select>
               <div className="flex justify-end gap-2 pt-2">
                 <button type="button" onClick={handleClose} className="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400">취소</button>
                 <button type="submit" className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700">저장</button>
@@ -146,10 +169,10 @@ const AdminUserPage = () => {
           <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
             <form className="bg-white p-6 rounded-lg shadow-lg min-w-[350px] space-y-4">
               <h2 className="text-lg font-bold mb-2">권한 부여</h2>
-              <select className="w-full border rounded p-2" defaultValue={selectedUser.role || selectedUser.role_code}>
-                <option value="ADMIN">관리자</option>
-                <option value="BASIC">일반</option>
-                <option value="GUEST">게스트</option>
+              <select className="w-full border rounded p-2" defaultValue={selectedUser.role_code || selectedUser.role}>
+                {roles.map((role: any) => (
+                  <option key={role.role_code} value={role.role_code}>{role.name}</option>
+                ))}
               </select>
               <div className="flex justify-end gap-2 pt-2">
                 <button type="button" onClick={handleClose} className="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400">취소</button>
@@ -180,14 +203,10 @@ const AdminUserPage = () => {
           <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
             <form className="bg-white p-6 rounded-lg shadow-lg min-w-[350px] space-y-4">
               <h2 className="text-lg font-bold mb-2">직급 관리</h2>
-              <select className="w-full border rounded p-2" defaultValue={selectedUser.position || selectedUser.position_name}>
-                <option value="사원">사원</option>
-                <option value="주임">주임</option>
-                <option value="대리">대리</option>
-                <option value="과장">과장</option>
-                <option value="차장">차장</option>
-                <option value="팀장">팀장</option>
-                <option value="이사">이사</option>
+              <select className="w-full border rounded p-2" defaultValue={selectedUser.position_code || selectedUser.position || selectedUser.position_name}>
+                {positions.map((pos: any) => (
+                  <option key={pos.position_code} value={pos.position_code}>{pos.name}</option>
+                ))}
               </select>
               <div className="flex justify-end gap-2 pt-2">
                 <button type="button" onClick={handleClose} className="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400">취소</button>

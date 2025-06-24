@@ -9,6 +9,7 @@ import positionRouter from './routes/position.route';
 import noticeRouter from './routes/notice.route';
 import projectRouter from './routes/project.route';
 import aiRoutes from './routes/ai.route';
+import roleRouter from './routes/role.route';
 
 import pool from './config/db';
 
@@ -46,6 +47,7 @@ app.use('/api/positions', positionRouter);
 app.use('/api/notices', noticeRouter);
 app.use('/api/projects', projectRouter);
 app.use('/api/ai', aiRoutes);
+app.use('/api/roles', roleRouter);
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
