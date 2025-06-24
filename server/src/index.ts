@@ -12,7 +12,7 @@ import aiRoutes from './routes/ai.route';
 import roleRouter from './routes/role.route';
 import companyRoutes from './routes/company.route';
 
-import pool from './config/db';
+import sequelize from './config/db';
 
 const app = express();
 app.use(express.json());
@@ -56,6 +56,7 @@ app.listen(PORT, () => {
   console.log(`🚀 Server is running on port ${PORT}`);
 });
 
-pool.query('SELECT NOW()')
-  .then(res => console.log('✅ DB 연결 성공:', res.rows[0]))
+// DB 연결 확인 (Sequelize)
+sequelize.authenticate()
+  .then(() => console.log('✅ DB 연결 성공'))
   .catch(err => console.error('❌ DB 연결 실패:', err));

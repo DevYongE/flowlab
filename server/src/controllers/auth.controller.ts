@@ -2,31 +2,29 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import pool from '../config/db'; // ✅ 이 pool만 사용
+import sequelize, { QueryTypes } from '../config/db';
 import nodemailer from 'nodemailer';
 import { v4 as uuidv4 } from 'uuid';
 
-
 export const loginUser = async (req: Request, res: Response) => {
   const { id, password } = req.body;
-console.log('🧪 Supabase 연결 정보 확인:', {
-  host: process.env.DB_HOST,
-  port: process.env.DB_PORT,
-  user: process.env.DB_USER,
-});
+  console.log('🧪 Supabase 연결 정보 확인:', {
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT,
+    user: process.env.DB_USER,
+  });
   try {
     // users와 positions를 조인해서 position_name도 가져옴
-    const result = await pool.query(
-      `SELECT u.*, p.name AS position_name FROM users u LEFT JOIN positions p ON u.position_code = p.position_code WHERE u.id = $1`,
-      [id]
+    const [user]: any = await sequelize.query(
+      `SELECT u.*, p.name AS position_name FROM users u LEFT JOIN positions p ON u.position_code = p.position_code WHERE u.id = :id`,
+      { replacements: { id }, type: QueryTypes.SELECT }
     );
 
-    if (result.rowCount === 0) {
+    if (!user) {
       res.status(401).json({ success: false, message: '존재하지 않는 계정입니다.' });
       return;
     }
 
-    const user = result.rows[0];
     // 비밀번호가 없거나 입력이 없으면 무조건 실패
     if (!user.password || !password) {
       res.status(401).json({ success: false, message: '비밀번호가 설정되지 않았거나 입력되지 않았습니다.' });
@@ -60,9 +58,8 @@ console.log('🧪 Supabase 연결 정보 확인:', {
         role_code: user.role_code,
       }
     });
-  } catch (error) {
-    console.error('❌ loginUser error:', error instanceof Error ? error.message : error);
-    res.status(500).json({ success: false, message: '로그인 처리 중 오류 발생' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: '로그인 실패', error: err });
   }
 };
 
@@ -78,7 +75,7 @@ export const forgotPassword = async (req: Request, res: Response) => {
     }
 
     // 사용자 확인
-    const userRes = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
+    const userRes = await sequelize.query('SELECT * FROM users WHERE id = $1', { replacements: [id], type: QueryTypes.SELECT });
     if (userRes.rowCount === 0) {
       res.status(404).json({ message: '존재하지 않는 계정입니다.' });
       return;
@@ -92,9 +89,9 @@ export const forgotPassword = async (req: Request, res: Response) => {
     // 토큰 생성 및 저장
     const token = uuidv4();
     const expiresAt = new Date(Date.now() + 1000 * 60 * 30); // 30분 유효
-    await pool.query(
+    await sequelize.query(
       'INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)',
-      [user.id, token, expiresAt]
+      { replacements: [user.id, token, expiresAt], type: QueryTypes.INSERT }
     );
 
     // 이메일 발송
@@ -129,9 +126,9 @@ export const resetPassword = async (req: Request, res: Response) => {
   const { token, newPassword } = req.body;
   try {
     // 토큰 검증
-    const tokenRes = await pool.query(
+    const tokenRes = await sequelize.query(
       'SELECT * FROM password_reset_tokens WHERE token = $1 AND used = FALSE AND expires_at > NOW()',
-      [token]
+      { replacements: [token], type: QueryTypes.SELECT }
     );
     if (tokenRes.rowCount === 0) {
       res.status(400).json({ message: '유효하지 않거나 만료된 토큰입니다.' });
@@ -140,9 +137,9 @@ export const resetPassword = async (req: Request, res: Response) => {
     const resetToken = tokenRes.rows[0];
     // 비밀번호 해싱 및 변경
     const hash = await bcrypt.hash(newPassword, 10);
-    await pool.query('UPDATE users SET password = $1 WHERE id = $2', [hash, resetToken.user_id]);
+    await sequelize.query('UPDATE users SET password = $1 WHERE id = $2', { replacements: [hash, resetToken.user_id], type: QueryTypes.UPDATE });
     // 토큰 사용 처리
-    await pool.query('UPDATE password_reset_tokens SET used = TRUE WHERE id = $1', [resetToken.id]);
+    await sequelize.query('UPDATE password_reset_tokens SET used = TRUE WHERE id = $1', { replacements: [resetToken.id], type: QueryTypes.UPDATE });
     res.json({ message: '비밀번호가 성공적으로 변경되었습니다.' });
   } catch (error) {
     console.error('❌ resetPassword error:', error instanceof Error ? error.message : error);

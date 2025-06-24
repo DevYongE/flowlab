@@ -1,4 +1,5 @@
-import pool from '../config/db'; // ✅ 이 pool만 사용
+import sequelize from '../config/db';
+import { QueryTypes } from 'sequelize';
 import bcrypt from 'bcrypt';
 
 export async function createUser(data: {
@@ -24,44 +25,36 @@ export async function createUser(data: {
     role_code = 'BASIC',
   } = data;
 
-  const client = await pool.connect();
-  try {
-    const hashed = await bcrypt.hash(password, 10);
+  const hashed = await bcrypt.hash(password, 10);
+  const ym = join_date.slice(2, 4) + join_date.slice(5, 7); // YYMM
+  const [countResult]: any = await sequelize.query(
+    'SELECT COUNT(*) FROM users WHERE user_code LIKE :ym',
+    { replacements: { ym: `${ym}%` }, type: QueryTypes.SELECT }
+  );
+  const seq = String(Number(countResult.count) + 1).padStart(2, '0');
+  const user_code = `${ym}${seq}`;
 
-    // user_code 생성: 예) 2505 + 01 (중복 방지를 위해 시퀀스 번호 필요)
-    const ym = join_date.slice(2, 4) + join_date.slice(5, 7); // YYMM
-    const { rows } = await client.query(
-      'SELECT COUNT(*) FROM users WHERE user_code LIKE $1',
-      [`${ym}%`]
-    );
-    const seq = String(Number(rows[0].count) + 1).padStart(2, '0');
-    const user_code = `${ym}${seq}`;
+  await sequelize.query(
+    `INSERT INTO users (
+      id, password, email, birth, name, position_code,
+      department, join_date, user_code, role_code
+    ) VALUES (:id,:password,:email,:birth,:name,:position_code,:department,:join_date,:user_code,:role_code)`,
+    {
+      replacements: {
+        id,
+        password: hashed,
+        email,
+        birth,
+        name,
+        position_code,
+        department,
+        join_date,
+        user_code,
+        role_code,
+      },
+      type: QueryTypes.INSERT,
+    }
+  );
 
-    const insertQuery = `
-      INSERT INTO users (
-        id, password, email, birth, name, position_code,
-        department, join_date, user_code, role_code
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-    `;
-
-    await client.query(insertQuery, [
-      id,
-      hashed,
-      email,
-      birth,
-      name,
-      position_code,
-      department,
-      join_date,
-      user_code,
-      role_code,
-    ]);
-
-    return { success: true, user_code };
-  } catch (err) {
-    console.error('❌ createUser error:', err);
-    throw err;
-  } finally {
-    client.release();
-  }
+  return { success: true, user_code };
 }

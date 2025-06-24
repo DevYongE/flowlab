@@ -1,18 +1,18 @@
 // server/controllers/user.controller.ts
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
-import pool from '../config/db';
+import sequelize, { QueryTypes } from '../config/db';
 
 // 사용자 전체 조회
 export const getUsers = async (req: Request, res: Response) => {
   try {
-    const result = await pool.query(`
+    const users = await sequelize.query(`
       SELECT u.*, p.name AS position_name, r.name AS role_name
       FROM users u
       LEFT JOIN positions p ON u.position_code = p.position_code
       LEFT JOIN roles r ON u.role_code = r.role_code
-    `);
-    res.status(200).json(result.rows);
+    `, { type: QueryTypes.SELECT });
+    res.status(200).json(users);
   } catch (err) {
     console.error('❌ 사용자 조회 에러:', err);
     res.status(500).json({ message: '사용자 조회 실패', error: err });
@@ -39,20 +39,34 @@ export const registerUser = async (req: Request, res: Response) => {
 
     const prefix = join_date.replace('-', '').slice(2); // '2025-06' => '2506'
 
-    const countRes = await pool.query(
-      'SELECT COUNT(*) FROM users WHERE user_code LIKE $1',
-      [`${prefix}%`]
+    const [countRes]: any = await sequelize.query(
+      'SELECT COUNT(*) FROM users WHERE user_code LIKE :prefix',
+      { replacements: { prefix: `${prefix}%` }, type: QueryTypes.SELECT }
     );
 
-    const user_code = `${prefix}${String(Number(countRes.rows[0].count) + 1).padStart(2, '0')}`;
+    const user_code = `${prefix}${String(Number(countRes.count) + 1).padStart(2, '0')}`;
     const hashed = await bcrypt.hash(password, 10);
     const role_code = 'BASIC';
 
-    await pool.query(
+    await sequelize.query(
       `INSERT INTO users (
         id, password, email, birth, name, position_code, department, join_date, user_code, role_code
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-      [id, hashed, email, birth, name, position_code, department, join_date, user_code, role_code]
+      ) VALUES (:id,:password,:email,:birth,:name,:position_code,:department,:join_date,:user_code,:role_code)`,
+      {
+        replacements: {
+          id,
+          password: hashed,
+          email,
+          birth,
+          name,
+          position_code,
+          department,
+          join_date,
+          user_code,
+          role_code,
+        },
+        type: QueryTypes.INSERT,
+      }
     );
 
     res.status(201).json({ message: '회원가입 완료', user_code });
@@ -67,7 +81,7 @@ export const updateUser = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { name, email, department, position_code } = req.body;
-    await pool.query(
+    await sequelize.query(
       `UPDATE users SET name=$1, email=$2, department=$3, position_code=$4 WHERE id=$5`,
       [name, email, department, position_code, id]
     );
@@ -81,7 +95,10 @@ export const updateUser = async (req: Request, res: Response) => {
 export const deleteUser = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    await pool.query(`DELETE FROM users WHERE id=$1`, [id]);
+    await sequelize.query(`DELETE FROM users WHERE id=:id`, {
+      replacements: { id },
+      type: QueryTypes.DELETE,
+    });
     res.status(200).json({ message: '회원이 삭제되었습니다.' });
   } catch (err) {
     res.status(500).json({ message: '회원 삭제 실패', error: err });
@@ -93,7 +110,7 @@ export const updateUserRole = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { role_code } = req.body;
-    await pool.query(`UPDATE users SET role_code=$1 WHERE id=$2`, [role_code, id]);
+    await sequelize.query(`UPDATE users SET role_code=$1 WHERE id=$2`, [role_code, id]);
     res.status(200).json({ message: '권한이 변경되었습니다.' });
   } catch (err) {
     res.status(500).json({ message: '권한 변경 실패', error: err });
@@ -105,7 +122,7 @@ export const updateUserDepartment = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { department } = req.body;
-    await pool.query(`UPDATE users SET department=$1 WHERE id=$2`, [department, id]);
+    await sequelize.query(`UPDATE users SET department=$1 WHERE id=$2`, [department, id]);
     res.status(200).json({ message: '부서가 변경되었습니다.' });
   } catch (err) {
     res.status(500).json({ message: '부서 변경 실패', error: err });
@@ -117,7 +134,10 @@ export const updateUserPosition = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { position_code } = req.body;
-    await pool.query(`UPDATE users SET position_code=$1 WHERE id=$2`, [position_code, id]);
+    await sequelize.query(`UPDATE users SET position_code=:position_code WHERE id=:id`, {
+      replacements: { position_code, id },
+      type: QueryTypes.UPDATE,
+    });
     res.status(200).json({ message: '직급이 변경되었습니다.' });
   } catch (err) {
     res.status(500).json({ message: '직급 변경 실패', error: err });
