@@ -65,10 +65,10 @@ export const getProjectById = async (req: Request, res: Response) => {
   const currentUserRole = req.user?.role;
 
   try {
-    const projectRes = await sequelize.query('SELECT *, TO_CHAR(start_date, \'YYYY-MM-DD\') as "startDate", TO_CHAR(end_date, \'YYYY-MM-DD\') as "endDate" FROM projects WHERE id = :id', { replacements: { id }, type: QueryTypes.SELECT }) as any[];
+    const [results] = await sequelize.query('SELECT *, TO_CHAR(start_date, \'YYYY-MM-DD\') as "startDate", TO_CHAR(end_date, \'YYYY-MM-DD\') as "endDate" FROM projects WHERE id = :id', { replacements: { id }, type: QueryTypes.SELECT }) as [any[], any];
     let project: any = undefined;
-    if (Array.isArray(projectRes) && projectRes.length > 0) {
-      project = projectRes[0];
+    if (Array.isArray(results) && results.length > 0) {
+      project = results[0];
     }
     if (!project) {
       res.status(404).json({ message: '프로젝트를 찾을 수 없습니다.' });

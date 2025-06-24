@@ -26,16 +26,16 @@ export const getNotice = async (req: Request, res: Response) => {
       type: QueryTypes.UPDATE,
     });
     // 공지사항 조회 (작성자 이름도 함께 가져오기)
-    const notices = await sequelize.query(
+    const [results] = await sequelize.query(
       `SELECT n.*, u.name as author_name 
        FROM notices n 
        LEFT JOIN users u ON n.author_id = u.id 
        WHERE n.notice_id = :id`,
       { replacements: { id }, type: QueryTypes.SELECT }
-    ) as any[];
+    ) as [any[], any];
     let notice: any = undefined;
-    if (Array.isArray(notices) && notices.length > 0) {
-      notice = notices[0];
+    if (Array.isArray(results) && results.length > 0) {
+      notice = results[0];
     }
     if (!notice) {
       res.status(404).json({ message: '공지사항 없음' });
@@ -102,13 +102,13 @@ export const updateNotice = async (req: Request, res: Response) => {
 export const deleteNotice = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const deleted = await sequelize.query('DELETE FROM notices WHERE notice_id = :id RETURNING *', {
+    const [deletedRows] = await sequelize.query('DELETE FROM notices WHERE notice_id = :id RETURNING *', {
       replacements: { id },
       type: QueryTypes.DELETE,
-    }) as any[];
+    }) as [any[], any];
     let deletedRow: any = undefined;
-    if (Array.isArray(deleted) && deleted.length > 0) {
-      deletedRow = deleted[0];
+    if (Array.isArray(deletedRows) && deletedRows.length > 0) {
+      deletedRow = deletedRows[0];
     }
     if (!deletedRow) {
       res.status(404).json({ message: '공지사항 없음' });
