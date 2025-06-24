@@ -111,7 +111,7 @@ const AdminUserPage = () => {
                   <td className="py-2 px-3 text-center">{user.email}</td>
                   <td className="py-2 px-3 text-center">{user.department || user.department_name}</td>
                   <td className="py-2 px-3 text-center">{user.position_name || user.position || user.position_code}</td>
-                  <td className="py-2 px-3 text-center">{user.role || user.role_code}</td>
+                  <td className="py-2 px-3 text-center">{user.role_name || user.role || user.role_code}</td>
                   <td className="py-2 px-3 text-center">{user.status || (user.is_active ? '활성' : '비활성')}</td>
                   <td className="py-2 px-3 text-center">
                     <button title="상세" className="text-blue-500 hover:text-blue-700 mx-1" onClick={() => handleOpen('detail', user)}><FaInfoCircle /></button>
@@ -147,12 +147,26 @@ const AdminUserPage = () => {
         {/* 수정 모달 */}
         {showEdit && selectedUser && (
           <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-            <form className="bg-white p-6 rounded-lg shadow-lg min-w-[350px] space-y-4">
+            <form className="bg-white p-6 rounded-lg shadow-lg min-w-[350px] space-y-4" onSubmit={async (e) => {
+              e.preventDefault();
+              const form = e.target as HTMLFormElement;
+              const name = (form.elements.namedItem('name') as HTMLInputElement).value;
+              const email = (form.elements.namedItem('email') as HTMLInputElement).value;
+              const department = (form.elements.namedItem('department') as HTMLInputElement).value;
+              const position_code = (form.elements.namedItem('position_code') as HTMLSelectElement).value;
+              try {
+                await axios.patch(`/users/${selectedUser.id}`, { name, email, department, position_code });
+                await fetchUsers();
+                handleClose();
+              } catch (err) {
+                alert('회원 정보 수정 실패');
+              }
+            }}>
               <h2 className="text-lg font-bold mb-2">회원 정보 수정</h2>
-              <input className="w-full border rounded p-2" defaultValue={selectedUser.name} placeholder="이름" />
-              <input className="w-full border rounded p-2" defaultValue={selectedUser.email} placeholder="이메일" />
-              <input className="w-full border rounded p-2" defaultValue={selectedUser.department || selectedUser.department_name} placeholder="부서" />
-              <select className="w-full border rounded p-2" defaultValue={selectedUser.position_code || selectedUser.position || selectedUser.position_name}>
+              <input name="name" className="w-full border rounded p-2" defaultValue={selectedUser.name} placeholder="이름" />
+              <input name="email" className="w-full border rounded p-2" defaultValue={selectedUser.email} placeholder="이메일" />
+              <input name="department" className="w-full border rounded p-2" defaultValue={selectedUser.department || selectedUser.department_name} placeholder="부서" />
+              <select name="position_code" className="w-full border rounded p-2" defaultValue={selectedUser.position_code || selectedUser.position || selectedUser.position_name}>
                 {positions.map((pos: any) => (
                   <option key={pos.position_code} value={pos.position_code}>{pos.name}</option>
                 ))}

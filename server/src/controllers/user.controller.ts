@@ -7,9 +7,10 @@ import pool from '../config/db';
 export const getUsers = async (req: Request, res: Response) => {
   try {
     const result = await pool.query(`
-      SELECT u.*, p.name AS position_name
+      SELECT u.*, p.name AS position_name, r.name AS role_name
       FROM users u
       LEFT JOIN positions p ON u.position_code = p.position_code
+      LEFT JOIN roles r ON u.role_code = r.role_code
     `);
     res.status(200).json(result.rows);
   } catch (err) {
