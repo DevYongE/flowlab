@@ -30,15 +30,7 @@ console.log('Server starting with allowedOrigins:', allowedOrigins);
 
 app.use(
   cors({
-    origin: function (origin, callback) {
-      console.log('Request Origin:', origin);
-
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
+    origin: allowedOrigins,
     credentials: true,
   })
 );
