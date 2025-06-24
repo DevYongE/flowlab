@@ -7,17 +7,13 @@ import { QueryTypes } from 'sequelize';
 // 사용자 전체 조회
 export const getUsers = async (req: Request, res: Response) => {
   try {
-    const [rows, meta] = await sequelize.query(`
+    const rows = await sequelize.query(`
       SELECT u.*, p.name AS position_name, r.name AS role_name
       FROM users u
       LEFT JOIN positions p ON u.position_code = p.position_code
       LEFT JOIN roles r ON u.role_code = r.role_code
     `, { type: QueryTypes.SELECT });
-    if (!Array.isArray(rows) || rows.length === 0) {
-      res.status(404).json({ message: '사용자 없음' });
-      return;
-    }
-    res.status(200).json(rows);
+    res.status(200).json(Array.isArray(rows) ? rows : []);
   } catch (err) {
     console.error('❌ 사용자 조회 에러:', err);
     res.status(500).json({ message: '사용자 조회 실패', error: err });
