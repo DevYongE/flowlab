@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from '../../lib/axios';
+import MainLayout from '../../components/layout/MainLayout';
 
 interface Company {
   company_id: string;
@@ -19,15 +20,18 @@ interface CompanyFormProps {
   onClose: () => void;
 }
 
-const CompanyForm: React.FC<CompanyFormProps> = ({ onSuccess, onClose }) => {
+const TABS = [
+  { key: 'companies', label: '기업관리' },
+];
+
+const CompanyForm: React.FC<CompanyFormProps & { initial?: Company | null }> = ({ onSuccess, onClose, initial }) => {
   const [form, setForm] = useState({
-    company_name: '',
-    company_code: '',
-    company_info: '',
-    company_type: '',
-    industry_type: '',
-    founded_at: '',
-    is_active: true,
+    company_name: initial?.company_name || '',
+    company_info: initial?.company_info || '',
+    company_type: initial?.company_type || '',
+    industry_type: initial?.industry_type || '',
+    founded_at: initial?.founded_at || '',
+    is_active: initial?.is_active ?? true,
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -40,58 +44,60 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ onSuccess, onClose }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await axios.post('/companies', form);
-    alert('등록되었습니다.');
+    if (initial) {
+      await axios.put(`/companies/${initial.company_id}`, form);
+      alert('수정되었습니다.');
+    } else {
+      await axios.post('/companies', form);
+      alert('등록되었습니다.');
+    }
     onSuccess();
     onClose();
   };
 
   return (
-    <div className="p-6 max-w-xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">기업 등록</h1>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block mb-1">이름</label>
-          <input name="company_name" value={form.company_name} onChange={handleChange} className="w-full border px-2 py-1" required />
-        </div>
-        <div>
-          <label className="block mb-1">업종</label>
-          <input name="industry_type" value={form.industry_type} onChange={handleChange} className="w-full border px-2 py-1" />
-        </div>
-        <div>
-          <label className="block mb-1">설립일</label>
-          <input name="founded_at" type="date" value={form.founded_at} onChange={handleChange} className="w-full border px-2 py-1" />
-        </div>
-        <div>
-          <label className="block mb-1">회사 정보</label>
-          <textarea name="company_info" value={form.company_info} onChange={handleChange} className="w-full border px-2 py-1" />
-        </div>
-        <div>
-          <label className="block mb-1">회사 유형</label>
-          <input name="company_type" value={form.company_type} onChange={handleChange} className="w-full border px-2 py-1" />
-        </div>
-        <div>
-          <label className="inline-flex items-center">
-            <input type="checkbox" name="is_active" checked={form.is_active} onChange={handleChange} />
-            <span className="ml-2">활성</span>
-          </label>
-        </div>
-        <div>
-          <button type="submit" className="px-4 py-2 bg-blue-500 text-white rounded">
-            저장
-          </button>
-          <button type="button" className="ml-2 px-4 py-2 bg-gray-300 rounded" onClick={onClose}>
-            닫기
-          </button>
-        </div>
-      </form>
-    </div>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <h2 className="text-lg font-bold mb-2">{initial ? '기업 수정' : '기업 등록'}</h2>
+      <div>
+        <label className="block mb-1">이름</label>
+        <input name="company_name" value={form.company_name} onChange={handleChange} className="w-full border px-2 py-1" required />
+      </div>
+      <div>
+        <label className="block mb-1">업종</label>
+        <input name="industry_type" value={form.industry_type} onChange={handleChange} className="w-full border px-2 py-1" />
+      </div>
+      <div>
+        <label className="block mb-1">설립일</label>
+        <input name="founded_at" type="date" value={form.founded_at} onChange={handleChange} className="w-full border px-2 py-1" />
+      </div>
+      <div>
+        <label className="block mb-1">회사 정보</label>
+        <textarea name="company_info" value={form.company_info} onChange={handleChange} className="w-full border px-2 py-1" />
+      </div>
+      <div>
+        <label className="block mb-1">회사 유형</label>
+        <input name="company_type" value={form.company_type} onChange={handleChange} className="w-full border px-2 py-1" />
+      </div>
+      <div>
+        <label className="inline-flex items-center">
+          <input type="checkbox" name="is_active" checked={form.is_active} onChange={handleChange} />
+          <span className="ml-2">활성</span>
+        </label>
+      </div>
+      <div className="flex gap-2 pt-2">
+        <button type="submit" className="px-4 py-2 rounded bg-blue-500 text-white hover:bg-blue-600">{initial ? '수정' : '등록'}</button>
+        <button type="button" onClick={onClose} className="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400">닫기</button>
+      </div>
+    </form>
   );
 };
 
 const AdminCompanyPage: React.FC = () => {
+  const [tab] = useState('companies');
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
 
   const fetchCompanies = async () => {
     const res = await axios.get('/companies');
@@ -108,54 +114,76 @@ const AdminCompanyPage: React.FC = () => {
     fetchCompanies();
   };
 
+  const filteredCompanies = companies.filter(c =>
+    !search || c.company_name?.includes(search) || c.industry_type?.includes(search)
+  );
+
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">기업 관리</h1>
-      <button
-        className="mb-4 px-4 py-2 bg-blue-500 text-white rounded"
-        onClick={() => setShowModal(true)}
-      >
-        기업 등록
-      </button>
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg">
-            <CompanyForm onSuccess={fetchCompanies} onClose={() => setShowModal(false)} />
-          </div>
-        </div>
-      )}
-      <table className="w-full border">
-        <thead>
-          <tr>
-            <th>이름</th>
-            <th>업종</th>
-            <th>설립일</th>
-            <th>활성</th>
-            <th>관리</th>
-          </tr>
-        </thead>
-        <tbody>
-          {companies.map((c) => (
-            <tr key={c.company_id} className="border-t">
-              <td>{c.company_name}</td>
-              <td>{c.industry_type}</td>
-              <td>{c.founded_at}</td>
-              <td>{c.is_active ? 'Y' : 'N'}</td>
-              <td>
-                <button
-                  className="mr-2 px-2 py-1 bg-green-500 text-white rounded"
-                  onClick={() => window.location.href = `/admin/companies/${c.company_id}`}
-                >수정</button>
-                <button
-                  className="px-2 py-1 bg-red-500 text-white rounded"
-                  onClick={() => handleDelete(c.company_id)}
-                >삭제</button>
-              </td>
-            </tr>
+    <MainLayout>
+      <div className="container mx-auto p-6">
+        <h1 className="text-2xl font-bold mb-6">🏢 기업관리</h1>
+        {/* 탭 버튼 (기업관리 단일 탭) */}
+        <div className="flex gap-2 mb-6">
+          {TABS.map(t => (
+            <button
+              key={t.key}
+              className={`px-4 py-2 rounded-t-md font-semibold border-b-2 ${tab === t.key ? 'border-blue-600 text-blue-700 bg-white' : 'border-transparent text-gray-400 bg-gray-100'}`}
+              disabled
+            >
+              {t.label}
+            </button>
           ))}
-        </tbody>
-      </table>
-    </div>
+        </div>
+        {/* 검색/필터 영역 */}
+        <div className="mb-4 flex gap-2">
+          <input className="border p-2 rounded w-64" placeholder="기업명, 업종 검색" value={search} onChange={e => setSearch(e.target.value)} />
+          <button className="bg-blue-500 text-white px-4 py-2 rounded" onClick={fetchCompanies}>새로고침</button>
+          <button className="bg-green-500 text-white px-4 py-2 rounded" onClick={() => { setSelectedCompany(null); setShowModal(true); }}>기업 등록</button>
+        </div>
+        {/* 기업 목록 테이블 */}
+        <div className="bg-white rounded shadow p-4">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50">
+                <th className="py-2 px-3 text-center">이름</th>
+                <th className="py-2 px-3 text-center">업종</th>
+                <th className="py-2 px-3 text-center">설립일</th>
+                <th className="py-2 px-3 text-center">활성</th>
+                <th className="py-2 px-3 text-center">관리</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredCompanies.length === 0 ? (
+                <tr><td colSpan={5} className="text-center text-gray-400 py-8">기업이 없습니다.</td></tr>
+              ) : filteredCompanies.map(c => (
+                <tr key={c.company_id} className="hover:bg-gray-50">
+                  <td className="py-2 px-3 text-center">{c.company_name}</td>
+                  <td className="py-2 px-3 text-center">{c.industry_type}</td>
+                  <td className="py-2 px-3 text-center">{c.founded_at}</td>
+                  <td className="py-2 px-3 text-center">{c.is_active ? 'Y' : 'N'}</td>
+                  <td className="py-2 px-3 text-center">
+                    <button className="text-green-500 hover:text-green-700 mx-1" onClick={() => { setSelectedCompany(c); setShowModal(true); }}>수정</button>
+                    <button className="text-red-500 hover:text-red-700 mx-1" onClick={() => handleDelete(c.company_id)}>삭제</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {/* 등록/수정 모달 */}
+        {showModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg shadow-lg min-w-[350px] space-y-4">
+              <CompanyForm
+                onSuccess={fetchCompanies}
+                onClose={() => setShowModal(false)}
+                initial={selectedCompany}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+    </MainLayout>
   );
 };
 
