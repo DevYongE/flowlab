@@ -6,7 +6,11 @@ import pool from '../config/db';
 // 사용자 전체 조회
 export const getUsers = async (req: Request, res: Response) => {
   try {
-    const result = await pool.query('SELECT * FROM users');
+    const result = await pool.query(`
+      SELECT u.*, p.name AS position_name
+      FROM users u
+      LEFT JOIN positions p ON u.position_code = p.position_code
+    `);
     res.status(200).json(result.rows);
   } catch (err) {
     console.error('❌ 사용자 조회 에러:', err);

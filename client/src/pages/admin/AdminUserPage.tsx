@@ -110,7 +110,7 @@ const AdminUserPage = () => {
                   <td className="py-2 px-3 text-center">{user.name}</td>
                   <td className="py-2 px-3 text-center">{user.email}</td>
                   <td className="py-2 px-3 text-center">{user.department || user.department_name}</td>
-                  <td className="py-2 px-3 text-center">{user.position || user.position_name}</td>
+                  <td className="py-2 px-3 text-center">{user.position_name || user.position || user.position_code}</td>
                   <td className="py-2 px-3 text-center">{user.role || user.role_code}</td>
                   <td className="py-2 px-3 text-center">{user.status || (user.is_active ? '활성' : '비활성')}</td>
                   <td className="py-2 px-3 text-center">
