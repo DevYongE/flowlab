@@ -40,7 +40,7 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ onSuccess, onClose }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await axios.post('/api/companies', form);
+    await axios.post('/companies', form);
     alert('등록되었습니다.');
     onSuccess();
     onClose();
@@ -98,7 +98,7 @@ const AdminCompanyPage: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
 
   const fetchCompanies = async () => {
-    const res = await axios.get('/api/companies');
+    const res = await axios.get('/companies');
     setCompanies(res.data);
   };
 
@@ -108,7 +108,7 @@ const AdminCompanyPage: React.FC = () => {
 
   const handleDelete = async (id: string) => {
     if (!window.confirm('정말 삭제하시겠습니까?')) return;
-    await axios.delete(`/api/companies/${id}`);
+    await axios.delete(`/companies/${id}`);
     fetchCompanies();
   };
 

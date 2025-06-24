@@ -27,7 +27,7 @@ const AdminCompanyFormPage: React.FC = () => {
 
   useEffect(() => {
     if (id && id !== 'new') {
-      axios.get(`/api/companies/${id}`).then((res) => {
+      axios.get(`/companies/${id}`).then((res) => {
         setForm({
           company_name: res.data.company_name,
           company_code: res.data.company_code,
@@ -52,10 +52,10 @@ const AdminCompanyFormPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (id && id !== 'new') {
-      await axios.put(`/api/companies/${id}`, form);
+      await axios.put(`/companies/${id}`, form);
       alert('수정되었습니다.');
     } else {
-      await axios.post('/api/companies', form);
+      await axios.post('/companies', form);
       alert('등록되었습니다.');
     }
     navigate('/admin/companies');
