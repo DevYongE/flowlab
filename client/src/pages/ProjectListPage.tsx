@@ -22,7 +22,14 @@ const ProjectListPage: React.FC = () => {
   useEffect(() => {
     axios
       .get('/projects')
-      .then((res) => setProjects(res.data))
+      .then((res) => {
+        if (Array.isArray(res.data)) {
+          setProjects(res.data);
+        } else {
+          setProjects([]);
+          console.error('프로젝트 목록 응답이 배열이 아님:', res.data);
+        }
+      })
       .catch(() => alert('프로젝트 목록을 불러올 수 없습니다.'));
   }, []);
 
@@ -48,7 +55,7 @@ const ProjectListPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {projects.map((proj, idx) => (
+                {(Array.isArray(projects) ? projects : []).map((proj, idx) => (
                   <tr key={proj.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 text-center">{idx + 1}</td>
                     <td className="px-6 py-4">{proj.category}</td>
