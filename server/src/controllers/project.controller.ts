@@ -65,7 +65,7 @@ export const getProjectById = async (req: Request, res: Response) => {
   const currentUserRole = req.user?.role;
 
   try {
-    const [rows, meta] = await sequelize.query('SELECT *, TO_CHAR(start_date, \'YYYY-MM-DD\') as "startDate", TO_CHAR(end_date, \'YYYY-MM-DD\') as "endDate" FROM projects WHERE id = :id', { replacements: { id }, type: QueryTypes.SELECT });
+    const rows = await sequelize.query('SELECT *, TO_CHAR(start_date, \'YYYY-MM-DD\') as "startDate", TO_CHAR(end_date, \'YYYY-MM-DD\') as "endDate" FROM projects WHERE id = :id', { replacements: { id }, type: QueryTypes.SELECT });
     if (!Array.isArray(rows) || rows.length === 0) {
       res.status(404).json({ message: '프로젝트를 찾을 수 없습니다.' });
       return;
@@ -78,7 +78,7 @@ export const getProjectById = async (req: Request, res: Response) => {
     }
 
     const detailsRes = await sequelize.query('SELECT * FROM project_details WHERE project_id = :project_id', { replacements: { project_id: id }, type: QueryTypes.SELECT });
-    project.details = detailsRes[0] || {};
+    project.details = Array.isArray(detailsRes) && detailsRes.length > 0 ? detailsRes[0] : {};
     
     const notesRes = await sequelize.query(
       `SELECT dn.*, u.name as "authorName", TO_CHAR(dn.registered_at, 'YYYY-MM-DD') as "registeredAt" 
@@ -87,7 +87,7 @@ export const getProjectById = async (req: Request, res: Response) => {
        WHERE dn.project_id = :project_id ORDER BY dn.registered_at DESC`, 
       { replacements: { project_id: id }, type: QueryTypes.SELECT }
     );
-    project.devNotes = notesRes;
+    project.devNotes = Array.isArray(notesRes) ? notesRes : [];
 
     res.json(project);
   } catch (error) {
