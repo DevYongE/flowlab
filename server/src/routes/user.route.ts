@@ -31,4 +31,18 @@ router.get('/check-id', (req: Request, res: Response) => {
   })();
 });
 
+// 이메일 중복 체크
+router.get('/check-email', (req: Request, res: Response) => {
+  (async () => {
+    try {
+      const email = String(req.query.email || '');
+      if (!email) return res.status(400).json({ exists: false, message: 'email is required' });
+      const rows = await sequelize.query('SELECT 1 FROM users WHERE email = :email', { replacements: { email }, type: QueryTypes.SELECT });
+      res.json({ exists: Array.isArray(rows) && rows.length > 0 });
+    } catch (err) {
+      res.status(500).json({ exists: false, message: '서버 오류' });
+    }
+  })();
+});
+
 export default router;

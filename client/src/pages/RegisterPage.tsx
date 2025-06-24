@@ -21,6 +21,7 @@ const RegisterPage: React.FC = () => {
   });
   const [positions, setPositions] = useState<{ position_code: string; name: string }[]>([]);
   const [idCheck, setIdCheck] = useState<{ checked: boolean; exists: boolean }>({ checked: false, exists: false });
+  const [emailCheck, setEmailCheck] = useState<{ checked: boolean; exists: boolean }>({ checked: false, exists: false });
 
   useEffect(() => {
     axios.get('/positions')
@@ -42,6 +43,20 @@ const RegisterPage: React.FC = () => {
         setIdCheck({ checked: true, exists: res.data.exists });
       } catch {
         setIdCheck({ checked: true, exists: false });
+      }
+    }
+  };
+
+  const handleEmailChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setForm({ ...form, email: value });
+    setEmailCheck({ checked: false, exists: false });
+    if (value) {
+      try {
+        const res = await axios.get(`/users/check-email?email=${encodeURIComponent(value)}`);
+        setEmailCheck({ checked: true, exists: res.data.exists });
+      } catch {
+        setEmailCheck({ checked: true, exists: false });
       }
     }
   };
@@ -99,7 +114,10 @@ const handleRegister = async () => {
           )}
           <Input name="password" type="password" placeholder="비밀번호" value={form.password} onChange={handleChange} />
           <Input name="confirmPassword" type="password" placeholder="비밀번호 확인" value={form.confirmPassword} onChange={handleChange} />
-          <Input name="email" placeholder="이메일" value={form.email} onChange={handleChange} />
+          <Input name="email" placeholder="이메일" value={form.email} onChange={handleEmailChange} />
+          {emailCheck.checked && emailCheck.exists && (
+            <div className="text-red-500 text-sm">이미 사용 중인 이메일입니다.</div>
+          )}
           <Input name="birth" placeholder="생년월일 (YYYY-MM-DD)" value={form.birth} onChange={handleChange} />
           <Input name="name" placeholder="이름" value={form.name} onChange={handleChange} />
           <select
@@ -115,7 +133,7 @@ const handleRegister = async () => {
           </select>
           <Input name="department" placeholder="부서명" value={form.department} onChange={handleChange} />
           <Input name="joinDate" placeholder="입사일자 (YYYY-MM)" value={form.joinDate} onChange={handleChange} />
-          <Button className="w-full rounded-xl text-lg" onClick={handleRegister} disabled={idCheck.exists}>가입하기</Button>
+          <Button className="w-full rounded-xl text-lg" onClick={handleRegister} disabled={idCheck.exists || emailCheck.exists}>가입하기</Button>
         </CardContent>
       </Card>
     </div>
