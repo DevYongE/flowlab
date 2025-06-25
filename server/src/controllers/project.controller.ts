@@ -175,6 +175,7 @@ export const createProject = async (req: Request, res: Response): Promise<void> 
   const type = toTypeCode(req.body.type);
   const { name, startDate, endDate, os, memory, javaVersion, springVersion, reactVersion, vueVersion, tomcatVersion, centricVersion } = req.body;
   const authorId = req.user?.id;
+  const safe = (v: string) => (v === '' ? null : v);
   console.log('[createProject] req.user:', req.user);
   console.log('[createProject] req.body:', req.body);
   if (!authorId) {
@@ -192,7 +193,7 @@ export const createProject = async (req: Request, res: Response): Promise<void> 
     await sequelize.query('BEGIN');
     const [rows] = await sequelize.query(
       'INSERT INTO projects (category, type, name, start_date, end_date, os, memory, author_id) VALUES (:category, :type, :name, :startDate, :endDate, :os, :memory, :authorId) RETURNING id',
-      { replacements: { category, type, name, startDate, endDate, os, memory, authorId }, type: QueryTypes.SELECT }
+      { replacements: { category, type, name, startDate, endDate, os: safe(os), memory: safe(memory), authorId }, type: QueryTypes.SELECT }
     );
     if (!Array.isArray(rows) || rows.length === 0) {
       await sequelize.query('ROLLBACK');
@@ -203,7 +204,7 @@ export const createProject = async (req: Request, res: Response): Promise<void> 
     const projectId = (rows[0] as any).id;
     await sequelize.query(
       'INSERT INTO project_details (project_id, java_version, spring_version, react_version, vue_version, tomcat_version, centric_version) VALUES (:projectId, :javaVersion, :springVersion, :reactVersion, :vueVersion, :tomcatVersion, :centricVersion)',
-      { replacements: { projectId, javaVersion, springVersion, reactVersion, vueVersion, tomcatVersion, centricVersion }, type: QueryTypes.INSERT }
+      { replacements: { projectId, javaVersion: safe(javaVersion), springVersion: safe(springVersion), reactVersion: safe(reactVersion), vueVersion: safe(vueVersion), tomcatVersion: safe(tomcatVersion), centricVersion: safe(centricVersion) }, type: QueryTypes.INSERT }
     );
     await sequelize.query('COMMIT');
     console.log('[createProject] 프로젝트 생성 성공:', projectId);
