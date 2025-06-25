@@ -195,12 +195,12 @@ export const createProject = async (req: Request, res: Response): Promise<void> 
       'INSERT INTO projects (category, type, name, start_date, end_date, os, memory, author_id) VALUES (:category, :type, :name, :startDate, :endDate, :os, :memory, :authorId) RETURNING id',
       { replacements: { category, type, name, startDate, endDate, os: safe(os), memory: safe(memory), authorId }, type: QueryTypes.SELECT }
     );
-    if (!Array.isArray(rows) || rows.length === 0) {
+    const projectId = Array.isArray(rows) ? (rows[0] as any)?.id : (rows as any)?.id;
+    if (!projectId) {
       await sequelize.query('ROLLBACK');
       console.log('[createProject] 프로젝트 생성 실패(DB insert 결과 없음, rows:', rows, ')');
       throw new Error('DB insert 결과 없음');
     }
-    const projectId = (rows[0] as any).id;
     await sequelize.query(
       'INSERT INTO project_details (project_id, java_version, spring_version, react_version, vue_version, tomcat_version, centric_version) VALUES (:projectId, :javaVersion, :springVersion, :reactVersion, :vueVersion, :tomcatVersion, :centricVersion)',
       { replacements: { projectId, javaVersion: safe(javaVersion), springVersion: safe(springVersion), reactVersion: safe(reactVersion), vueVersion: safe(vueVersion), tomcatVersion: safe(tomcatVersion), centricVersion: safe(centricVersion) }, type: QueryTypes.INSERT }
