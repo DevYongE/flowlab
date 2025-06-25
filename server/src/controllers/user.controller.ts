@@ -86,6 +86,16 @@ export const updateUser = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { name, email, department, position_code, company_code } = req.body;
+
+    const replacements = {
+      name,
+      email,
+      department: department || null,
+      position_code: position_code || null,
+      company_code: company_code || null,
+      id,
+    };
+
     await sequelize.query(
       `UPDATE users SET 
         name=:name, 
@@ -95,7 +105,7 @@ export const updateUser = async (req: Request, res: Response) => {
         company_code=:company_code 
       WHERE id=:id`,
       {
-        replacements: { name, email, department, position_code, company_code, id },
+        replacements,
         type: QueryTypes.UPDATE,
       }
     );
