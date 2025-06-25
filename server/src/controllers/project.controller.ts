@@ -332,13 +332,18 @@ export const getOngoingProjects = async (req: Request, res: Response): Promise<v
 // 개발 노트 생성
 export const createDevNote = async (req: Request, res: Response): Promise<void> => {
   const { projectId } = req.params;
-  // 한글→영문 변환 적용
   const status = toStatusCode(req.body.status);
   const { content, deadline, progress, parent_id, order } = req.body;
   const authorId = req.user?.id;
   const currentUserRole = req.user?.role;
   try {
+    console.log('[createDevNote] req.user:', req.user);
+    console.log('[createDevNote] req.body:', req.body);
+    console.log('[createDevNote] params:', req.params);
+
     const [projectRows] = await sequelize.query('SELECT author_id FROM projects WHERE id = :project_id', { replacements: { project_id: projectId }, type: QueryTypes.SELECT });
+    console.log('[createDevNote] projectRows:', projectRows);
+
     if (!Array.isArray(projectRows) || projectRows.length === 0) {
       res.status(404).json({ message: '프로젝트를 찾을 수 없습니다.' });
       return;
@@ -348,11 +353,14 @@ export const createDevNote = async (req: Request, res: Response): Promise<void> 
       res.status(403).json({ message: '이 프로젝트에 요구사항을 추가할 권한이 없습니다.' });
       return;
     }
+    console.log('[createDevNote] Inserting dev_note:', { projectId, content, deadline, status, progress, authorId, parent_id, order });
+
     const [rows] = await sequelize.query(
       'INSERT INTO dev_notes (project_id, content, deadline, status, progress, author_id, parent_id, "order") VALUES (:projectId, :content, :deadline, :status, :progress, :authorId, :parent_id, :order) RETURNING *',
       { replacements: { projectId, content, deadline, status, progress, authorId, parent_id, order }, type: QueryTypes.SELECT }
     );
-    // 반환값 구조 유연하게 처리
+    console.log('[createDevNote] Insert result rows:', rows);
+
     let note = null;
     if (Array.isArray(rows)) {
       note = rows[0];
@@ -366,6 +374,8 @@ export const createDevNote = async (req: Request, res: Response): Promise<void> 
     res.status(201).json(note);
     return;
   } catch (error) {
+    const err = error as any;
+    console.error('[createDevNote] error:', err, 'stack:', err?.stack);
     res.status(500).json({ message: '개발 노트 생성 실패', error: JSON.stringify(error) });
     return;
   }
