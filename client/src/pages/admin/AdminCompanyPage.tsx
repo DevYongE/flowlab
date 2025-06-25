@@ -105,7 +105,6 @@ const AdminCompanyPage: React.FC = () => {
   const [expandedCompanyId, setExpandedCompanyId] = useState<string | null>(null);
   const [solutions, setSolutions] = useState<Solution[]>([]);
   const [solutionForm, setSolutionForm] = useState({ solution_name: '', description: '', version: '' });
-  const [solutionLoading, setSolutionLoading] = useState(false);
 
   const fetchCompanies = async () => {
     const res = await axios.get('/companies');
@@ -113,13 +112,8 @@ const AdminCompanyPage: React.FC = () => {
   };
 
   const fetchSolutions = async (company_code: string) => {
-    setSolutionLoading(true);
-    try {
-      const res = await axios.get(`/solutions?company_code=${company_code}`);
-      setSolutions(res.data);
-    } finally {
-      setSolutionLoading(false);
-    }
+    const res = await axios.get(`/solutions?company_code=${company_code}`);
+    setSolutions(res.data);
   };
 
   useEffect(() => {
