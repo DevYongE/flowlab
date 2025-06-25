@@ -15,19 +15,65 @@ const RegisterPage: React.FC = () => {
     email: '',
     birth: '',
     name: '',
-    position: '',
+    company_code: '',
+    position_code: '',
     department: '',
     joinDate: '',
   });
-  const [positions, setPositions] = useState<{ position_code: string; name: string }[]>([]);
+
+  // Dropdown lists
+  const [companies, setCompanies] = useState<any[]>([]);
+  const [departments, setDepartments] = useState<any[]>([]);
+  const [positions, setPositions] = useState<any[]>([]);
+
+  // Validation
   const [idCheck, setIdCheck] = useState<{ checked: boolean; exists: boolean }>({ checked: false, exists: false });
   const [emailCheck, setEmailCheck] = useState<{ checked: boolean; exists: boolean }>({ checked: false, exists: false });
 
   useEffect(() => {
-    axios.get('/positions')
-      .then(res => setPositions(res.data))
-      .catch(err => console.error('직책 불러오기 실패:', err));
+    // Fetch all companies on mount
+    axios.get('/companies')
+      .then(res => setCompanies(res.data))
+      .catch(err => console.error('기업 목록 불러오기 실패:', err));
   }, []);
+
+  const fetchDepartments = async (companyCode: string) => {
+    if (!companyCode) {
+      setDepartments([]);
+      return;
+    }
+    try {
+      const res = await axios.get(`/departments?company_code=${companyCode}`);
+      setDepartments(res.data);
+    } catch (err) {
+      setDepartments([]);
+    }
+  };
+
+  const fetchPositions = async (companyCode: string) => {
+    if (!companyCode) {
+      setPositions([]);
+      return;
+    }
+    try {
+      const res = await axios.get(`/positions?company_code=${companyCode}`);
+      setPositions(res.data);
+    } catch (err) {
+      setPositions([]);
+    }
+  };
+
+  const handleCompanyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const companyCode = e.target.value;
+    setForm({ 
+      ...form, 
+      company_code: companyCode,
+      department: '', // Reset department and position
+      position_code: '' 
+    });
+    fetchDepartments(companyCode);
+    fetchPositions(companyCode);
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -64,7 +110,7 @@ const RegisterPage: React.FC = () => {
 const handleRegister = async () => {
   const {
     id, password, confirmPassword, email,
-    birth, name, department, joinDate, position
+    birth, name, department, joinDate, position_code, company_code
   } = form;
 
   const missingFields: string[] = [];
@@ -75,9 +121,10 @@ const handleRegister = async () => {
   if (!email) missingFields.push('이메일');
   if (!birth) missingFields.push('생년월일');
   if (!name) missingFields.push('이름');
+  if (!company_code) missingFields.push('기업');
   if (!department) missingFields.push('부서');
   if (!joinDate) missingFields.push('입사일자');
-  if (!position) missingFields.push('직책');
+  if (!position_code) missingFields.push('직책');
 
   if (missingFields.length > 0) {
     alert(`${missingFields.join(', ')} 입력해주세요.`);
@@ -93,7 +140,6 @@ const handleRegister = async () => {
     await axios.post('/users/register', {
       ...form,
       join_date: joinDate,
-      position_code: position,
     });
     alert('회원가입 완료! 로그인 페이지로 이동합니다.');
     navigate('/login');
@@ -120,18 +166,30 @@ const handleRegister = async () => {
           )}
           <Input name="birth" placeholder="생년월일 (YYYY-MM-DD)" value={form.birth} onChange={handleChange} />
           <Input name="name" placeholder="이름" value={form.name} onChange={handleChange} />
-          <select
-            name="position"
-            className="w-full p-2 rounded border border-gray-300"
-            value={form.position}
-            onChange={handleChange}
-          >
-            <option value="">직책 선택</option>
-            {positions.map(pos => (
-              <option key={pos.position_code} value={pos.position_code}>{pos.name}</option>
+          <select name="company_code" className="w-full p-2 rounded border border-gray-300" value={form.company_code} onChange={handleCompanyChange}>
+            <option value="">기업 선택</option>
+            {companies.map(c => (
+              <option key={c.company_code} value={c.company_code}>{c.company_name}</option>
             ))}
           </select>
-          <Input name="department" placeholder="부서명" value={form.department} onChange={handleChange} />
+
+          {form.company_code && (
+            <>
+              <select name="department" className="w-full p-2 rounded border border-gray-300" value={form.department} onChange={handleChange}>
+                <option value="">부서 선택</option>
+                {departments.map(d => (
+                  <option key={d.id} value={d.department_name}>{d.department_name}</option>
+                ))}
+              </select>
+              <select name="position_code" className="w-full p-2 rounded border border-gray-300" value={form.position_code} onChange={handleChange}>
+                <option value="">직책 선택</option>
+                {positions.map(pos => (
+                  <option key={pos.id} value={pos.id}>{pos.name}</option>
+                ))}
+              </select>
+            </>
+          )}
+
           <Input name="joinDate" placeholder="입사일자 (YYYY-MM)" value={form.joinDate} onChange={handleChange} />
           <Button className="w-full rounded-xl text-lg" onClick={handleRegister} disabled={idCheck.exists || emailCheck.exists}>가입하기</Button>
         </CardContent>

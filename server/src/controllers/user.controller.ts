@@ -34,7 +34,8 @@ export const registerUser = async (req: Request, res: Response) => {
       name,
       position_code,
       department,
-      join_date
+      join_date,
+      company_code,
     } = req.body;
 
     if (!join_date) {
@@ -55,8 +56,8 @@ export const registerUser = async (req: Request, res: Response) => {
 
     await sequelize.query(
       `INSERT INTO users (
-        id, password, email, birth, name, position_code, department, join_date, user_code, role_code
-      ) VALUES (:id,:password,:email,:birth,:name,:position_code,:department,:join_date,:user_code,:role_code)`,
+        id, password, email, birth, name, position_code, department, join_date, user_code, role_code, company_code
+      ) VALUES (:id,:password,:email,:birth,:name,:position_code,:department,:join_date,:user_code,:role_code,:company_code)`,
       {
         replacements: {
           id,
@@ -69,6 +70,7 @@ export const registerUser = async (req: Request, res: Response) => {
           join_date,
           user_code,
           role_code,
+          company_code,
         },
         type: QueryTypes.INSERT,
       }
