@@ -19,10 +19,6 @@ interface CompanyFormProps {
   onClose: () => void;
 }
 
-const TABS = [
-  { key: 'companies', label: '기업관리' },
-];
-
 const CompanyForm: React.FC<CompanyFormProps & { initial?: Company | null }> = ({ onSuccess, onClose, initial }) => {
   const [form, setForm] = useState({
     company_name: initial?.company_name || '',
@@ -92,7 +88,6 @@ const CompanyForm: React.FC<CompanyFormProps & { initial?: Company | null }> = (
 };
 
 const AdminCompanyPage: React.FC = () => {
-  const [tab] = useState('companies');
   const [companies, setCompanies] = useState<Company[]>([]);
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
