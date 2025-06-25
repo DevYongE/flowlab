@@ -55,7 +55,7 @@ function toCategoryCode(category: string) {
 }
 
 // 프로젝트 목록 조회
-export const getProjects = async (req: Request, res: Response) => {
+export const getProjects = async (req: Request, res: Response): Promise<void> => {
   const currentUserId = req.user?.id;
   const currentUserRole = req.user?.role;
 
@@ -80,7 +80,7 @@ export const getProjects = async (req: Request, res: Response) => {
 };
 
 // 프로젝트 상세 조회
-export const getProjectById = async (req: Request, res: Response) => {
+export const getProjectById = async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
   const currentUserId = req.user?.id;
   const currentUserRole = req.user?.role;
@@ -117,7 +117,7 @@ export const getProjectById = async (req: Request, res: Response) => {
 };
 
 // 프로젝트의 DevNotes를 WBS 형식(트리)으로 조회
-export const getDevNotesAsWbs = async (req: Request, res: Response) => {
+export const getDevNotesAsWbs = async (req: Request, res: Response): Promise<void> => {
   const { projectId } = req.params;
   try {
     const notesRes = await sequelize.query(
@@ -137,7 +137,7 @@ export const getDevNotesAsWbs = async (req: Request, res: Response) => {
 };
 
 // 프로젝트 상태별 개수 조회
-export const getProjectStatusSummary = async (req: Request, res: Response) => {
+export const getProjectStatusSummary = async (req: Request, res: Response): Promise<void> => {
   const currentUserId = req.user?.id;
   const currentUserRole = req.user?.role;
 
@@ -170,16 +170,18 @@ export const getProjectStatusSummary = async (req: Request, res: Response) => {
 };
 
 // 프로젝트 생성
-export const createProject = async (req: Request, res: Response) => {
+export const createProject = async (req: Request, res: Response): Promise<void> => {
   const category = toCategoryCode(req.body.category);
   const type = toTypeCode(req.body.type);
   const { name, startDate, endDate, os, memory, javaVersion, springVersion, reactVersion, vueVersion, tomcatVersion, centricVersion } = req.body;
   const authorId = req.user?.id;
   if (!authorId) {
-    return res.status(401).json({ message: '로그인 정보가 필요합니다.' });
+    res.status(401).json({ message: '로그인 정보가 필요합니다.' });
+    return;
   }
   if (!category || !type || !name || !startDate || !endDate) {
-    return res.status(400).json({ message: '필수값 누락' });
+    res.status(400).json({ message: '필수값 누락' });
+    return;
   }
   try {
     await sequelize.query('BEGIN');
@@ -206,7 +208,7 @@ export const createProject = async (req: Request, res: Response) => {
 };
 
 // 프로젝트 수정
-export const updateProject = async (req: Request, res: Response) => {
+export const updateProject = async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
   // 한글→영문 변환 적용
   const category = toCategoryCode(req.body.category);
@@ -245,7 +247,7 @@ export const updateProject = async (req: Request, res: Response) => {
 };
 
 // 프로젝트 삭제
-export const deleteProject = async (req: Request, res: Response) => {
+export const deleteProject = async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
   const currentUserId = req.user?.id;
   const currentUserRole = req.user?.role;
@@ -275,7 +277,7 @@ export const deleteProject = async (req: Request, res: Response) => {
 };
 
 // 진행중인 프로젝트 목록 조회
-export const getOngoingProjects = async (req: Request, res: Response) => {
+export const getOngoingProjects = async (req: Request, res: Response): Promise<void> => {
   const currentUserId = req.user?.id;
   const currentUserRole = req.user?.role;
 
@@ -306,13 +308,15 @@ export const getOngoingProjects = async (req: Request, res: Response) => {
 
         const result = await sequelize.query(query, { replacements: params, type: QueryTypes.SELECT });
         res.json(result);
+        return;
     } catch (error) {
         res.status(500).json({ message: '진행중인 프로젝트 목록 조회 실패', error });
+        return;
     }
 };
 
 // 개발 노트 생성
-export const createDevNote = async (req: Request, res: Response) => {
+export const createDevNote = async (req: Request, res: Response): Promise<void> => {
   const { projectId } = req.params;
   // 한글→영문 변환 적용
   const status = toStatusCode(req.body.status);
@@ -335,13 +339,15 @@ export const createDevNote = async (req: Request, res: Response) => {
       { replacements: { projectId, content, deadline, status, progress, authorId, parent_id, order }, type: QueryTypes.SELECT }
     );
     res.status(201).json((rows as any[])[0]);
+    return;
   } catch (error) {
     res.status(500).json({ message: '개발 노트 생성 실패', error });
+    return;
   }
 };
 
 // 개발 노트 수정
-export const updateDevNote = async (req: Request, res: Response) => {
+export const updateDevNote = async (req: Request, res: Response): Promise<void> => {
   const { noteId } = req.params;
   // 한글→영문 변환 적용
   const status = toStatusCode(req.body.status);
@@ -370,7 +376,7 @@ export const updateDevNote = async (req: Request, res: Response) => {
 };
 
 // 개발 노트 삭제
-export const deleteDevNote = async (req: Request, res: Response) => {
+export const deleteDevNote = async (req: Request, res: Response): Promise<void> => {
   const { noteId } = req.params;
   const currentUserId = req.user?.id;
   const currentUserRole = req.user?.role;
@@ -393,7 +399,7 @@ export const deleteDevNote = async (req: Request, res: Response) => {
 };
 
 // WBS/DevNotes 구조 업데이트를 위한 새 함수
-export const updateDevNotesStructure = async (req: Request, res: Response) => {
+export const updateDevNotesStructure = async (req: Request, res: Response): Promise<void> => {
   const { projectId } = req.params;
   const { structure } = req.body; // [{ id: 1, parent_id: null, order: 0 }, ...]
   try {
@@ -414,7 +420,7 @@ export const updateDevNotesStructure = async (req: Request, res: Response) => {
 };
 
 // 특정 노트의 댓글 조회
-export const getDevNoteComments = async (req: Request, res: Response) => {
+export const getDevNoteComments = async (req: Request, res: Response): Promise<void> => {
   const { noteId } = req.params;
   try {
     const [rows] = await sequelize.query(
@@ -432,7 +438,7 @@ export const getDevNoteComments = async (req: Request, res: Response) => {
 };
 
 // 댓글 생성
-export const createDevNoteComment = async (req: Request, res: Response) => {
+export const createDevNoteComment = async (req: Request, res: Response): Promise<void> => {
   const { noteId } = req.params;
   const { content } = req.body;
   const authorId = req.user?.id;
