@@ -36,8 +36,6 @@ interface Department {
 interface Position {
   id: string;
   name: string;
-  company_code: string;
-  company_name: string;
   // description?: string; // 필요시 추가
 }
 
@@ -215,7 +213,6 @@ const AdminCompanyPage: React.FC = () => {
     await axios.post('/positions', {
       name: positionForm.name,
       company_code: company.company_code,
-      company_name: company.company_name,
     });
     setPositionForm({ name: '' });
     fetchPositions(company.company_code);
@@ -387,23 +384,19 @@ const AdminCompanyPage: React.FC = () => {
                               <table className="w-full text-sm">
                                 <thead>
                                   <tr className="bg-blue-50 text-blue-800">
-                                    <th className="py-3 px-4 text-center w-1/5">ID</th>
-                                    <th className="py-3 px-4 text-center w-1/5">직급명</th>
-                                    <th className="py-3 px-4 text-center w-1/5">기업코드</th>
-                                    <th className="py-3 px-4 text-center w-1/5">기업명</th>
+                                    <th className="py-3 px-4 text-center w-1/4">ID</th>
+                                    <th className="py-3 px-4 text-center w-1/2">직급명</th>
                                   </tr>
                                 </thead>
                                 <tbody>
                                   {positions.length === 0 ? (
                                     <tr>
-                                      <td colSpan={4} className="text-center text-gray-400 py-6">직급이 없습니다.</td>
+                                      <td colSpan={2} className="text-center text-gray-400 py-6">직급이 없습니다.</td>
                                     </tr>
                                   ) : positions.map(p => (
                                     <tr key={p.id} className="hover:bg-blue-50 transition">
                                       <td className="py-2 px-4 text-center font-mono">{p.id}</td>
                                       <td className="py-2 px-4 text-center">{p.name}</td>
-                                      <td className="py-2 px-4 text-center">{p.company_code}</td>
-                                      <td className="py-2 px-4 text-center">{p.company_name}</td>
                                     </tr>
                                   ))}
                                 </tbody>
