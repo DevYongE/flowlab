@@ -202,40 +202,47 @@ const AdminCompanyPage: React.FC = () => {
                 {expandedCompanyId === c.company_id && (
                   <tr>
                     <td colSpan={5} className="bg-gray-50 p-4">
-                      <div className="mb-2 font-semibold">솔루션 목록</div>
-                      {solutionLoading ? (
-                        <div>로딩중...</div>
-                      ) : (
-                        <table className="w-full text-xs mb-2">
+                      <div className="mb-4 font-semibold text-lg">솔루션 목록</div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm border">
                           <thead>
-                            <tr className="bg-gray-100">
-                              <th className="py-1 px-2">ID</th>
-                              <th className="py-1 px-2">이름</th>
-                              <th className="py-1 px-2">버전</th>
-                              <th className="py-1 px-2">설명</th>
-                              <th className="py-1 px-2">등록일</th>
+                            <tr className="bg-gray-100 border-b">
+                              <th className="py-2 px-3 text-center w-40">ID</th>
+                              <th className="py-2 px-3 text-center w-40">이름</th>
+                              <th className="py-2 px-3 text-center w-24">버전</th>
+                              <th className="py-2 px-3 text-center">설명</th>
+                              <th className="py-2 px-3 text-center w-32">등록일</th>
                             </tr>
                           </thead>
                           <tbody>
                             {solutions.length === 0 ? (
-                              <tr><td colSpan={5} className="text-center text-gray-400 py-2">솔루션이 없습니다.</td></tr>
+                              <tr><td colSpan={5} className="text-center text-gray-400 py-4">솔루션이 없습니다.</td></tr>
                             ) : solutions.map(s => (
-                              <tr key={s.id}>
-                                <td className="py-1 px-2">{s.id}</td>
-                                <td className="py-1 px-2">{s.solution_name}</td>
-                                <td className="py-1 px-2">{s.version}</td>
-                                <td className="py-1 px-2">{s.description}</td>
-                                <td className="py-1 px-2">{s.created_at?.slice(0, 10)}</td>
+                              <tr key={s.id} className="border-b hover:bg-gray-50">
+                                <td className="py-2 px-3 text-center font-mono">{s.id}</td>
+                                <td className="py-2 px-3 text-center">{s.solution_name}</td>
+                                <td className="py-2 px-3 text-center">{s.version}</td>
+                                <td className="py-2 px-3">{s.description}</td>
+                                <td className="py-2 px-3 text-center">{s.created_at?.slice(0, 10)}</td>
                               </tr>
                             ))}
                           </tbody>
                         </table>
-                      )}
-                      <form className="flex gap-2 items-center mt-2" onSubmit={e => handleSolutionSubmit(c, e)}>
-                        <input className="border p-1 rounded w-32" name="solution_name" value={solutionForm.solution_name} onChange={handleSolutionFormChange} placeholder="솔루션명" required />
-                        <input className="border p-1 rounded w-20" name="version" value={solutionForm.version} onChange={handleSolutionFormChange} placeholder="버전" />
-                        <input className="border p-1 rounded w-48" name="description" value={solutionForm.description} onChange={handleSolutionFormChange} placeholder="설명" />
-                        <button className="bg-blue-500 text-white px-3 py-1 rounded">등록</button>
+                      </div>
+                      <form className="flex flex-wrap gap-2 items-center mt-4 border-t pt-4" onSubmit={e => handleSolutionSubmit(c, e)}>
+                        <label className="flex flex-col text-xs w-40">
+                          솔루션명
+                          <input className="border p-2 rounded mt-1" name="solution_name" value={solutionForm.solution_name} onChange={handleSolutionFormChange} placeholder="솔루션명" required />
+                        </label>
+                        <label className="flex flex-col text-xs w-24">
+                          버전
+                          <input className="border p-2 rounded mt-1" name="version" value={solutionForm.version} onChange={handleSolutionFormChange} placeholder="버전" />
+                        </label>
+                        <label className="flex flex-col text-xs flex-1 min-w-[120px]">
+                          설명
+                          <input className="border p-2 rounded mt-1" name="description" value={solutionForm.description} onChange={handleSolutionFormChange} placeholder="설명" />
+                        </label>
+                        <button className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700" type="submit">등록</button>
                       </form>
                     </td>
                   </tr>
