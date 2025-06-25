@@ -233,12 +233,16 @@ export const updateProject = async (req: Request, res: Response): Promise<void> 
   try {
     await sequelize.query('BEGIN');
     const [rows] = await sequelize.query('SELECT author_id FROM projects WHERE id = :id', { replacements: { id }, type: QueryTypes.SELECT });
-    if (!Array.isArray(rows) || rows.length === 0) {
+    let projectAuthorId = null;
+    if (Array.isArray(rows) && rows.length > 0) {
+      projectAuthorId = rows[0].author_id;
+    } else if (rows && typeof rows === 'object' && 'author_id' in rows) {
+      projectAuthorId = rows.author_id;
+    } else {
       await sequelize.query('ROLLBACK');
-      res.status(404).json({ message: '프로젝트를 찾을 수 없습니다.' });
+      res.status(404).json({ message: '프로젝트를 찾을 수 없습니다.', rows });
       return;
     }
-    const projectAuthorId = (rows[0] as any).author_id;
     if (currentUserRole !== 'ADMIN' && currentUserId !== projectAuthorId) {
       await sequelize.query('ROLLBACK');
       res.status(403).json({ message: '프로젝트를 수정할 권한이 없습니다.' });
@@ -268,12 +272,16 @@ export const deleteProject = async (req: Request, res: Response): Promise<void> 
   try {
     await sequelize.query('BEGIN');
     const [rows] = await sequelize.query('SELECT author_id FROM projects WHERE id = :id', { replacements: { id }, type: QueryTypes.SELECT });
-    if (!Array.isArray(rows) || rows.length === 0) {
+    let projectAuthorId = null;
+    if (Array.isArray(rows) && rows.length > 0) {
+      projectAuthorId = rows[0].author_id;
+    } else if (rows && typeof rows === 'object' && 'author_id' in rows) {
+      projectAuthorId = rows.author_id;
+    } else {
       await sequelize.query('ROLLBACK');
-      res.status(404).json({ message: '프로젝트를 찾을 수 없습니다.' });
+      res.status(404).json({ message: '프로젝트를 찾을 수 없습니다.', rows });
       return;
     }
-    const projectAuthorId = (rows[0] as any).author_id;
     if (currentUserRole !== 'ADMIN' && currentUserId !== projectAuthorId) {
       await sequelize.query('ROLLBACK');
       res.status(403).json({ message: '프로젝트를 삭제할 권한이 없습니다.' });
