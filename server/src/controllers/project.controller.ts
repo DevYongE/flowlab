@@ -480,7 +480,7 @@ export const updateDevNotesStructure = async (req: Request, res: Response): Prom
 export const getDevNoteComments = async (req: Request, res: Response): Promise<void> => {
   const { noteId } = req.params;
   try {
-    const rows = await sequelize.query(
+    const result = await sequelize.query(
       `SELECT c.*, u.name as "authorName", TO_CHAR(c.created_at, 'YYYY-MM-DD HH24:MI') as "createdAt"
        FROM dev_note_comments c
        LEFT JOIN users u ON c.author_id = u.id
@@ -488,8 +488,11 @@ export const getDevNoteComments = async (req: Request, res: Response): Promise<v
        ORDER BY c.created_at ASC`,
       { replacements: { noteId }, type: QueryTypes.SELECT }
     );
-    res.json(rows);
+    // sequelize.query 결과가 이중 배열일 수 있으므로 flat()으로 처리
+    const comments = Array.isArray(result) ? result.flat() : [];
+    res.json(comments);
   } catch (error) {
+    console.error('댓글 조회 실패:', error);
     res.status(500).json({ message: '댓글 조회 실패', error });
   }
 };
