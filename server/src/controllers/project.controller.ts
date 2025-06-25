@@ -171,11 +171,16 @@ export const getProjectStatusSummary = async (req: Request, res: Response) => {
 
 // 프로젝트 생성
 export const createProject = async (req: Request, res: Response) => {
-  // 한글→영문 변환 적용
   const category = toCategoryCode(req.body.category);
   const type = toTypeCode(req.body.type);
   const { name, startDate, endDate, os, memory, javaVersion, springVersion, reactVersion, vueVersion, tomcatVersion, centricVersion } = req.body;
   const authorId = req.user?.id;
+  if (!authorId) {
+    return res.status(401).json({ message: '로그인 정보가 필요합니다.' });
+  }
+  if (!category || !type || !name || !startDate || !endDate) {
+    return res.status(400).json({ message: '필수값 누락' });
+  }
   try {
     await sequelize.query('BEGIN');
     const [rows] = await sequelize.query(
