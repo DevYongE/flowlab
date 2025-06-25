@@ -197,9 +197,8 @@ export const createProject = async (req: Request, res: Response): Promise<void> 
     );
     if (!Array.isArray(rows) || rows.length === 0) {
       await sequelize.query('ROLLBACK');
-      console.log('[createProject] 프로젝트 생성 실패(DB insert 결과 없음)');
-      res.status(500).json({ message: '프로젝트 생성 실패' });
-      return;
+      console.log('[createProject] 프로젝트 생성 실패(DB insert 결과 없음, rows:', rows, ')');
+      throw new Error('DB insert 결과 없음');
     }
     const projectId = (rows[0] as any).id;
     await sequelize.query(
@@ -212,7 +211,11 @@ export const createProject = async (req: Request, res: Response): Promise<void> 
     return;
   } catch (error) {
     await sequelize.query('ROLLBACK');
-    console.log('[createProject] 프로젝트 생성 중 예외 발생:', error);
+    try {
+      console.log('[createProject] 프로젝트 생성 중 예외 발생:', error, JSON.stringify(error));
+    } catch (e) {
+      console.log('[createProject] 프로젝트 생성 중 예외 발생(직렬화 불가):', error);
+    }
     res.status(500).json({ message: '프로젝트 생성 실패', error });
     return;
   }
