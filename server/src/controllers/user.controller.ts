@@ -14,7 +14,7 @@ export const getUsers = async (req: Request, res: Response) => {
              r.name AS role_name
       FROM users u
       LEFT JOIN companies c ON u.company_code = c.company_code
-      LEFT JOIN positions p ON u.position_code = p.id
+      LEFT JOIN positions p ON u.position_code = p.id::text
       LEFT JOIN roles r ON u.role_code = r.role_code
     `, { type: QueryTypes.SELECT });
     res.status(200).json(Array.isArray(rows) ? rows : []);
