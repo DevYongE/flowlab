@@ -126,7 +126,16 @@ const ProjectDetailPage = () => {
       return;
     }
     try {
-      await axios.post(`/projects/${id}/notes`, newNote);
+      // status 값이 한글이면 영어 코드로 변환
+      let status = newNote.status;
+      if (status === '미완료') status = 'TODO';
+      else if (status === '진행중') status = 'IN_PROGRESS';
+      else if (status === '완료') status = 'DONE';
+
+      await axios.post(`/projects/${id}/notes`, {
+        ...newNote,
+        status, // 변환된 값 사용
+      });
       setNewNote({ content: '', deadline: '', status: 'TODO', progress: 0 });
       setShowModal(false);
       fetchProject();
