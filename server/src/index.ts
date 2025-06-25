@@ -11,6 +11,7 @@ import projectRouter from './routes/project.route';
 import aiRoutes from './routes/ai.route';
 import roleRouter from './routes/role.route';
 import companyRoutes from './routes/company.route';
+import solutionRouter from './routes/solution.route';
 
 import sequelize from './config/db';
 
@@ -42,6 +43,7 @@ app.use('/api/projects', projectRouter);
 app.use('/api/ai', aiRoutes);
 app.use('/api/roles', roleRouter);
 app.use('/api/companies', companyRoutes);
+app.use('/api/solutions', solutionRouter);
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
