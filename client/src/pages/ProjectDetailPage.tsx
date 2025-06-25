@@ -205,15 +205,20 @@ const ProjectDetailPage = () => {
 
       if (Array.isArray(newDevNotes)) {
         for (const note of newDevNotes) {
-          await axios.post(`/projects/${id}/notes`, {
-            content: note.content,
-            deadline: note.deadline ? new Date(note.deadline) : null,
-            status: '미완료',
-            progress: 0,
-            parent_id: null,
-            order: 0,
-            author_id: currentUser?.id || ''
-          });
+          try {
+            await axios.post(`/projects/${id}/notes`, {
+              content: note.content,
+              deadline: note.deadline ? note.deadline : null,
+              status: 'TODO',
+              progress: 0,
+              parent_id: null,
+              order: 0
+            });
+          } catch (err) {
+            console.error('노트 생성 실패:', note, err);
+            alert(`노트 생성 중 오류가 발생했습니다.\n내용: ${note.content}`);
+            break;
+          }
         }
       } else {
         console.error('AI 분석 결과가 배열이 아닙니다:', res.data);
