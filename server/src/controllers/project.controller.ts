@@ -352,10 +352,21 @@ export const createDevNote = async (req: Request, res: Response): Promise<void> 
       'INSERT INTO dev_notes (project_id, content, deadline, status, progress, author_id, parent_id, "order") VALUES (:projectId, :content, :deadline, :status, :progress, :authorId, :parent_id, :order) RETURNING *',
       { replacements: { projectId, content, deadline, status, progress, authorId, parent_id, order }, type: QueryTypes.SELECT }
     );
-    res.status(201).json((rows as any[])[0]);
+    // 반환값 구조 유연하게 처리
+    let note = null;
+    if (Array.isArray(rows)) {
+      note = rows[0];
+    } else if (rows && typeof rows === 'object' && 'id' in rows) {
+      note = rows;
+    }
+    if (!note) {
+      res.status(500).json({ message: '노트 생성 결과가 올바르지 않습니다.', rows });
+      return;
+    }
+    res.status(201).json(note);
     return;
   } catch (error) {
-    res.status(500).json({ message: '개발 노트 생성 실패', error });
+    res.status(500).json({ message: '개발 노트 생성 실패', error: JSON.stringify(error) });
     return;
   }
 };
