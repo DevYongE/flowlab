@@ -33,6 +33,14 @@ interface Department {
   created_at?: string;
 }
 
+interface Position {
+  id: string;
+  name: string;
+  company_code: string;
+  company_name: string;
+  // description?: string; // 필요시 추가
+}
+
 interface CompanyFormProps {
   onSuccess: () => void;
   onClose: () => void;
@@ -117,6 +125,8 @@ const AdminCompanyPage: React.FC = () => {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [departmentForm, setDepartmentForm] = useState({ department_name: '', description: '' });
   const [companyTabs, setCompanyTabs] = useState<{ [companyId: string]: string }>({});
+  const [positions, setPositions] = useState<Position[]>([]);
+  const [positionForm, setPositionForm] = useState({ name: '' });
 
   const fetchCompanies = async () => {
     const res = await axios.get('/companies');
@@ -131,6 +141,11 @@ const AdminCompanyPage: React.FC = () => {
   const fetchDepartments = async (company_code: string) => {
     const res = await axios.get(`/departments?company_code=${company_code}`);
     setDepartments(res.data);
+  };
+
+  const fetchPositions = async (company_code: string) => {
+    const res = await axios.get(`/positions?company_code=${company_code}`);
+    setPositions(res.data);
   };
 
   useEffect(() => {
@@ -148,10 +163,12 @@ const AdminCompanyPage: React.FC = () => {
       setExpandedCompanyId(null);
       setSolutions([]);
       setDepartments([]);
+      setPositions([]);
     } else {
       setExpandedCompanyId(company.company_id);
       fetchSolutions(company.company_code);
       fetchDepartments(company.company_code);
+      fetchPositions(company.company_code);
     }
   };
 
@@ -186,6 +203,22 @@ const AdminCompanyPage: React.FC = () => {
     });
     setDepartmentForm({ department_name: '', description: '' });
     fetchDepartments(company.company_code);
+  };
+
+  const handlePositionFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setPositionForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handlePositionSubmit = async (company: Company, e: React.FormEvent) => {
+    e.preventDefault();
+    await axios.post('/positions', {
+      name: positionForm.name,
+      company_code: company.company_code,
+      company_name: company.company_name,
+    });
+    setPositionForm({ name: '' });
+    fetchPositions(company.company_code);
   };
 
   const filteredCompanies = companies.filter(c =>
@@ -234,7 +267,7 @@ const AdminCompanyPage: React.FC = () => {
                       <div className="w-full max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-8 mt-4">
                         {/* 탭 버튼 */}
                         <div className="flex gap-2 mb-6">
-                          {['부서 관리', '솔루션 관리'].map(tab => (
+                          {['부서 관리', '솔루션 관리', '직급 관리'].map(tab => (
                             <button
                               key={tab}
                               className={`px-4 py-2 rounded-t-md font-semibold border-b-2 ${
@@ -294,7 +327,7 @@ const AdminCompanyPage: React.FC = () => {
                               </button>
                             </form>
                           </div>
-                        ) : (
+                        ) : (companyTabs[c.company_id] || '부서 관리') === '솔루션 관리' ? (
                           <div>
                             <div className="font-bold text-xl mb-6 flex items-center gap-2">
                               <span className="text-blue-600">🧩</span> 솔루션 목록
@@ -339,6 +372,47 @@ const AdminCompanyPage: React.FC = () => {
                               <div className="flex flex-col flex-1 min-w-[120px]">
                                 <label className="text-xs mb-1 text-gray-600">설명</label>
                                 <input className="border rounded-lg p-2 focus:ring-2 focus:ring-blue-300" name="description" value={solutionForm.description} onChange={handleSolutionFormChange} placeholder="설명" />
+                              </div>
+                              <button className="bg-blue-600 text-white px-8 py-2 rounded-lg font-semibold shadow hover:bg-blue-700 transition" type="submit">
+                                등록
+                              </button>
+                            </form>
+                          </div>
+                        ) : (
+                          <div>
+                            <div className="font-bold text-xl mb-6 flex items-center gap-2">
+                              <span className="text-blue-600">👔</span> 직급 목록
+                            </div>
+                            <div className="overflow-x-auto rounded-lg border mb-6">
+                              <table className="w-full text-sm">
+                                <thead>
+                                  <tr className="bg-blue-50 text-blue-800">
+                                    <th className="py-3 px-4 text-center w-1/5">ID</th>
+                                    <th className="py-3 px-4 text-center w-1/5">직급명</th>
+                                    <th className="py-3 px-4 text-center w-1/5">기업코드</th>
+                                    <th className="py-3 px-4 text-center w-1/5">기업명</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {positions.length === 0 ? (
+                                    <tr>
+                                      <td colSpan={4} className="text-center text-gray-400 py-6">직급이 없습니다.</td>
+                                    </tr>
+                                  ) : positions.map(p => (
+                                    <tr key={p.id} className="hover:bg-blue-50 transition">
+                                      <td className="py-2 px-4 text-center font-mono">{p.id}</td>
+                                      <td className="py-2 px-4 text-center">{p.name}</td>
+                                      <td className="py-2 px-4 text-center">{p.company_code}</td>
+                                      <td className="py-2 px-4 text-center">{p.company_name}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                            <form className="flex flex-wrap gap-4 items-end border-t pt-6" onSubmit={e => handlePositionSubmit(c, e)}>
+                              <div className="flex flex-col flex-1 min-w-[120px]">
+                                <label className="text-xs mb-1 text-gray-600">직급명</label>
+                                <input className="border rounded-lg p-2 focus:ring-2 focus:ring-blue-300" name="name" value={positionForm.name} onChange={handlePositionFormChange} placeholder="직급명" required />
                               </div>
                               <button className="bg-blue-600 text-white px-8 py-2 rounded-lg font-semibold shadow hover:bg-blue-700 transition" type="submit">
                                 등록
