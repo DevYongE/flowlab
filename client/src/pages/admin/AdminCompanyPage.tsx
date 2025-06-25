@@ -196,19 +196,19 @@ const AdminCompanyPage: React.FC = () => {
                 {expandedCompanyId === c.company_id && (
                   <tr>
                     <td colSpan={5}>
-                      <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-lg p-6 mt-4">
-                        <div className="font-bold text-xl mb-4 flex items-center gap-2">
+                      <div className="w-full max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-8 mt-4">
+                        <div className="font-bold text-xl mb-6 flex items-center gap-2">
                           <span className="text-blue-600">🧩</span> 솔루션 목록
                         </div>
-                        <div className="overflow-x-auto rounded-lg border">
+                        <div className="overflow-x-auto rounded-lg border mb-6">
                           <table className="w-full text-sm">
                             <thead>
                               <tr className="bg-blue-50 text-blue-800">
-                                <th className="py-3 px-4 text-center">ID</th>
-                                <th className="py-3 px-4 text-center">이름</th>
-                                <th className="py-3 px-4 text-center">버전</th>
-                                <th className="py-3 px-4 text-center">설명</th>
-                                <th className="py-3 px-4 text-center">등록일</th>
+                                <th className="py-3 px-4 text-center w-1/5">ID</th>
+                                <th className="py-3 px-4 text-center w-1/5">이름</th>
+                                <th className="py-3 px-4 text-center w-1/6">버전</th>
+                                <th className="py-3 px-4 text-center w-2/5">설명</th>
+                                <th className="py-3 px-4 text-center w-1/5">등록일</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -221,14 +221,14 @@ const AdminCompanyPage: React.FC = () => {
                                   <td className="py-2 px-4 text-center font-mono">{s.id}</td>
                                   <td className="py-2 px-4 text-center">{s.solution_name}</td>
                                   <td className="py-2 px-4 text-center">{s.version}</td>
-                                  <td className="py-2 px-4">{s.description}</td>
+                                  <td className="py-2 px-4 text-center">{s.description}</td>
                                   <td className="py-2 px-4 text-center">{s.created_at?.slice(0, 10)}</td>
                                 </tr>
                               ))}
                             </tbody>
                           </table>
                         </div>
-                        <form className="flex flex-wrap gap-4 items-end mt-6 border-t pt-6" onSubmit={e => handleSolutionSubmit(c, e)}>
+                        <form className="flex flex-wrap gap-4 items-end border-t pt-6" onSubmit={e => handleSolutionSubmit(c, e)}>
                           <div className="flex flex-col flex-1 min-w-[120px]">
                             <label className="text-xs mb-1 text-gray-600">솔루션명</label>
                             <input className="border rounded-lg p-2 focus:ring-2 focus:ring-blue-300" name="solution_name" value={solutionForm.solution_name} onChange={handleSolutionFormChange} placeholder="솔루션명" required />
