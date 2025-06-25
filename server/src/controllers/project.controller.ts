@@ -175,15 +175,20 @@ export const createProject = async (req: Request, res: Response): Promise<void> 
   const type = toTypeCode(req.body.type);
   const { name, startDate, endDate, os, memory, javaVersion, springVersion, reactVersion, vueVersion, tomcatVersion, centricVersion } = req.body;
   const authorId = req.user?.id;
+  console.log('[createProject] req.user:', req.user);
+  console.log('[createProject] req.body:', req.body);
   if (!authorId) {
+    console.log('[createProject] authorId is missing!');
     res.status(401).json({ message: '로그인 정보가 필요합니다.' });
     return;
   }
   if (!category || !type || !name || !startDate || !endDate) {
+    console.log('[createProject] 필수값 누락:', { category, type, name, startDate, endDate });
     res.status(400).json({ message: '필수값 누락' });
     return;
   }
   try {
+    console.log('[createProject] Inserting project:', { category, type, name, startDate, endDate, os, memory, authorId });
     await sequelize.query('BEGIN');
     const [rows] = await sequelize.query(
       'INSERT INTO projects (category, type, name, start_date, end_date, os, memory, author_id) VALUES (:category, :type, :name, :startDate, :endDate, :os, :memory, :authorId) RETURNING id',
@@ -191,6 +196,7 @@ export const createProject = async (req: Request, res: Response): Promise<void> 
     );
     if (!Array.isArray(rows) || rows.length === 0) {
       await sequelize.query('ROLLBACK');
+      console.log('[createProject] 프로젝트 생성 실패(DB insert 결과 없음)');
       res.status(500).json({ message: '프로젝트 생성 실패' });
       return;
     }
@@ -200,10 +206,14 @@ export const createProject = async (req: Request, res: Response): Promise<void> 
       { replacements: { projectId, javaVersion, springVersion, reactVersion, vueVersion, tomcatVersion, centricVersion }, type: QueryTypes.INSERT }
     );
     await sequelize.query('COMMIT');
+    console.log('[createProject] 프로젝트 생성 성공:', projectId);
     res.status(201).json({ id: projectId, message: '프로젝트가 성공적으로 생성되었습니다.' });
+    return;
   } catch (error) {
     await sequelize.query('ROLLBACK');
+    console.log('[createProject] 프로젝트 생성 중 예외 발생:', error);
     res.status(500).json({ message: '프로젝트 생성 실패', error });
+    return;
   }
 };
 
