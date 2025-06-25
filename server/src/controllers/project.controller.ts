@@ -344,11 +344,17 @@ export const createDevNote = async (req: Request, res: Response): Promise<void> 
     const [projectRows] = await sequelize.query('SELECT author_id FROM projects WHERE id = :project_id', { replacements: { project_id: projectId }, type: QueryTypes.SELECT });
     console.log('[createDevNote] projectRows:', projectRows);
 
-    if (!Array.isArray(projectRows) || projectRows.length === 0) {
-      res.status(404).json({ message: '프로젝트를 찾을 수 없습니다.' });
+    // projectRows가 배열이 아니어도 author_id가 있으면 통과
+    let projectAuthorId = null;
+    if (Array.isArray(projectRows) && projectRows.length > 0) {
+      projectAuthorId = projectRows[0].author_id;
+    } else if (projectRows && typeof projectRows === 'object' && 'author_id' in projectRows) {
+      projectAuthorId = projectRows.author_id;
+    } else {
+      res.status(404).json({ message: '프로젝트를 찾을 수 없습니다.', projectRows });
       return;
     }
-    const projectAuthorId = (projectRows[0] as any).author_id;
+
     if (currentUserRole !== 'ADMIN' && authorId !== projectAuthorId) {
       res.status(403).json({ message: '이 프로젝트에 요구사항을 추가할 권한이 없습니다.' });
       return;
