@@ -363,7 +363,7 @@ export const createDevNote = async (req: Request, res: Response): Promise<void> 
 
     const [rows] = await sequelize.query(
       'INSERT INTO dev_notes (project_id, content, deadline, status, progress, author_id, parent_id, "order") VALUES (:projectId, :content, :deadline, :status, :progress, :authorId, :parent_id, :order) RETURNING *',
-      { replacements: { projectId, content, deadline, status, progress, authorId, parent_id, order }, type: QueryTypes.SELECT }
+      { replacements: { projectId, content, deadline, status, progress, authorId, parent_id: parent_id ?? null, order: order ?? null }, type: QueryTypes.SELECT }
     );
     console.log('[createDevNote] Insert result rows:', rows);
 
