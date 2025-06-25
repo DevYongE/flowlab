@@ -480,7 +480,7 @@ export const updateDevNotesStructure = async (req: Request, res: Response): Prom
 export const getDevNoteComments = async (req: Request, res: Response): Promise<void> => {
   const { noteId } = req.params;
   try {
-    const [rows] = await sequelize.query(
+    const rows = await sequelize.query(
       `SELECT c.*, u.name as "authorName", TO_CHAR(c.created_at, 'YYYY-MM-DD HH24:MI') as "createdAt"
        FROM dev_note_comments c
        LEFT JOIN users u ON c.author_id = u.id
@@ -500,19 +500,13 @@ export const createDevNoteComment = async (req: Request, res: Response): Promise
   const { content } = req.body;
   const authorId = req.user?.id;
   try {
-    const [rows] = await sequelize.query(
+    const [comment] = await sequelize.query(
       'INSERT INTO dev_note_comments (dev_note_id, author_id, content) VALUES (:noteId, :authorId, :content) RETURNING *',
       { replacements: { noteId, authorId, content }, type: QueryTypes.SELECT }
     );
     // 반환값 구조 유연하게 처리
-    let comment = null;
-    if (Array.isArray(rows)) {
-      comment = rows[0];
-    } else if (rows && typeof rows === 'object' && 'id' in rows) {
-      comment = rows;
-    }
     if (!comment) {
-      res.status(500).json({ message: '댓글 생성 결과가 올바르지 않습니다.', rows });
+      res.status(500).json({ message: '댓글 생성 결과가 올바르지 않습니다.' });
       return;
     }
     res.status(201).json(comment);
