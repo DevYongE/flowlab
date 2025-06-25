@@ -13,10 +13,10 @@ export const getAllPositions = async (req: Request, res: Response) => {
 };
 
 export const createPosition = async (req: Request, res: Response) => {
-  const { code, name, company_code, company_name } = req.body;
+  const { code, name, company_code } = req.body;
   try {
-    await sequelize.query('INSERT INTO positions (id, name, company_code, company_name) VALUES (:code, :name, :company_code, :company_name)', {
-      replacements: { code, name, company_code, company_name },
+    await sequelize.query('INSERT INTO positions (id, name, company_code) VALUES (:code, :name, :company_code)', {
+      replacements: { code, name, company_code },
       type: QueryTypes.INSERT,
     });
     res.status(201).json({ message: '직책 생성 완료' });
@@ -27,10 +27,10 @@ export const createPosition = async (req: Request, res: Response) => {
 
 export const updatePosition = async (req: Request, res: Response) => {
   const { code } = req.params;
-  const { name, company_code, company_name } = req.body;
+  const { name, company_code } = req.body;
   try {
-    await sequelize.query('UPDATE positions SET name = :name, company_code = :company_code, company_name = :company_name WHERE id = :code', {
-      replacements: { code, name, company_code, company_name },
+    await sequelize.query('UPDATE positions SET name = :name, company_code = :company_code WHERE id = :code', {
+      replacements: { code, name, company_code },
       type: QueryTypes.UPDATE,
     });
     res.json({ message: '직책 수정 완료' });
