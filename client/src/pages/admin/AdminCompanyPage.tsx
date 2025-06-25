@@ -120,18 +120,6 @@ const AdminCompanyPage: React.FC = () => {
   return (
     <div className="container mx-auto p-6">
       <h1 className="text-2xl font-bold mb-6">🏢 기업관리</h1>
-      {/* 탭 버튼 (기업관리 단일 탭) */}
-      <div className="flex gap-2 mb-6">
-        {TABS.map(t => (
-          <button
-            key={t.key}
-            className={`px-4 py-2 rounded-t-md font-semibold border-b-2 ${tab === t.key ? 'border-blue-600 text-blue-700 bg-white' : 'border-transparent text-gray-400 bg-gray-100'}`}
-            disabled
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
       {/* 검색/필터 영역 */}
       <div className="mb-4 flex gap-2">
         <input className="border p-2 rounded w-64" placeholder="기업명, 업종 검색" value={search} onChange={e => setSearch(e.target.value)} />
