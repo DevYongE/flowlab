@@ -6,7 +6,6 @@ import AdminCompanyPage from './AdminCompanyPage';
 
 const TABS = [
   { key: 'users', label: '회원관리' },
-  { key: 'positions', label: '직급관리' },
   { key: 'roles', label: '권한관리' },
   { key: 'companies', label: '기업관리' },
 ];
@@ -359,37 +358,6 @@ const AdminUserPage = () => {
         {tab === 'companies' && (
           <div className="bg-white rounded shadow p-4">
             <AdminCompanyPage />
-          </div>
-        )}
-        {tab === 'positions' && (
-          <div className="bg-white rounded shadow p-4 mb-4">
-            <h2 className="text-lg font-bold mb-4 flex items-center gap-2"><FaUserTie /> 직급관리</h2>
-            <table className="w-full text-sm mb-4">
-              <thead>
-                <tr className="bg-gray-50">
-                  <th className="py-2 px-3 text-center">직급명</th>
-                  <th className="py-2 px-3 text-center">설명</th>
-                  <th className="py-2 px-3 text-center">관리</th>
-                </tr>
-              </thead>
-              <tbody>
-                {positions.map((pos: any) => (
-                  <tr key={pos.position_code} className="hover:bg-gray-50">
-                    <td className="py-2 px-3 text-center">{pos.name}</td>
-                    <td className="py-2 px-3 text-center">{pos.description || '-'}</td>
-                    <td className="py-2 px-3 text-center">
-                      <button title="수정" className="text-green-500 hover:text-green-700 mx-1"><FaUserEdit /></button>
-                      <button title="삭제" className="text-red-500 hover:text-red-700 mx-1"><FaTrash /></button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <form className="flex gap-2 items-center">
-              <input className="border p-2 rounded w-64" placeholder="직급명" />
-              <input className="border p-2 rounded w-64" placeholder="설명" />
-              <button className="bg-blue-500 text-white px-4 py-2 rounded flex items-center gap-1"><FaPlus /> 추가</button>
-            </form>
           </div>
         )}
         {tab === 'roles' && (
