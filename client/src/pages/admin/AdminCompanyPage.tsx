@@ -24,6 +24,15 @@ interface Solution {
   created_at?: string;
 }
 
+interface Department {
+  id: string;
+  department_name: string;
+  company_code: string;
+  description?: string;
+  is_active?: boolean;
+  created_at?: string;
+}
+
 interface CompanyFormProps {
   onSuccess: () => void;
   onClose: () => void;
@@ -105,6 +114,9 @@ const AdminCompanyPage: React.FC = () => {
   const [expandedCompanyId, setExpandedCompanyId] = useState<string | null>(null);
   const [solutions, setSolutions] = useState<Solution[]>([]);
   const [solutionForm, setSolutionForm] = useState({ solution_name: '', description: '', version: '' });
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [departmentForm, setDepartmentForm] = useState({ department_name: '', description: '' });
+  const [companyTabs, setCompanyTabs] = useState<{ [companyId: string]: string }>({});
 
   const fetchCompanies = async () => {
     const res = await axios.get('/companies');
@@ -114,6 +126,11 @@ const AdminCompanyPage: React.FC = () => {
   const fetchSolutions = async (company_code: string) => {
     const res = await axios.get(`/solutions?company_code=${company_code}`);
     setSolutions(res.data);
+  };
+
+  const fetchDepartments = async (company_code: string) => {
+    const res = await axios.get(`/departments?company_code=${company_code}`);
+    setDepartments(res.data);
   };
 
   useEffect(() => {
@@ -130,9 +147,11 @@ const AdminCompanyPage: React.FC = () => {
     if (expandedCompanyId === company.company_id) {
       setExpandedCompanyId(null);
       setSolutions([]);
+      setDepartments([]);
     } else {
       setExpandedCompanyId(company.company_id);
       fetchSolutions(company.company_code);
+      fetchDepartments(company.company_code);
     }
   };
 
@@ -151,6 +170,22 @@ const AdminCompanyPage: React.FC = () => {
     });
     setSolutionForm({ solution_name: '', description: '', version: '' });
     fetchSolutions(company.company_code);
+  };
+
+  const handleDepartmentFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setDepartmentForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleDepartmentSubmit = async (company: Company, e: React.FormEvent) => {
+    e.preventDefault();
+    await axios.post('/departments', {
+      department_name: departmentForm.department_name,
+      company_code: company.company_code,
+      description: departmentForm.description,
+    });
+    setDepartmentForm({ department_name: '', description: '' });
+    fetchDepartments(company.company_code);
   };
 
   const filteredCompanies = companies.filter(c =>
@@ -197,54 +232,120 @@ const AdminCompanyPage: React.FC = () => {
                   <tr>
                     <td colSpan={5}>
                       <div className="w-full max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-8 mt-4">
-                        <div className="font-bold text-xl mb-6 flex items-center gap-2">
-                          <span className="text-blue-600">🧩</span> 솔루션 목록
+                        {/* 탭 버튼 */}
+                        <div className="flex gap-2 mb-6">
+                          {['부서 관리', '솔루션 관리'].map(tab => (
+                            <button
+                              key={tab}
+                              className={`px-4 py-2 rounded-t-md font-semibold border-b-2 ${
+                                (companyTabs[c.company_id] || '부서 관리') === tab
+                                  ? 'border-blue-600 text-blue-700 bg-white'
+                                  : 'border-transparent text-gray-400 bg-gray-100'
+                              }`}
+                              onClick={() => setCompanyTabs(tabs => ({ ...tabs, [c.company_id]: tab }))}
+                            >
+                              {tab}
+                            </button>
+                          ))}
                         </div>
-                        <div className="overflow-x-auto rounded-lg border mb-6">
-                          <table className="w-full text-sm">
-                            <thead>
-                              <tr className="bg-blue-50 text-blue-800">
-                                <th className="py-3 px-4 text-center w-1/5">ID</th>
-                                <th className="py-3 px-4 text-center w-1/5">이름</th>
-                                <th className="py-3 px-4 text-center w-1/6">버전</th>
-                                <th className="py-3 px-4 text-center w-2/5">설명</th>
-                                <th className="py-3 px-4 text-center w-1/5">등록일</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {solutions.length === 0 ? (
-                                <tr>
-                                  <td colSpan={5} className="text-center text-gray-400 py-6">솔루션이 없습니다.</td>
-                                </tr>
-                              ) : solutions.map(s => (
-                                <tr key={s.id} className="hover:bg-blue-50 transition">
-                                  <td className="py-2 px-4 text-center font-mono">{s.id}</td>
-                                  <td className="py-2 px-4 text-center">{s.solution_name}</td>
-                                  <td className="py-2 px-4 text-center">{s.version}</td>
-                                  <td className="py-2 px-4 text-center">{s.description}</td>
-                                  <td className="py-2 px-4 text-center">{s.created_at?.slice(0, 10)}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                        <form className="flex flex-wrap gap-4 items-end border-t pt-6" onSubmit={e => handleSolutionSubmit(c, e)}>
-                          <div className="flex flex-col flex-1 min-w-[120px]">
-                            <label className="text-xs mb-1 text-gray-600">솔루션명</label>
-                            <input className="border rounded-lg p-2 focus:ring-2 focus:ring-blue-300" name="solution_name" value={solutionForm.solution_name} onChange={handleSolutionFormChange} placeholder="솔루션명" required />
+                        {/* 탭별 내용 */}
+                        {(companyTabs[c.company_id] || '부서 관리') === '부서 관리' ? (
+                          <div>
+                            <div className="font-bold text-xl mb-6 flex items-center gap-2">
+                              <span className="text-blue-600">🏢</span> 부서 목록
+                            </div>
+                            <div className="overflow-x-auto rounded-lg border mb-6">
+                              <table className="w-full text-sm">
+                                <thead>
+                                  <tr className="bg-blue-50 text-blue-800">
+                                    <th className="py-3 px-4 text-center w-1/4">ID</th>
+                                    <th className="py-3 px-4 text-center w-1/4">부서명</th>
+                                    <th className="py-3 px-4 text-center w-2/4">설명</th>
+                                    <th className="py-3 px-4 text-center w-1/6">등록일</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {departments.length === 0 ? (
+                                    <tr>
+                                      <td colSpan={4} className="text-center text-gray-400 py-6">부서가 없습니다.</td>
+                                    </tr>
+                                  ) : departments.map(d => (
+                                    <tr key={d.id} className="hover:bg-blue-50 transition">
+                                      <td className="py-2 px-4 text-center font-mono">{d.id}</td>
+                                      <td className="py-2 px-4 text-center">{d.department_name}</td>
+                                      <td className="py-2 px-4 text-center">{d.description}</td>
+                                      <td className="py-2 px-4 text-center">{d.created_at?.slice(0, 10)}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                            <form className="flex flex-wrap gap-4 items-end border-t pt-6" onSubmit={e => handleDepartmentSubmit(c, e)}>
+                              <div className="flex flex-col flex-1 min-w-[120px]">
+                                <label className="text-xs mb-1 text-gray-600">부서명</label>
+                                <input className="border rounded-lg p-2 focus:ring-2 focus:ring-blue-300" name="department_name" value={departmentForm.department_name} onChange={handleDepartmentFormChange} placeholder="부서명" required />
+                              </div>
+                              <div className="flex flex-col flex-1 min-w-[120px]">
+                                <label className="text-xs mb-1 text-gray-600">설명</label>
+                                <input className="border rounded-lg p-2 focus:ring-2 focus:ring-blue-300" name="description" value={departmentForm.description} onChange={handleDepartmentFormChange} placeholder="설명" />
+                              </div>
+                              <button className="bg-blue-600 text-white px-8 py-2 rounded-lg font-semibold shadow hover:bg-blue-700 transition" type="submit">
+                                등록
+                              </button>
+                            </form>
                           </div>
-                          <div className="flex flex-col w-28">
-                            <label className="text-xs mb-1 text-gray-600">버전</label>
-                            <input className="border rounded-lg p-2 focus:ring-2 focus:ring-blue-300" name="version" value={solutionForm.version} onChange={handleSolutionFormChange} placeholder="버전" />
+                        ) : (
+                          <div>
+                            <div className="font-bold text-xl mb-6 flex items-center gap-2">
+                              <span className="text-blue-600">🧩</span> 솔루션 목록
+                            </div>
+                            <div className="overflow-x-auto rounded-lg border mb-6">
+                              <table className="w-full text-sm">
+                                <thead>
+                                  <tr className="bg-blue-50 text-blue-800">
+                                    <th className="py-3 px-4 text-center w-1/5">ID</th>
+                                    <th className="py-3 px-4 text-center w-1/5">이름</th>
+                                    <th className="py-3 px-4 text-center w-1/6">버전</th>
+                                    <th className="py-3 px-4 text-center w-2/5">설명</th>
+                                    <th className="py-3 px-4 text-center w-1/5">등록일</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {solutions.length === 0 ? (
+                                    <tr>
+                                      <td colSpan={5} className="text-center text-gray-400 py-6">솔루션이 없습니다.</td>
+                                    </tr>
+                                  ) : solutions.map(s => (
+                                    <tr key={s.id} className="hover:bg-blue-50 transition">
+                                      <td className="py-2 px-4 text-center font-mono">{s.id}</td>
+                                      <td className="py-2 px-4 text-center">{s.solution_name}</td>
+                                      <td className="py-2 px-4 text-center">{s.version}</td>
+                                      <td className="py-2 px-4 text-center">{s.description}</td>
+                                      <td className="py-2 px-4 text-center">{s.created_at?.slice(0, 10)}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                            <form className="flex flex-wrap gap-4 items-end border-t pt-6" onSubmit={e => handleSolutionSubmit(c, e)}>
+                              <div className="flex flex-col flex-1 min-w-[120px]">
+                                <label className="text-xs mb-1 text-gray-600">솔루션명</label>
+                                <input className="border rounded-lg p-2 focus:ring-2 focus:ring-blue-300" name="solution_name" value={solutionForm.solution_name} onChange={handleSolutionFormChange} placeholder="솔루션명" required />
+                              </div>
+                              <div className="flex flex-col w-28">
+                                <label className="text-xs mb-1 text-gray-600">버전</label>
+                                <input className="border rounded-lg p-2 focus:ring-2 focus:ring-blue-300" name="version" value={solutionForm.version} onChange={handleSolutionFormChange} placeholder="버전" />
+                              </div>
+                              <div className="flex flex-col flex-1 min-w-[120px]">
+                                <label className="text-xs mb-1 text-gray-600">설명</label>
+                                <input className="border rounded-lg p-2 focus:ring-2 focus:ring-blue-300" name="description" value={solutionForm.description} onChange={handleSolutionFormChange} placeholder="설명" />
+                              </div>
+                              <button className="bg-blue-600 text-white px-8 py-2 rounded-lg font-semibold shadow hover:bg-blue-700 transition" type="submit">
+                                등록
+                              </button>
+                            </form>
                           </div>
-                          <div className="flex flex-col flex-1 min-w-[120px]">
-                            <label className="text-xs mb-1 text-gray-600">설명</label>
-                            <input className="border rounded-lg p-2 focus:ring-2 focus:ring-blue-300" name="description" value={solutionForm.description} onChange={handleSolutionFormChange} placeholder="설명" />
-                          </div>
-                          <button className="bg-blue-600 text-white px-8 py-2 rounded-lg font-semibold shadow hover:bg-blue-700 transition" type="submit">
-                            등록
-                          </button>
-                        </form>
+                        )}
                       </div>
                     </td>
                   </tr>
