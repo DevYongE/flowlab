@@ -405,11 +405,15 @@ export const updateDevNote = async (req: Request, res: Response): Promise<void> 
   const currentUserRole = req.user?.role;
   try {
     const [noteRows] = await sequelize.query('SELECT author_id FROM dev_notes WHERE id = :note_id', { replacements: { note_id: noteId }, type: QueryTypes.SELECT });
-    if (!Array.isArray(noteRows) || noteRows.length === 0) {
-      res.status(404).json({ message: '노트를 찾을 수 없습니다.' });
+    let noteAuthorId = null;
+    if (Array.isArray(noteRows) && noteRows.length > 0) {
+      noteAuthorId = noteRows[0].author_id;
+    } else if (noteRows && typeof noteRows === 'object' && 'author_id' in noteRows) {
+      noteAuthorId = noteRows.author_id;
+    } else {
+      res.status(404).json({ message: '노트를 찾을 수 없습니다.', noteRows });
       return;
     }
-    const noteAuthorId = (noteRows[0] as any).author_id;
     if (currentUserRole !== 'ADMIN' && currentUserId !== noteAuthorId) {
       res.status(403).json({ message: '노트를 수정할 권한이 없습니다.' });
       return;
@@ -431,11 +435,15 @@ export const deleteDevNote = async (req: Request, res: Response): Promise<void> 
   const currentUserRole = req.user?.role;
   try {
     const [noteRows] = await sequelize.query('SELECT author_id FROM dev_notes WHERE id = :note_id', { replacements: { note_id: noteId }, type: QueryTypes.SELECT });
-    if (!Array.isArray(noteRows) || noteRows.length === 0) {
-      res.status(404).json({ message: '노트를 찾을 수 없습니다.' });
+    let noteAuthorId = null;
+    if (Array.isArray(noteRows) && noteRows.length > 0) {
+      noteAuthorId = noteRows[0].author_id;
+    } else if (noteRows && typeof noteRows === 'object' && 'author_id' in noteRows) {
+      noteAuthorId = noteRows.author_id;
+    } else {
+      res.status(404).json({ message: '노트를 찾을 수 없습니다.', noteRows });
       return;
     }
-    const noteAuthorId = (noteRows[0] as any).author_id;
     if (currentUserRole !== 'ADMIN' && currentUserId !== noteAuthorId) {
       res.status(403).json({ message: '노트를 삭제할 권한이 없습니다.' });
       return;
