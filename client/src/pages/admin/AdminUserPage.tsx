@@ -16,7 +16,6 @@ const AdminUserPage = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [positions, setPositions] = useState<any[]>([]);
   const [roles, setRoles] = useState<any[]>([]);
-  const [departments, setDepartments] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [showDetail, setShowDetail] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
@@ -29,7 +28,6 @@ const AdminUserPage = () => {
     fetchUsers();
     fetchPositions();
     fetchRoles();
-    fetchDepartments();
   }, []);
 
   const fetchUsers = async () => {
@@ -55,13 +53,6 @@ const AdminUserPage = () => {
     } catch (err) {
       setRoles([]);
     }
-  };
-  const fetchDepartments = async () => {
-    setDepartments([
-      { name: '개발팀', description: '서비스 개발 담당' },
-      { name: '기획팀', description: '기획 및 PM' },
-      { name: '디자인팀', description: 'UI/UX 디자인' },
-    ]);
   };
 
   const handleOpen = (type: string, user: any) => {
