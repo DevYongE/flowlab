@@ -504,7 +504,18 @@ export const createDevNoteComment = async (req: Request, res: Response): Promise
       'INSERT INTO dev_note_comments (dev_note_id, author_id, content) VALUES (:noteId, :authorId, :content) RETURNING *',
       { replacements: { noteId, authorId, content }, type: QueryTypes.SELECT }
     );
-    res.status(201).json((rows as any[])[0]);
+    // 반환값 구조 유연하게 처리
+    let comment = null;
+    if (Array.isArray(rows)) {
+      comment = rows[0];
+    } else if (rows && typeof rows === 'object' && 'id' in rows) {
+      comment = rows;
+    }
+    if (!comment) {
+      res.status(500).json({ message: '댓글 생성 결과가 올바르지 않습니다.', rows });
+      return;
+    }
+    res.status(201).json(comment);
   } catch (error) {
     res.status(500).json({ message: '댓글 생성 실패', error });
   }
