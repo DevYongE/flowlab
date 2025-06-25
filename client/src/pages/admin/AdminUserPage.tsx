@@ -16,6 +16,11 @@ const AdminUserPage = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [positions, setPositions] = useState<any[]>([]);
   const [roles, setRoles] = useState<any[]>([]);
+  
+  // 드롭다운 목록용 상태
+  const [companies, setCompanies] = useState<any[]>([]);
+  const [departments, setDepartments] = useState<any[]>([]);
+  
   const [search, setSearch] = useState('');
   const [showDetail, setShowDetail] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
@@ -24,10 +29,13 @@ const AdminUserPage = () => {
   const [showPosition, setShowPosition] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
 
+  // 선택된 기업/부서/직급 상태
+  const [selectedCompanyCode, setSelectedCompanyCode] = useState('');
+
   useEffect(() => {
     fetchUsers();
-    fetchPositions();
     fetchRoles();
+    fetchCompanies(); // 전체 기업 목록 불러오기
   }, []);
 
   const fetchUsers = async () => {
@@ -38,14 +46,7 @@ const AdminUserPage = () => {
       alert('회원 목록을 불러오지 못했습니다.');
     }
   };
-  const fetchPositions = async () => {
-    try {
-      const res = await axios.get('/positions');
-      setPositions(res.data);
-    } catch (err) {
-      setPositions([]);
-    }
-  };
+
   const fetchRoles = async () => {
     try {
       const res = await axios.get('/roles');
@@ -55,10 +56,56 @@ const AdminUserPage = () => {
     }
   };
 
+  const fetchCompanies = async () => {
+    try {
+      const res = await axios.get('/companies');
+      setCompanies(res.data);
+    } catch (err) {
+      setCompanies([]);
+    }
+  };
+
+  const fetchDepartments = async (companyCode: string) => {
+    if (!companyCode) {
+      setDepartments([]);
+      return;
+    }
+    try {
+      const res = await axios.get(`/departments?company_code=${companyCode}`);
+      setDepartments(res.data);
+    } catch (err) {
+      setDepartments([]);
+    }
+  };
+
+  const fetchPositions = async (companyCode: string) => {
+    if (!companyCode) {
+      setPositions([]);
+      return;
+    }
+    try {
+      const res = await axios.get(`/positions?company_code=${companyCode}`);
+      setPositions(res.data);
+    } catch (err) {
+      setPositions([]);
+    }
+  };
+
   const handleOpen = (type: string, user: any) => {
     setSelectedUser(user);
     if (type === 'detail') setShowDetail(true);
-    if (type === 'edit') setShowEdit(true);
+    if (type === 'edit') {
+      if(user.company_code) {
+        setSelectedCompanyCode(user.company_code);
+        fetchDepartments(user.company_code);
+        fetchPositions(user.company_code);
+      } else {
+        setSelectedCompanyCode('');
+        setDepartments([]);
+        setPositions([]);
+      }
+      setShowEdit(true);
+    }
     if (type === 'role') setShowRole(true);
     if (type === 'dept') setShowDept(true);
     if (type === 'position') setShowPosition(true);
@@ -70,6 +117,7 @@ const AdminUserPage = () => {
     setShowDept(false);
     setShowPosition(false);
     setSelectedUser(null);
+    setSelectedCompanyCode('');
   };
 
   // 검색 필터링
@@ -176,10 +224,12 @@ const AdminUserPage = () => {
                   const form = e.target as HTMLFormElement;
                   const name = (form.elements.namedItem('name') as HTMLInputElement).value;
                   const email = (form.elements.namedItem('email') as HTMLInputElement).value;
-                  const department = (form.elements.namedItem('department') as HTMLInputElement).value;
+                  const company_code = (form.elements.namedItem('company_code') as HTMLSelectElement).value;
+                  const department = (form.elements.namedItem('department') as HTMLSelectElement).value;
                   const position_code = (form.elements.namedItem('position_code') as HTMLSelectElement).value;
+                  
                   try {
-                    await axios.patch(`/users/${selectedUser.id}`, { name, email, department, position_code });
+                    await axios.patch(`/users/${selectedUser.id}`, { name, email, department, position_code, company_code });
                     await fetchUsers();
                     handleClose();
                   } catch (err) {
@@ -189,10 +239,38 @@ const AdminUserPage = () => {
                   <h2 className="text-lg font-bold mb-2">회원 정보 수정</h2>
                   <input name="name" className="w-full border rounded p-2" defaultValue={selectedUser.name} placeholder="이름" />
                   <input name="email" className="w-full border rounded p-2" defaultValue={selectedUser.email} placeholder="이메일" />
-                  <input name="department" className="w-full border rounded p-2" defaultValue={selectedUser.department || selectedUser.department_name} placeholder="부서" />
-                  <select name="position_code" className="w-full border rounded p-2" defaultValue={selectedUser.position_code || selectedUser.position || selectedUser.position_name}>
+
+                  <label className="block text-sm">기업</label>
+                  <select
+                    name="company_code"
+                    className="w-full border rounded p-2"
+                    value={selectedCompanyCode}
+                    onChange={(e) => {
+                      const code = e.target.value;
+                      setSelectedCompanyCode(code);
+                      fetchDepartments(code);
+                      fetchPositions(code);
+                    }}
+                  >
+                    <option value="">기업 선택</option>
+                    {companies.map((c: any) => (
+                      <option key={c.company_code} value={c.company_code}>{c.company_name}</option>
+                    ))}
+                  </select>
+                  
+                  <label className="block text-sm">부서</label>
+                  <select name="department" className="w-full border rounded p-2" defaultValue={selectedUser.department}>
+                    <option value="">부서 선택</option>
+                    {departments.map((d: any) => (
+                      <option key={d.id} value={d.department_name}>{d.department_name}</option>
+                    ))}
+                  </select>
+                  
+                  <label className="block text-sm">직급</label>
+                  <select name="position_code" className="w-full border rounded p-2" defaultValue={selectedUser.position_code}>
+                    <option value="">직급 선택</option>
                     {positions.map((pos: any) => (
-                      <option key={pos.position_code} value={pos.position_code}>{pos.name}</option>
+                      <option key={pos.id} value={pos.id}>{pos.name}</option>
                     ))}
                   </select>
                   <div className="flex justify-end gap-2 pt-2">

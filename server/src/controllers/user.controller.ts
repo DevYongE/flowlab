@@ -8,9 +8,13 @@ import { QueryTypes } from 'sequelize';
 export const getUsers = async (req: Request, res: Response) => {
   try {
     const rows = await sequelize.query(`
-      SELECT u.*, p.name AS position_name, r.name AS role_name
+      SELECT u.*, 
+             c.company_name,
+             p.name AS position_name, 
+             r.name AS role_name
       FROM users u
-      LEFT JOIN positions p ON u.position_code = p.position_code
+      LEFT JOIN companies c ON u.company_code = c.company_code
+      LEFT JOIN positions p ON u.position_code = p.id
       LEFT JOIN roles r ON u.role_code = r.role_code
     `, { type: QueryTypes.SELECT });
     res.status(200).json(Array.isArray(rows) ? rows : []);
@@ -81,11 +85,17 @@ export const registerUser = async (req: Request, res: Response) => {
 export const updateUser = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { name, email, department, position_code } = req.body;
+    const { name, email, department, position_code, company_code } = req.body;
     await sequelize.query(
-      `UPDATE users SET name=:name, email=:email, department=:department, position_code=:position_code WHERE id=:id`,
+      `UPDATE users SET 
+        name=:name, 
+        email=:email, 
+        department=:department, 
+        position_code=:position_code,
+        company_code=:company_code 
+      WHERE id=:id`,
       {
-        replacements: { name, email, department, position_code, id },
+        replacements: { name, email, department, position_code, company_code, id },
         type: QueryTypes.UPDATE,
       }
     );
