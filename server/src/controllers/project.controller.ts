@@ -33,6 +33,27 @@ const buildDevNotesTree = (items: any[]): any[] => {
   return roots;
 };
 
+// 한글→영문 변환 함수
+function toStatusCode(status: string) {
+  if (status === '미결') return 'TODO';
+  if (status === '진행중') return 'IN_PROGRESS';
+  if (status === '완료') return 'DONE';
+  return status;
+}
+function toTypeCode(type: string) {
+  if (type === '신규') return 'NEW';
+  if (type === '추가') return 'ADD';
+  if (type === '완료') return 'COMPLETE';
+  if (type === '실패') return 'FAIL';
+  return type;
+}
+function toCategoryCode(category: string) {
+  if (category === 'SI') return 'SI';
+  if (category === '센트릭') return 'CENTRIC';
+  if (category === '기타') return 'ETC';
+  return category;
+}
+
 // 프로젝트 목록 조회
 export const getProjects = async (req: Request, res: Response) => {
   const currentUserId = req.user?.id;
@@ -150,7 +171,10 @@ export const getProjectStatusSummary = async (req: Request, res: Response) => {
 
 // 프로젝트 생성
 export const createProject = async (req: Request, res: Response) => {
-  const { category, type, name, startDate, endDate, os, memory, javaVersion, springVersion, reactVersion, vueVersion, tomcatVersion, centricVersion } = req.body;
+  // 한글→영문 변환 적용
+  const category = toCategoryCode(req.body.category);
+  const type = toTypeCode(req.body.type);
+  const { name, startDate, endDate, os, memory, javaVersion, springVersion, reactVersion, vueVersion, tomcatVersion, centricVersion } = req.body;
   const authorId = req.user?.id;
   try {
     await sequelize.query('BEGIN');
@@ -179,7 +203,10 @@ export const createProject = async (req: Request, res: Response) => {
 // 프로젝트 수정
 export const updateProject = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { category, type, name, startDate, endDate, os, memory, javaVersion, springVersion, reactVersion, vueVersion, tomcatVersion, centricVersion } = req.body;
+  // 한글→영문 변환 적용
+  const category = toCategoryCode(req.body.category);
+  const type = toTypeCode(req.body.type);
+  const { name, startDate, endDate, os, memory, javaVersion, springVersion, reactVersion, vueVersion, tomcatVersion, centricVersion } = req.body;
   const currentUserId = req.user?.id;
   const currentUserRole = req.user?.role;
   try {
@@ -282,7 +309,9 @@ export const getOngoingProjects = async (req: Request, res: Response) => {
 // 개발 노트 생성
 export const createDevNote = async (req: Request, res: Response) => {
   const { projectId } = req.params;
-  const { content, deadline, status, progress, parent_id, order } = req.body;
+  // 한글→영문 변환 적용
+  const status = toStatusCode(req.body.status);
+  const { content, deadline, progress, parent_id, order } = req.body;
   const authorId = req.user?.id;
   const currentUserRole = req.user?.role;
   try {
@@ -309,7 +338,9 @@ export const createDevNote = async (req: Request, res: Response) => {
 // 개발 노트 수정
 export const updateDevNote = async (req: Request, res: Response) => {
   const { noteId } = req.params;
-  const { content, deadline, status, progress } = req.body;
+  // 한글→영문 변환 적용
+  const status = toStatusCode(req.body.status);
+  const { content, deadline, progress } = req.body;
   const currentUserId = req.user?.id;
   const currentUserRole = req.user?.role;
   try {

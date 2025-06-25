@@ -12,7 +12,7 @@ const ProjectFormPage: React.FC = () => {
   
   const [form, setForm] = useState({
     category: 'SI',
-    type: '신규',
+    type: 'NEW',
     name: '',
     startDate: '',
     endDate: '',
@@ -43,7 +43,7 @@ const ProjectFormPage: React.FC = () => {
       
       setForm({
         category: project.category || 'SI',
-        type: project.type || '신규',
+        type: project.type || 'NEW',
         name: project.name || '',
         startDate: project.startDate || '',
         endDate: project.endDate || '',
@@ -132,8 +132,8 @@ const ProjectFormPage: React.FC = () => {
                     onChange={handleChange}
                   >
                     <option value="SI">SI</option>
-                    <option value="센트릭">센트릭</option>
-                    <option value="기타">기타</option>
+                    <option value="CENTRIC">센트릭</option>
+                    <option value="ETC">기타</option>
                   </select>
                 </div>
                 <div>
@@ -144,10 +144,10 @@ const ProjectFormPage: React.FC = () => {
                     value={form.type} 
                     onChange={handleChange}
                   >
-                    <option value="신규">신규</option>
-                    <option value="추가">추가</option>
-                    <option value="완료">완료</option>
-                    <option value="실패">실패</option>
+                    <option value="NEW">신규</option>
+                    <option value="ADD">추가</option>
+                    <option value="COMPLETE">완료</option>
+                    <option value="FAIL">실패</option>
                   </select>
                 </div>
                 <div>

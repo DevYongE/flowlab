@@ -126,15 +126,9 @@ const ProjectDetailPage = () => {
       return;
     }
     try {
-      // status 값이 한글이면 영어 코드로 변환
-      let status = newNote.status;
-      if (status === '미완료') status = 'TODO';
-      else if (status === '진행중') status = 'IN_PROGRESS';
-      else if (status === '완료') status = 'DONE';
-
       await axios.post(`/projects/${id}/notes`, {
         ...newNote,
-        status, // 변환된 값 사용
+        status: newNote.status,
       });
       setNewNote({ content: '', deadline: '', status: 'TODO', progress: 0 });
       setShowModal(false);
@@ -255,7 +249,7 @@ const ProjectDetailPage = () => {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'TODO': return '미완료';
+      case 'TODO': return '미결';
       case 'IN_PROGRESS': return '진행중';
       case 'DONE': return '완료';
       default: return status;
@@ -533,7 +527,7 @@ const ProjectDetailPage = () => {
               >
                 <option value="ALL">전체</option>
                 <option value="IN_PROGRESS">진행중</option>
-                <option value="TODO">미완료</option>
+                <option value="TODO">미결</option>
                 <option value="DONE">완료</option>
               </select>
             </div>
@@ -689,7 +683,7 @@ const ProjectDetailPage = () => {
                       onChange={handleNoteChange} 
                       className="w-full border border-gray-300 rounded-md shadow-sm p-2"
                     >
-                      <option value="TODO">미완료</option>
+                      <option value="TODO">미결</option>
                       <option value="IN_PROGRESS">진행중</option>
                       <option value="DONE">완료</option>
                     </select>

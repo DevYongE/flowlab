@@ -15,6 +15,27 @@ interface Project {
   progress: number; // 0 ~ 100
 }
 
+// 프로젝트 유형 한글 변환 함수
+const getTypeText = (type: string) => {
+  switch (type) {
+    case 'NEW': return '신규';
+    case 'ADD': return '추가';
+    case 'COMPLETE': return '완료';
+    case 'FAIL': return '실패';
+    default: return type;
+  }
+};
+
+// 프로젝트 구분 한글 변환 함수
+const getCategoryText = (category: string) => {
+  switch (category) {
+    case 'SI': return 'SI';
+    case 'CENTRIC': return '센트릭';
+    case 'ETC': return '기타';
+    default: return category;
+  }
+};
+
 const ProjectListPage: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const navigate = useNavigate();
@@ -58,8 +79,8 @@ const ProjectListPage: React.FC = () => {
                 {(Array.isArray(projects) ? projects : []).map((proj, idx) => (
                   <tr key={proj.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 text-center">{idx + 1}</td>
-                    <td className="px-6 py-4">{proj.category}</td>
-                    <td className="px-6 py-4">{proj.type}</td>
+                    <td className="px-6 py-4">{getCategoryText(proj.category)}</td>
+                    <td className="px-6 py-4">{getTypeText(proj.type)}</td>
                     <td className="px-6 py-4">
                       <span 
                         className="cursor-pointer hover:text-blue-600 hover:underline font-medium"
