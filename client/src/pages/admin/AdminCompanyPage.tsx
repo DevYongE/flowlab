@@ -14,6 +14,16 @@ interface Company {
   is_active?: boolean;
 }
 
+interface Solution {
+  id: string;
+  solution_name: string;
+  company_code: string;
+  description?: string;
+  version?: string;
+  is_active?: boolean;
+  created_at?: string;
+}
+
 interface CompanyFormProps {
   onSuccess: () => void;
   onClose: () => void;
@@ -92,10 +102,24 @@ const AdminCompanyPage: React.FC = () => {
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  const [expandedCompanyId, setExpandedCompanyId] = useState<string | null>(null);
+  const [solutions, setSolutions] = useState<Solution[]>([]);
+  const [solutionForm, setSolutionForm] = useState({ solution_name: '', description: '', version: '' });
+  const [solutionLoading, setSolutionLoading] = useState(false);
 
   const fetchCompanies = async () => {
     const res = await axios.get('/companies');
     setCompanies(res.data);
+  };
+
+  const fetchSolutions = async (company_code: string) => {
+    setSolutionLoading(true);
+    try {
+      const res = await axios.get(`/solutions?company_code=${company_code}`);
+      setSolutions(res.data);
+    } finally {
+      setSolutionLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -106,6 +130,33 @@ const AdminCompanyPage: React.FC = () => {
     if (!window.confirm('정말 삭제하시겠습니까?')) return;
     await axios.delete(`/companies/${id}`);
     fetchCompanies();
+  };
+
+  const handleExpand = (company: Company) => {
+    if (expandedCompanyId === company.company_id) {
+      setExpandedCompanyId(null);
+      setSolutions([]);
+    } else {
+      setExpandedCompanyId(company.company_id);
+      fetchSolutions(company.company_code);
+    }
+  };
+
+  const handleSolutionFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setSolutionForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSolutionSubmit = async (company: Company, e: React.FormEvent) => {
+    e.preventDefault();
+    await axios.post('/solutions', {
+      solution_name: solutionForm.solution_name,
+      company_code: company.company_code,
+      description: solutionForm.description,
+      version: solutionForm.version,
+    });
+    setSolutionForm({ solution_name: '', description: '', version: '' });
+    fetchSolutions(company.company_code);
   };
 
   const filteredCompanies = companies.filter(c =>
@@ -137,16 +188,59 @@ const AdminCompanyPage: React.FC = () => {
             {filteredCompanies.length === 0 ? (
               <tr><td colSpan={5} className="text-center text-gray-400 py-8">기업이 없습니다.</td></tr>
             ) : filteredCompanies.map(c => (
-              <tr key={c.company_id} className="hover:bg-gray-50">
-                <td className="py-2 px-3 text-center">{c.company_name}</td>
-                <td className="py-2 px-3 text-center">{c.industry_type}</td>
-                <td className="py-2 px-3 text-center">{c.founded_at}</td>
-                <td className="py-2 px-3 text-center">{c.is_active ? 'Y' : 'N'}</td>
-                <td className="py-2 px-3 text-center">
-                  <button className="text-green-500 hover:text-green-700 mx-1" onClick={() => { setSelectedCompany(c); setShowModal(true); }}>수정</button>
-                  <button className="text-red-500 hover:text-red-700 mx-1" onClick={() => handleDelete(c.company_id)}>삭제</button>
-                </td>
-              </tr>
+              <React.Fragment key={c.company_id}>
+                <tr className="hover:bg-gray-50">
+                  <td className="py-2 px-3 text-center cursor-pointer text-blue-600 underline" onClick={() => handleExpand(c)}>{c.company_name}</td>
+                  <td className="py-2 px-3 text-center">{c.industry_type}</td>
+                  <td className="py-2 px-3 text-center">{c.founded_at}</td>
+                  <td className="py-2 px-3 text-center">{c.is_active ? 'Y' : 'N'}</td>
+                  <td className="py-2 px-3 text-center">
+                    <button className="text-green-500 hover:text-green-700 mx-1" onClick={() => { setSelectedCompany(c); setShowModal(true); }}>수정</button>
+                    <button className="text-red-500 hover:text-red-700 mx-1" onClick={() => handleDelete(c.company_id)}>삭제</button>
+                  </td>
+                </tr>
+                {expandedCompanyId === c.company_id && (
+                  <tr>
+                    <td colSpan={5} className="bg-gray-50 p-4">
+                      <div className="mb-2 font-semibold">솔루션 목록</div>
+                      {solutionLoading ? (
+                        <div>로딩중...</div>
+                      ) : (
+                        <table className="w-full text-xs mb-2">
+                          <thead>
+                            <tr className="bg-gray-100">
+                              <th className="py-1 px-2">ID</th>
+                              <th className="py-1 px-2">이름</th>
+                              <th className="py-1 px-2">버전</th>
+                              <th className="py-1 px-2">설명</th>
+                              <th className="py-1 px-2">등록일</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {solutions.length === 0 ? (
+                              <tr><td colSpan={5} className="text-center text-gray-400 py-2">솔루션이 없습니다.</td></tr>
+                            ) : solutions.map(s => (
+                              <tr key={s.id}>
+                                <td className="py-1 px-2">{s.id}</td>
+                                <td className="py-1 px-2">{s.solution_name}</td>
+                                <td className="py-1 px-2">{s.version}</td>
+                                <td className="py-1 px-2">{s.description}</td>
+                                <td className="py-1 px-2">{s.created_at?.slice(0, 10)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                      <form className="flex gap-2 items-center mt-2" onSubmit={e => handleSolutionSubmit(c, e)}>
+                        <input className="border p-1 rounded w-32" name="solution_name" value={solutionForm.solution_name} onChange={handleSolutionFormChange} placeholder="솔루션명" required />
+                        <input className="border p-1 rounded w-20" name="version" value={solutionForm.version} onChange={handleSolutionFormChange} placeholder="버전" />
+                        <input className="border p-1 rounded w-48" name="description" value={solutionForm.description} onChange={handleSolutionFormChange} placeholder="설명" />
+                        <button className="bg-blue-500 text-white px-3 py-1 rounded">등록</button>
+                      </form>
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
             ))}
           </tbody>
         </table>
