@@ -484,7 +484,7 @@ export const getDevNoteComments = async (req: Request, res: Response): Promise<v
       `SELECT c.*, u.name as "authorName", TO_CHAR(c.created_at, 'YYYY-MM-DD HH24:MI') as "createdAt"
        FROM dev_note_comments c
        LEFT JOIN users u ON c.author_id = u.id
-       WHERE c.dev_note_id = :noteId
+       WHERE c.note_id = :noteId
        ORDER BY c.created_at ASC`,
       { replacements: { noteId }, type: QueryTypes.SELECT }
     );
@@ -504,7 +504,7 @@ export const createDevNoteComment = async (req: Request, res: Response): Promise
   const authorId = req.user?.id;
   try {
     const [comment] = await sequelize.query(
-      'INSERT INTO dev_note_comments (dev_note_id, author_id, content) VALUES (:noteId, :authorId, :content) RETURNING *',
+      'INSERT INTO dev_note_comments (note_id, author_id, content) VALUES (:noteId, :authorId, :content) RETURNING *',
       { replacements: { noteId, authorId, content }, type: QueryTypes.SELECT }
     );
     // 반환값 구조 유연하게 처리
