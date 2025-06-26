@@ -97,6 +97,18 @@ export const updateUser = async (req: Request, res: Response) => {
       return;
     }
 
+    // position_code 유효성 체크
+    if (position_code) {
+      const [position]: any = await sequelize.query(
+        'SELECT id FROM positions WHERE id = :position_code',
+        { replacements: { position_code }, type: QueryTypes.SELECT }
+      );
+      if (!position) {
+        res.status(400).json({ message: `존재하지 않는 직급 코드입니다: ${position_code}` });
+        return;
+      }
+    }
+
     // 기존 사용자 확인
     const [existingUser]: any = await sequelize.query(
       'SELECT * FROM users WHERE id = :id',
