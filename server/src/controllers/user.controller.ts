@@ -91,9 +91,10 @@ export const updateUser = async (req: Request, res: Response) => {
 
     // 필수 필드 검증
     if (!name || !email) {
-      return res.status(400).json({ 
+      res.status(400).json({ 
         message: '이름과 이메일은 필수 입력 항목입니다.' 
       });
+      return;
     }
 
     // 기존 사용자 확인
@@ -103,9 +104,10 @@ export const updateUser = async (req: Request, res: Response) => {
     );
 
     if (!existingUser) {
-      return res.status(404).json({ 
+      res.status(404).json({ 
         message: '사용자를 찾을 수 없습니다.' 
       });
+      return;
     }
 
     const replacements = {
@@ -131,9 +133,11 @@ export const updateUser = async (req: Request, res: Response) => {
       }
     );
     res.status(200).json({ message: '회원 정보가 수정되었습니다.' });
+    return;
   } catch (err) {
     console.error('❌ 회원 정보 수정 에러:', err);
     res.status(500).json({ message: '회원 정보 수정 실패', error: err });
+    return;
   }
 };
 
@@ -146,8 +150,10 @@ export const deleteUser = async (req: Request, res: Response) => {
       type: QueryTypes.DELETE,
     });
     res.status(200).json({ message: '회원이 삭제되었습니다.' });
+    return;
   } catch (err) {
     res.status(500).json({ message: '회원 삭제 실패', error: err });
+    return;
   }
 };
 
@@ -164,8 +170,10 @@ export const updateUserRole = async (req: Request, res: Response) => {
       }
     );
     res.status(200).json({ message: '권한이 변경되었습니다.' });
+    return;
   } catch (err) {
     res.status(500).json({ message: '권한 변경 실패', error: err });
+    return;
   }
 };
 
@@ -182,8 +190,10 @@ export const updateUserDepartment = async (req: Request, res: Response) => {
       }
     );
     res.status(200).json({ message: '부서가 변경되었습니다.' });
+    return;
   } catch (err) {
     res.status(500).json({ message: '부서 변경 실패', error: err });
+    return;
   }
 };
 
@@ -197,7 +207,9 @@ export const updateUserPosition = async (req: Request, res: Response) => {
       type: QueryTypes.UPDATE,
     });
     res.status(200).json({ message: '직급이 변경되었습니다.' });
+    return;
   } catch (err) {
     res.status(500).json({ message: '직급 변경 실패', error: err });
+    return;
   }
 };
