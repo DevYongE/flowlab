@@ -91,9 +91,7 @@ export const updateUser = async (req: Request, res: Response) => {
 
     // 필수 필드 검증
     if (!name || !email) {
-      res.status(400).json({ 
-        message: '이름과 이메일은 필수 입력 항목입니다.' 
-      });
+      res.status(400).json({ message: '이름과 이메일은 필수 입력 항목입니다.' });
       return;
     }
 
@@ -109,6 +107,30 @@ export const updateUser = async (req: Request, res: Response) => {
       }
     }
 
+    // company_code 유효성 체크
+    if (company_code !== undefined && company_code !== null && company_code !== '') {
+      const companies: any = await sequelize.query(
+        'SELECT company_code FROM companies WHERE company_code = :company_code',
+        { replacements: { company_code }, type: QueryTypes.SELECT }
+      );
+      if (!Array.isArray(companies) || companies.length === 0) {
+        res.status(400).json({ message: `존재하지 않는 기업 코드입니다: ${company_code}` });
+        return;
+      }
+    }
+
+    // department 유효성 체크 (departments.department_name 기준)
+    if (department !== undefined && department !== null && department !== '') {
+      const departments: any = await sequelize.query(
+        'SELECT department_name FROM departments WHERE department_name = :department',
+        { replacements: { department }, type: QueryTypes.SELECT }
+      );
+      if (!Array.isArray(departments) || departments.length === 0) {
+        res.status(400).json({ message: `존재하지 않는 부서명입니다: ${department}` });
+        return;
+      }
+    }
+
     // 기존 사용자 확인
     const [existingUser]: any = await sequelize.query(
       'SELECT * FROM users WHERE id = :id',
@@ -116,9 +138,7 @@ export const updateUser = async (req: Request, res: Response) => {
     );
 
     if (!existingUser) {
-      res.status(404).json({ 
-        message: '사용자를 찾을 수 없습니다.' 
-      });
+      res.status(404).json({ message: '사용자를 찾을 수 없습니다.' });
       return;
     }
 
