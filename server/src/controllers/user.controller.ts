@@ -89,6 +89,25 @@ export const updateUser = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { name, email, department, position_code, company_code } = req.body;
 
+    // 필수 필드 검증
+    if (!name || !email) {
+      return res.status(400).json({ 
+        message: '이름과 이메일은 필수 입력 항목입니다.' 
+      });
+    }
+
+    // 기존 사용자 확인
+    const [existingUser]: any = await sequelize.query(
+      'SELECT * FROM users WHERE id = :id',
+      { replacements: { id }, type: QueryTypes.SELECT }
+    );
+
+    if (!existingUser) {
+      return res.status(404).json({ 
+        message: '사용자를 찾을 수 없습니다.' 
+      });
+    }
+
     const replacements = {
       name,
       email,
@@ -113,6 +132,7 @@ export const updateUser = async (req: Request, res: Response) => {
     );
     res.status(200).json({ message: '회원 정보가 수정되었습니다.' });
   } catch (err) {
+    console.error('❌ 회원 정보 수정 에러:', err);
     res.status(500).json({ message: '회원 정보 수정 실패', error: err });
   }
 };

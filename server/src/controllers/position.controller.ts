@@ -13,10 +13,10 @@ export const getAllPositions = async (req: Request, res: Response) => {
 };
 
 export const createPosition = async (req: Request, res: Response) => {
-  const { code, name, company_code } = req.body;
+  const { code, name, company_code, company_name } = req.body;
   try {
-    await sequelize.query('INSERT INTO positions (id, name, company_code) VALUES (:code, :name, :company_code)', {
-      replacements: { code, name, company_code },
+    await sequelize.query('INSERT INTO positions (id, name, company_code, company_name) VALUES (:code, :name, :company_code, :company_name)', {
+      replacements: { code, name, company_code, company_name },
       type: QueryTypes.INSERT,
     });
     res.status(201).json({ message: '직책 생성 완료' });
