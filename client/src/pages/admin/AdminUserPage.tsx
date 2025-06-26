@@ -269,7 +269,7 @@ const AdminUserPage = () => {
                   <select name="position_code" className="w-full border rounded p-2" defaultValue={selectedUser.position_code}>
                     <option value="">직급 선택</option>
                     {positions.map((pos: any) => (
-                      <option key={pos.id} value={pos.id}>{pos.name}</option>
+                      <option key={pos.position_code} value={pos.position_code}>{pos.name}</option>
                     ))}
                   </select>
                   <div className="flex justify-end gap-2 pt-2">
