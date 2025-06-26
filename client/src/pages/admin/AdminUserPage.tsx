@@ -266,7 +266,12 @@ const AdminUserPage = () => {
                   </select>
                   
                   <label className="block text-sm">직급</label>
-                  <select name="position_code" className="w-full border rounded p-2" defaultValue={selectedUser.position_code}>
+                  <select
+                    name="position_code"
+                    className="w-full border rounded p-2"
+                    value={selectedUser.position_code || ''}
+                    onChange={e => setSelectedUser({ ...selectedUser, position_code: e.target.value })}
+                  >
                     <option value="">직급 선택</option>
                     {positions.map((pos: any) => (
                       <option key={pos.position_code} value={pos.position_code}>{pos.name}</option>
