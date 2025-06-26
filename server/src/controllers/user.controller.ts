@@ -97,12 +97,11 @@ export const updateUser = async (req: Request, res: Response) => {
       return;
     }
 
-    // position_code 유효성 체크 (빈 값/undefined/null 방지, 숫자 변환)
+    // position_code 유효성 체크 (문자열 기준)
     if (position_code !== undefined && position_code !== null && position_code !== '') {
-      const codeNum = Number(position_code);
       const positions: any = await sequelize.query(
-        'SELECT id FROM positions WHERE id = :position_code',
-        { replacements: { position_code: codeNum }, type: QueryTypes.SELECT }
+        'SELECT position_code FROM positions WHERE position_code = :position_code',
+        { replacements: { position_code }, type: QueryTypes.SELECT }
       );
       if (!Array.isArray(positions) || positions.length === 0) {
         res.status(400).json({ message: `존재하지 않는 직급 코드입니다: ${position_code}` });
