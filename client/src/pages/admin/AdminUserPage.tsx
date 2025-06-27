@@ -189,7 +189,9 @@ const AdminUserPage = () => {
                       <td className="py-2 px-3 text-center">{user.name}</td>
                       <td className="py-2 px-3 text-center">{user.email}</td>
                       <td className="py-2 px-3 text-center">
-                        {user.department_name || departments.find(d => d.id === user.department)?.department_name || user.department}
+                        {user.department_name ||
+                          departments.find(d => String(d.id).trim() === String(user.department).trim())?.department_name ||
+                          user.department}
                       </td>
                       <td className="py-2 px-3 text-center">
                         {user.position_name || positions.find(p => p.position_code === user.position_code)?.name || user.position_code}
