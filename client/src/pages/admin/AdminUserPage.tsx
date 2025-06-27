@@ -129,10 +129,15 @@ const AdminUserPage = () => {
   );
 
   // 삭제 핸들러(더미)
-  const handleDelete = (user: any) => {
+  const handleDelete = async (user: any) => {
     if (window.confirm(`${user.name} 회원을 삭제하시겠습니까?`)) {
-      alert('삭제 API 연동 필요');
-      // 추후: axios.delete(`/users/${user.id}`) ...
+      try {
+        await axios.delete(`/users/${user.id}`);
+        setUsers(users => users.filter(u => u.id !== user.id));
+        alert('회원이 삭제되었습니다.');
+      } catch (err) {
+        alert('회원 삭제 실패');
+      }
     }
   };
 
