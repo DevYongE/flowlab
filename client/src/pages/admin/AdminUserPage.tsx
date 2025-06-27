@@ -34,7 +34,9 @@ const AdminUserPage = () => {
   useEffect(() => {
     fetchUsers();
     fetchRoles();
-    fetchCompanies(); // 전체 기업 목록 불러오기
+    fetchCompanies();
+    fetchAllDepartments();
+    fetchAllPositions();
   }, []);
 
   const fetchUsers = async () => {
@@ -64,26 +66,18 @@ const AdminUserPage = () => {
     }
   };
 
-  const fetchDepartments = async (companyCode: string) => {
-    if (!companyCode) {
-      setDepartments([]);
-      return;
-    }
+  const fetchAllDepartments = async () => {
     try {
-      const res = await axios.get(`/departments?company_code=${companyCode}`);
+      const res = await axios.get('/departments');
       setDepartments(res.data);
     } catch (err) {
       setDepartments([]);
     }
   };
 
-  const fetchPositions = async (companyCode: string) => {
-    if (!companyCode) {
-      setPositions([]);
-      return;
-    }
+  const fetchAllPositions = async () => {
     try {
-      const res = await axios.get(`/positions?company_code=${companyCode}`);
+      const res = await axios.get('/positions');
       setPositions(res.data);
     } catch (err) {
       setPositions([]);
@@ -96,8 +90,8 @@ const AdminUserPage = () => {
     if (type === 'edit') {
       if(user.company_code) {
         setSelectedCompanyCode(user.company_code);
-        fetchDepartments(user.company_code);
-        fetchPositions(user.company_code);
+        fetchAllDepartments();
+        fetchAllPositions();
       } else {
         setSelectedCompanyCode('');
         setDepartments([]);
@@ -253,8 +247,8 @@ const AdminUserPage = () => {
                     onChange={(e) => {
                       const code = e.target.value;
                       setSelectedCompanyCode(code);
-                      fetchDepartments(code);
-                      fetchPositions(code);
+                      fetchAllDepartments();
+                      fetchAllPositions();
                     }}
                   >
                     <option value="">기업 선택</option>
