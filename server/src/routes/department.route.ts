@@ -5,7 +5,7 @@ import { authenticate } from '../middlewares/auth.middleware';
 const router = express.Router();
 
 router.post('/', authenticate, createDepartment);
-router.get('/', authenticate, getDepartments);
+router.get('/', getDepartments);
 router.get('/:id', authenticate, getDepartmentById);
 router.put('/:id', authenticate, updateDepartment);
 
