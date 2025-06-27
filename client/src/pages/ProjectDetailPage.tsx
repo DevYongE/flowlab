@@ -65,6 +65,9 @@ const ProjectDetailPage = () => {
   const [newComment, setNewComment] = useState('');
   const commentInputRef = useRef<HTMLInputElement>(null);
   const currentUser = getCurrentUser();
+  const [companyUsers, setCompanyUsers] = useState<any[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState('');
+  const [assignedUsers, setAssignedUsers] = useState<any[]>([]);
 
   const fetchProject = async () => {
     try {
@@ -78,6 +81,17 @@ const ProjectDetailPage = () => {
   useEffect(() => {
     fetchProject();
   }, [id]);
+
+  useEffect(() => {
+    if (project && project.company_code) {
+      axios.get(`/users?company_code=${project.company_code}`)
+        .then(res => setCompanyUsers(res.data))
+        .catch(() => setCompanyUsers([]));
+      axios.get(`/projects/${project.id}/assignees`)
+        .then(res => setAssignedUsers(res.data))
+        .catch(() => setAssignedUsers([]));
+    }
+  }, [project]);
 
   const handleNoteChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value: rawValue } = e.target;
@@ -400,6 +414,18 @@ const ProjectDetailPage = () => {
     }
   };
 
+  const handleAssignUser = async () => {
+    if (!selectedUserId) return;
+    try {
+      await axios.post(`/projects/${project?.id}/assign-user`, { userId: selectedUserId });
+      axios.get(`/projects/${project?.id}/assignees`).then(res => setAssignedUsers(res.data));
+      setSelectedUserId('');
+      alert('회원이 할당되었습니다.');
+    } catch (err) {
+      alert('회원 할당 실패');
+    }
+  };
+
   if (!project) return <div>로딩 중...</div>;
   
   const canEditProject = isAdmin() || currentUser?.id === project.author_id;
@@ -421,6 +447,33 @@ const ProjectDetailPage = () => {
                   삭제
                 </button>
               </div>
+            )}
+          </div>
+          {/* 회원 할당 UI */}
+          <div className="mb-4 flex gap-2 items-center">
+            <select
+              className="border rounded p-2"
+              value={selectedUserId}
+              onChange={e => setSelectedUserId(e.target.value)}
+            >
+              <option value="">회원 선택</option>
+              {companyUsers.map(u => (
+                <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
+              ))}
+            </select>
+            <button className="bg-blue-500 text-white px-4 py-2 rounded" onClick={handleAssignUser}>할당</button>
+          </div>
+          {/* 할당된 회원 목록 */}
+          <div className="mb-4">
+            <span className="font-semibold">할당된 회원:</span>
+            {assignedUsers.length === 0 ? (
+              <span className="ml-2 text-gray-400">없음</span>
+            ) : (
+              <ul className="inline ml-2">
+                {assignedUsers.map(u => (
+                  <li key={u.id} className="inline-block mr-2">{u.name} ({u.email})</li>
+                ))}
+              </ul>
             )}
           </div>
           
