@@ -43,9 +43,12 @@ const RegisterPage: React.FC = () => {
       return;
     }
     try {
+      console.log('부서 조회 시작:', companyCode);
       const res = await axios.get(`/departments?company_code=${companyCode}`);
+      console.log('부서 조회 결과:', res.data);
       setDepartments(res.data);
     } catch (err) {
+      console.error('부서 조회 실패:', err);
       setDepartments([]);
     }
   };
