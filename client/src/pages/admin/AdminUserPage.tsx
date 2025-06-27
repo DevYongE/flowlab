@@ -226,7 +226,6 @@ const AdminUserPage = () => {
                   const company_code = (form.elements.namedItem('company_code') as HTMLSelectElement).value;
                   const department = (form.elements.namedItem('department') as HTMLSelectElement).value;
                   const position_code = (form.elements.namedItem('position_code') as HTMLSelectElement).value;
-                  
                   try {
                     await axios.patch(`/users/${selectedUser.id}`, { name, email, department, position_code, company_code });
                     await fetchUsers();
@@ -261,7 +260,7 @@ const AdminUserPage = () => {
                   <select name="department" className="w-full border rounded p-2" defaultValue={selectedUser.department}>
                     <option value="">부서 선택</option>
                     {departments.map((d: any) => (
-                      <option key={d.id} value={d.department_name}>{d.department_name}</option>
+                      <option key={d.id} value={d.id}>{d.department_name}</option>
                     ))}
                   </select>
                   
@@ -270,7 +269,6 @@ const AdminUserPage = () => {
                     name="position_code"
                     className="w-full border rounded p-2"
                     value={selectedUser.position_code || ''}
-                    onChange={e => setSelectedUser({ ...selectedUser, position_code: e.target.value })}
                   >
                     <option value="">직급 선택</option>
                     {positions.map((pos: any) => (
@@ -278,8 +276,8 @@ const AdminUserPage = () => {
                     ))}
                   </select>
                   <div className="flex justify-end gap-2 pt-2">
-                    <button type="button" onClick={handleClose} className="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400">취소</button>
-                    <button type="submit" className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700">저장</button>
+                    <button type="submit" className="px-4 py-2 rounded bg-blue-500 text-white hover:bg-blue-600">저장</button>
+                    <button type="button" onClick={handleClose} className="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400 ml-2">취소</button>
                   </div>
                 </form>
               </div>
