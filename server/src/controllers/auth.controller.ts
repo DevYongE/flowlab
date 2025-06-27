@@ -39,6 +39,7 @@ export const loginUser = async (req: Request, res: Response) => {
         name: user.name,
         role: user.role_code,
         userCode: user.user_code,
+        company_code: user.company_code,
       },
       process.env.JWT_SECRET || 'dev-secret',
       { expiresIn: '2h' }
