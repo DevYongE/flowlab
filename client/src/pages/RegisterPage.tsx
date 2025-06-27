@@ -181,7 +181,7 @@ const handleRegister = async () => {
               <select name="department" className="w-full p-2 rounded border border-gray-300" value={form.department} onChange={handleChange}>
                 <option value="">부서 선택</option>
                 {departments.map(d => (
-                  <option key={d.id} value={d.department_name}>{d.department_name}</option>
+                  <option key={d.id} value={d.id}>{d.department_name}</option>
                 ))}
               </select>
               <select name="position_code" className="w-full p-2 rounded border border-gray-300" value={form.position_code} onChange={handleChange}>

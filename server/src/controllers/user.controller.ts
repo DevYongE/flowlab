@@ -119,14 +119,14 @@ export const updateUser = async (req: Request, res: Response) => {
       }
     }
 
-    // department 유효성 체크 (departments.department_name 기준)
+    // department 유효성 체크 (departments.id 기준)
     if (department !== undefined && department !== null && department !== '') {
       const departments: any = await sequelize.query(
-        'SELECT department_name FROM departments WHERE department_name = :department',
+        'SELECT id FROM departments WHERE id = :department',
         { replacements: { department }, type: QueryTypes.SELECT }
       );
       if (!Array.isArray(departments) || departments.length === 0) {
-        res.status(400).json({ message: `존재하지 않는 부서명입니다: ${department}` });
+        res.status(400).json({ message: `존재하지 않는 부서 id입니다: ${department}` });
         return;
       }
     }
