@@ -30,6 +30,7 @@ const AdminUserPage = () => {
 
   // 선택된 기업/부서/직급 상태
   const [selectedCompanyCode, setSelectedCompanyCode] = useState('');
+  const [editPositionCode, setEditPositionCode] = useState('');
 
   useEffect(() => {
     fetchUsers();
@@ -38,6 +39,12 @@ const AdminUserPage = () => {
     fetchAllDepartments();
     fetchAllPositions();
   }, []);
+
+  useEffect(() => {
+    if (showEdit && selectedUser) {
+      setEditPositionCode(selectedUser.position_code || '');
+    }
+  }, [showEdit, selectedUser]);
 
   const fetchUsers = async () => {
     try {
@@ -225,9 +232,8 @@ const AdminUserPage = () => {
                   const email = (form.elements.namedItem('email') as HTMLInputElement).value;
                   const company_code = (form.elements.namedItem('company_code') as HTMLSelectElement).value;
                   const department = (form.elements.namedItem('department') as HTMLSelectElement).value;
-                  const position_code = (form.elements.namedItem('position_code') as HTMLSelectElement).value;
                   try {
-                    await axios.patch(`/users/${selectedUser.id}`, { name, email, department, position_code, company_code });
+                    await axios.patch(`/users/${selectedUser.id}`, { name, email, department, position_code: editPositionCode, company_code });
                     await fetchUsers();
                     handleClose();
                   } catch (err) {
@@ -268,7 +274,8 @@ const AdminUserPage = () => {
                   <select
                     name="position_code"
                     className="w-full border rounded p-2"
-                    value={selectedUser.position_code || ''}
+                    value={editPositionCode}
+                    onChange={e => setEditPositionCode(e.target.value)}
                   >
                     <option value="">직급 선택</option>
                     {positions.map((pos: any) => (
