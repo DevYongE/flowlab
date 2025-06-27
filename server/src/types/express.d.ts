@@ -5,6 +5,7 @@ declare namespace Express {
       name: string;
       role: string;
       userCode: string;
+      company_code: string;
     };
   }
 } 

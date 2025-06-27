@@ -58,15 +58,19 @@ function toCategoryCode(category: string) {
 export const getProjects = async (req: Request, res: Response): Promise<void> => {
   const currentUserId = req.user?.id;
   const currentUserRole = req.user?.role;
+  const currentUserCompany = req.user?.company_code;
 
   try {
     let query = `
-      SELECT id, category, type, name, TO_CHAR(start_date, 'YYYY-MM-DD') as "startDate", TO_CHAR(end_date, 'YYYY-MM-DD') as "endDate", progress
+      SELECT id, category, type, name, company_code, TO_CHAR(start_date, 'YYYY-MM-DD') as "startDate", TO_CHAR(end_date, 'YYYY-MM-DD') as "endDate", progress
       FROM projects
     `;
     const params: any = {};
 
-    if (currentUserRole !== 'ADMIN') {
+    if (currentUserRole === 'MANAGER') {
+      query += ' WHERE company_code = :company_code';
+      params.company_code = currentUserCompany;
+    } else if (currentUserRole !== 'ADMIN') {
       query += ' WHERE author_id = :author_id';
       params.author_id = currentUserId;
     }
@@ -84,6 +88,7 @@ export const getProjectById = async (req: Request, res: Response): Promise<void>
   const { id } = req.params;
   const currentUserId = req.user?.id;
   const currentUserRole = req.user?.role;
+  const currentUserCompany = req.user?.company_code;
 
   try {
     const rows = await sequelize.query('SELECT *, TO_CHAR(start_date, \'YYYY-MM-DD\') as "startDate", TO_CHAR(end_date, \'YYYY-MM-DD\') as "endDate" FROM projects WHERE id = :id', { replacements: { id }, type: QueryTypes.SELECT });
@@ -93,7 +98,11 @@ export const getProjectById = async (req: Request, res: Response): Promise<void>
     }
     const project = rows[0] as any;
 
-    if (currentUserRole !== 'ADMIN' && currentUserId !== project.author_id) {
+    if (currentUserRole === 'MANAGER' && currentUserCompany !== project.company_code) {
+      res.status(403).json({ message: '타 기업 프로젝트 접근 불가' });
+      return;
+    }
+    if (currentUserRole !== 'ADMIN' && currentUserRole !== 'MANAGER' && currentUserId !== project.author_id) {
       res.status(403).json({ message: '프로젝트에 접근할 권한이 없습니다.' });
       return;
     }
