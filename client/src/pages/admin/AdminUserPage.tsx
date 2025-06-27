@@ -164,6 +164,7 @@ const AdminUserPage = () => {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50">
+                    <th className="py-2 px-3 text-center">아이디</th>
                     <th className="py-2 px-3 text-center">이름</th>
                     <th className="py-2 px-3 text-center">이메일</th>
                     <th className="py-2 px-3 text-center">부서</th>
@@ -175,14 +176,15 @@ const AdminUserPage = () => {
                 </thead>
                 <tbody>
                   {filteredUsers.length === 0 ? (
-                    <tr><td colSpan={7} className="text-center text-gray-400 py-8">회원이 없습니다.</td></tr>
+                    <tr><td colSpan={8} className="text-center text-gray-400 py-8">회원이 없습니다.</td></tr>
                   ) : filteredUsers.map(user => (
                     <tr key={user.id} className="hover:bg-gray-50">
+                      <td className="py-2 px-3 text-center">{user.id}</td>
                       <td className="py-2 px-3 text-center">{user.name}</td>
                       <td className="py-2 px-3 text-center">{user.email}</td>
-                      <td className="py-2 px-3 text-center">{user.department || user.department_name}</td>
-                      <td className="py-2 px-3 text-center">{user.position_name || user.position || user.position_code}</td>
-                      <td className="py-2 px-3 text-center">{user.role_name || user.role || user.role_code}</td>
+                      <td className="py-2 px-3 text-center">{user.department_name || user.department}</td>
+                      <td className="py-2 px-3 text-center">{user.position_name || user.position_code}</td>
+                      <td className="py-2 px-3 text-center">{user.role_name || user.role_code}</td>
                       <td className="py-2 px-3 text-center">{user.status || (user.is_active ? '활성' : '비활성')}</td>
                       <td className="py-2 px-3 text-center">
                         <button title="상세" className="text-blue-500 hover:text-blue-700 mx-1" onClick={() => handleOpen('detail', user)}><FaInfoCircle /></button>
