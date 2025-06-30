@@ -93,6 +93,16 @@ const ProjectDetailPage = () => {
     }
   }, [project]);
 
+  // URL 해시 확인하여 할당 섹션으로 스크롤
+  useEffect(() => {
+    if (window.location.hash === '#assign') {
+      const assignSection = document.getElementById('assign-section');
+      if (assignSection) {
+        assignSection.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  }, [project]);
+
   const handleNoteChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value: rawValue } = e.target;
     
@@ -450,31 +460,42 @@ const ProjectDetailPage = () => {
             )}
           </div>
           {/* 회원 할당 UI */}
-          <div className="mb-4 flex gap-2 items-center">
-            <select
-              className="border rounded p-2"
-              value={selectedUserId}
-              onChange={e => setSelectedUserId(e.target.value)}
-            >
-              <option value="">회원 선택</option>
-              {companyUsers.map(u => (
-                <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
-              ))}
-            </select>
-            <button className="bg-blue-500 text-white px-4 py-2 rounded" onClick={handleAssignUser}>할당</button>
-          </div>
-          {/* 할당된 회원 목록 */}
-          <div className="mb-4">
-            <span className="font-semibold">할당된 회원:</span>
-            {assignedUsers.length === 0 ? (
-              <span className="ml-2 text-gray-400">없음</span>
-            ) : (
-              <ul className="inline ml-2">
-                {assignedUsers.map(u => (
-                  <li key={u.id} className="inline-block mr-2">{u.name} ({u.email})</li>
+          <div id="assign-section" className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <h3 className="text-lg font-semibold mb-3 text-blue-800">👥 프로젝트 할당</h3>
+            <div className="flex gap-2 items-center mb-3">
+              <select
+                className="border rounded p-2 flex-1"
+                value={selectedUserId}
+                onChange={e => setSelectedUserId(e.target.value)}
+              >
+                <option value="">회원 선택</option>
+                {companyUsers.map(u => (
+                  <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
                 ))}
-              </ul>
-            )}
+              </select>
+              <button 
+                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:bg-gray-400" 
+                onClick={handleAssignUser}
+                disabled={!selectedUserId}
+              >
+                할당
+              </button>
+            </div>
+            {/* 할당된 회원 목록 */}
+            <div>
+              <span className="font-semibold text-blue-800">할당된 회원:</span>
+              {assignedUsers.length === 0 ? (
+                <span className="ml-2 text-gray-400">없음</span>
+              ) : (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {assignedUsers.map(u => (
+                    <span key={u.id} className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
+                      {u.name} ({u.email})
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
           
           {/* 프로젝트 기본 정보 */}

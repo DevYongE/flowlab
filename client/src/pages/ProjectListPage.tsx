@@ -13,6 +13,11 @@ interface Project {
   startDate: string;
   endDate: string;
   progress: number; // 0 ~ 100
+  assignedUsers?: Array<{
+    id: string;
+    name: string;
+    email: string;
+  }>;
 }
 
 // 프로젝트 유형 한글 변환 함수
@@ -41,17 +46,38 @@ const ProjectListPage: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    axios
-      .get('/projects')
-      .then((res) => {
+    const fetchProjects = async () => {
+      try {
+        const res = await axios.get('/projects');
         if (Array.isArray(res.data)) {
-          setProjects(res.data);
+          // 각 프로젝트의 할당된 사용자 정보도 함께 가져오기
+          const projectsWithAssignees = await Promise.all(
+            res.data.map(async (project: Project) => {
+              try {
+                const assigneesRes = await axios.get(`/projects/${project.id}/assignees`);
+                return {
+                  ...project,
+                  assignedUsers: assigneesRes.data || []
+                };
+              } catch (error) {
+                return {
+                  ...project,
+                  assignedUsers: []
+                };
+              }
+            })
+          );
+          setProjects(projectsWithAssignees);
         } else {
           setProjects([]);
           console.error('프로젝트 목록 응답이 배열이 아님:', res.data);
         }
-      })
-      .catch(() => alert('프로젝트 목록을 불러올 수 없습니다.'));
+      } catch (error) {
+        alert('프로젝트 목록을 불러올 수 없습니다.');
+      }
+    };
+
+    fetchProjects();
   }, []);
 
   return (
@@ -73,6 +99,8 @@ const ProjectListPage: React.FC = () => {
                   <th className="px-6 py-3">프로젝트명</th>
                   <th className="px-6 py-3">기간</th>
                   <th className="px-6 py-3 w-48">진행률</th>
+                  <th className="px-6 py-3">할당된 사용자</th>
+                  <th className="px-6 py-3 w-32">관리</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -99,6 +127,44 @@ const ProjectListPage: React.FC = () => {
                           ></div>
                         </div>
                         <span className="font-semibold">{proj.progress}%</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      {proj.assignedUsers && proj.assignedUsers.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {proj.assignedUsers.slice(0, 2).map(user => (
+                            <span key={user.id} className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
+                              {user.name}
+                            </span>
+                          ))}
+                          {proj.assignedUsers.length > 2 && (
+                            <span className="inline-block bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded">
+                              +{proj.assignedUsers.length - 2}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 text-sm">할당 없음</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex gap-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigate(`/projects/${proj.id}`)}
+                          className="text-xs"
+                        >
+                          상세
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigate(`/projects/${proj.id}#assign`)}
+                          className="text-xs bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                        >
+                          할당
+                        </Button>
                       </div>
                     </td>
                   </tr>
