@@ -184,6 +184,7 @@ export const createProject = async (req: Request, res: Response): Promise<void> 
   const type = toTypeCode(req.body.type);
   const { name, startDate, endDate, os, memory, javaVersion, springVersion, reactVersion, vueVersion, tomcatVersion, centricVersion } = req.body;
   const authorId = req.user?.id;
+  const companyCode = req.user?.company_code;
   const safe = (v: string) => (v === '' ? null : v);
   console.log('[createProject] req.user:', req.user);
   console.log('[createProject] req.body:', req.body);
@@ -198,11 +199,11 @@ export const createProject = async (req: Request, res: Response): Promise<void> 
     return;
   }
   try {
-    console.log('[createProject] Inserting project:', { category, type, name, startDate, endDate, os, memory, authorId });
+    console.log('[createProject] Inserting project:', { category, type, name, startDate, endDate, os, memory, authorId, companyCode });
     await sequelize.query('BEGIN');
     const [rows] = await sequelize.query(
-      'INSERT INTO projects (category, type, name, start_date, end_date, os, memory, author_id) VALUES (:category, :type, :name, :startDate, :endDate, :os, :memory, :authorId) RETURNING id',
-      { replacements: { category, type, name, startDate, endDate, os: safe(os), memory: safe(memory), authorId }, type: QueryTypes.SELECT }
+      'INSERT INTO projects (category, type, name, start_date, end_date, os, memory, author_id, company_code) VALUES (:category, :type, :name, :startDate, :endDate, :os, :memory, :authorId, :companyCode) RETURNING id',
+      { replacements: { category, type, name, startDate, endDate, os: safe(os), memory: safe(memory), authorId, companyCode }, type: QueryTypes.SELECT }
     );
     const projectId = Array.isArray(rows) ? (rows[0] as any)?.id : (rows as any)?.id;
     if (!projectId) {
