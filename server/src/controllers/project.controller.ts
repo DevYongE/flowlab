@@ -532,8 +532,9 @@ export const getProjectAssignees = async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
     const rows = await sequelize.query(
-      `SELECT u.id, u.name, u.email FROM project_assignees pa
+      `SELECT u.id, d.department_name FROM project_assignees pa
        JOIN users u ON pa.user_id = u.id
+       LEFT JOIN departments d ON u.department = d.id
        WHERE pa.project_id = :project_id`,
       { replacements: { project_id: id }, type: QueryTypes.SELECT }
     );
@@ -568,8 +569,9 @@ export const getDevNoteAssignees = async (req: Request, res: Response) => {
   const { noteId } = req.params;
   try {
     const rows = await sequelize.query(
-      `SELECT u.id, u.name, u.email FROM devnote_assignees da
+      `SELECT u.id, d.department_name FROM devnote_assignees da
        JOIN users u ON da.user_id = u.id
+       LEFT JOIN departments d ON u.department = d.id
        WHERE da.devnote_id = :devnote_id`,
       { replacements: { devnote_id: noteId }, type: QueryTypes.SELECT }
     );

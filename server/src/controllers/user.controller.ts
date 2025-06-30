@@ -9,14 +9,9 @@ export const getUsers = async (req: Request, res: Response) => {
   try {
     const { company_code } = req.query;
     let query = `
-      SELECT u.*, 
-             c.company_name,
-             p.name AS position_name, 
-             r.name AS role_name
+      SELECT u.id, d.department_name
       FROM users u
-      LEFT JOIN companies c ON u.company_code = c.company_code
-      LEFT JOIN positions p ON u.position_code = p.id::text
-      LEFT JOIN roles r ON u.role_code = r.role_code
+      LEFT JOIN departments d ON u.department = d.id
     `;
     const params: any = {};
     if (company_code) {
