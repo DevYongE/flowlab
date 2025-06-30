@@ -35,4 +35,13 @@ CREATE TABLE IF NOT EXISTS dev_notes (
     deadline DATE,
     author_id VARCHAR(255) REFERENCES users(id) ON DELETE SET NULL,
     registered_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 프로젝트-회원 할당 테이블
+CREATE TABLE IF NOT EXISTS project_assignees (
+    id SERIAL PRIMARY KEY,
+    project_id INT REFERENCES projects(id) ON DELETE CASCADE,
+    user_id VARCHAR(255) REFERENCES users(id) ON DELETE CASCADE,
+    assigned_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE (project_id, user_id)
 ); 

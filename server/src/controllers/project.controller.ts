@@ -525,4 +525,40 @@ export const createDevNoteComment = async (req: Request, res: Response): Promise
   } catch (error) {
     res.status(500).json({ message: '댓글 생성 실패', error });
   }
+};
+
+// 프로젝트에 할당된 회원 목록 조회
+export const getProjectAssignees = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  try {
+    const rows = await sequelize.query(
+      `SELECT u.id, u.name, u.email FROM project_assignees pa
+       JOIN users u ON pa.user_id = u.id
+       WHERE pa.project_id = :project_id`,
+      { replacements: { project_id: id }, type: QueryTypes.SELECT }
+    );
+    res.json(Array.isArray(rows) ? rows : []);
+  } catch (error) {
+    res.status(500).json({ message: '할당된 회원 조회 실패', error });
+  }
+};
+
+// 프로젝트에 회원 할당
+export const assignUserToProject = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { userId } = req.body;
+  if (!userId) {
+    res.status(400).json({ message: 'userId가 필요합니다.' });
+    return;
+  }
+  try {
+    await sequelize.query(
+      `INSERT INTO project_assignees (project_id, user_id) VALUES (:project_id, :user_id)
+       ON CONFLICT (project_id, user_id) DO NOTHING`,
+      { replacements: { project_id: id, user_id: userId }, type: QueryTypes.INSERT }
+    );
+    res.json({ message: '회원이 프로젝트에 할당되었습니다.' });
+  } catch (error) {
+    res.status(500).json({ message: '회원 할당 실패', error });
+  }
 }; 

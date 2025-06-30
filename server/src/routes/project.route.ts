@@ -13,7 +13,9 @@ import {
   getDevNotesAsWbs,
   getProjectStatusSummary,
   getDevNoteComments,
-  createDevNoteComment
+  createDevNoteComment,
+  getProjectAssignees,
+  assignUserToProject
 } from '../controllers/project.controller';
 import { authenticate } from '../middlewares/auth.middleware';
 import { requireAdmin } from '../middlewares/admin.middleware';
@@ -41,5 +43,9 @@ router.post('/notes/:noteId/comments', authenticate, createDevNoteComment);
 
 // DevNotes 구조 업데이트 라우트
 router.patch('/notes/structure/:projectId', authenticate, updateDevNotesStructure);
+
+// Assignees routes
+router.get('/:id/assignees', authenticate, getProjectAssignees);
+router.post('/:id/assign-user', authenticate, assignUserToProject);
 
 export default router; 
