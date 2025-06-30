@@ -561,4 +561,40 @@ export const assignUserToProject = async (req: Request, res: Response) => {
   } catch (error) {
     res.status(500).json({ message: '회원 할당 실패', error });
   }
+};
+
+// 요구사항(DevNote)에 할당된 회원 목록 조회
+export const getDevNoteAssignees = async (req: Request, res: Response) => {
+  const { noteId } = req.params;
+  try {
+    const rows = await sequelize.query(
+      `SELECT u.id, u.name, u.email FROM devnote_assignees da
+       JOIN users u ON da.user_id = u.id
+       WHERE da.devnote_id = :devnote_id`,
+      { replacements: { devnote_id: noteId }, type: QueryTypes.SELECT }
+    );
+    res.json(Array.isArray(rows) ? rows : []);
+  } catch (error) {
+    res.status(500).json({ message: '요구사항 담당자 조회 실패', error });
+  }
+};
+
+// 요구사항(DevNote)에 회원 할당
+export const assignUserToDevNote = async (req: Request, res: Response) => {
+  const { noteId } = req.params;
+  const { userId } = req.body;
+  if (!userId) {
+    res.status(400).json({ message: 'userId가 필요합니다.' });
+    return;
+  }
+  try {
+    await sequelize.query(
+      `INSERT INTO devnote_assignees (devnote_id, user_id) VALUES (:devnote_id, :user_id)
+       ON CONFLICT (devnote_id, user_id) DO NOTHING`,
+      { replacements: { devnote_id: noteId, user_id: userId }, type: QueryTypes.INSERT }
+    );
+    res.json({ message: '회원이 요구사항에 할당되었습니다.' });
+  } catch (error) {
+    res.status(500).json({ message: '요구사항 담당자 할당 실패', error });
+  }
 }; 

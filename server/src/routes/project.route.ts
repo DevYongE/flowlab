@@ -15,7 +15,9 @@ import {
   getDevNoteComments,
   createDevNoteComment,
   getProjectAssignees,
-  assignUserToProject
+  assignUserToProject,
+  getDevNoteAssignees,
+  assignUserToDevNote
 } from '../controllers/project.controller';
 import { authenticate } from '../middlewares/auth.middleware';
 import { requireAdmin } from '../middlewares/admin.middleware';
@@ -47,5 +49,9 @@ router.patch('/notes/structure/:projectId', authenticate, updateDevNotesStructur
 // Assignees routes
 router.get('/:id/assignees', authenticate, getProjectAssignees);
 router.post('/:id/assign-user', authenticate, assignUserToProject);
+
+// DevNote Assignees routes
+router.get('/notes/:noteId/assignees', authenticate, getDevNoteAssignees);
+router.post('/notes/:noteId/assign-user', authenticate, assignUserToDevNote);
 
 export default router; 

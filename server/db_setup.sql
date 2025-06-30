@@ -44,4 +44,13 @@ CREATE TABLE IF NOT EXISTS project_assignees (
     user_id VARCHAR(255) REFERENCES users(id) ON DELETE CASCADE,
     assigned_at TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE (project_id, user_id)
+);
+
+-- 요구사항(DevNote)-회원 할당 테이블
+CREATE TABLE IF NOT EXISTS devnote_assignees (
+    id SERIAL PRIMARY KEY,
+    devnote_id INT REFERENCES dev_notes(id) ON DELETE CASCADE,
+    user_id VARCHAR(255) REFERENCES users(id) ON DELETE CASCADE,
+    assigned_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE (devnote_id, user_id)
 ); 
