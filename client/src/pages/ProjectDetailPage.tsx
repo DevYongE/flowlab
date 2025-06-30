@@ -34,6 +34,7 @@ interface Project {
   endDate: string;
   os: string;
   memory: string;
+  company_code: string;
   details: {
     java_version: string;
     spring_version: string;
