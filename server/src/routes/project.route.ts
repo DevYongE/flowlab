@@ -24,6 +24,10 @@ import { requireAdmin } from '../middlewares/admin.middleware';
 
 const router = express.Router();
 
+// Assignees routes
+router.get('/:id/assignees', authenticate, getProjectAssignees);
+router.post('/:id/assign-user', authenticate, assignUserToProject);
+
 // Project routes
 router.get('/', authenticate, getProjects);
 router.get('/ongoing', authenticate, getOngoingProjects);
@@ -45,10 +49,6 @@ router.post('/notes/:noteId/comments', authenticate, createDevNoteComment);
 
 // DevNotes 구조 업데이트 라우트
 router.patch('/notes/structure/:projectId', authenticate, updateDevNotesStructure);
-
-// Assignees routes
-router.get('/:id/assignees', authenticate, getProjectAssignees);
-router.post('/:id/assign-user', authenticate, assignUserToProject);
 
 // DevNote Assignees routes
 router.get('/notes/:noteId/assignees', authenticate, getDevNoteAssignees);
