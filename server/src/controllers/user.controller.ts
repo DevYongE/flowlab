@@ -9,7 +9,7 @@ export const getUsers = async (req: Request, res: Response) => {
   try {
     const { company_code } = req.query;
     let query = `
-      SELECT u.id, d.department_name
+      SELECT u.id, u.name, u.email, d.department_name, u.position_code, u.role_code, u.status
       FROM users u
       LEFT JOIN departments d ON u.department = d.id
     `;
