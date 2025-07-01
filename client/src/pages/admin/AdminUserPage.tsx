@@ -270,23 +270,29 @@ const AdminUserPage = () => {
                   </select>
                   
                   <label className="block text-sm">부서</label>
-                  <select name="department" className="w-full border rounded p-2" defaultValue={selectedUser.department}>
+                  <select
+                    className="border p-2 rounded w-full"
+                    name="department"
+                    defaultValue={selectedUser?.department || selectedUser?.department_name || ''}
+                  >
                     <option value="">부서 선택</option>
-                    {departments.map((d: any) => (
-                      <option key={d.id} value={d.id}>{d.department_name}</option>
-                    ))}
+                    {departments
+                      .filter(d => !selectedCompanyCode || d.company_code === selectedCompanyCode)
+                      .map(d => (
+                        <option key={d.id} value={d.id}>{d.department_name}</option>
+                      ))}
                   </select>
                   
                   <label className="block text-sm">직급</label>
                   <select
+                    className="border p-2 rounded w-full"
                     name="position_code"
-                    className="w-full border rounded p-2"
                     value={editPositionCode}
                     onChange={e => setEditPositionCode(e.target.value)}
                   >
                     <option value="">직급 선택</option>
-                    {positions.map((pos: any) => (
-                      <option key={pos.position_code} value={pos.position_code}>{pos.name}</option>
+                    {positions.map(p => (
+                      <option key={p.position_code} value={p.position_code}>{p.name}</option>
                     ))}
                   </select>
                   <div className="flex justify-end gap-2 pt-2">
