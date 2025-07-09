@@ -12,7 +12,7 @@ export const getUsers = async (req: Request, res: Response) => {
       SELECT u.id, u.name, u.email, d.department_name, p.name AS position_name, r.name AS role_name, u.position_code
       FROM users u
       LEFT JOIN departments d ON u.department = d.id
-      LEFT JOIN positions p ON u.position_code = p.id::text
+      LEFT JOIN positions p ON u.position_code = p.position_code
       LEFT JOIN roles r ON u.role_code = r.role_code
     `;
     const params: any = {};
@@ -21,7 +21,6 @@ export const getUsers = async (req: Request, res: Response) => {
       params.company_code = company_code;
     }
     const rows = await sequelize.query(query, { replacements: params, type: QueryTypes.SELECT });
-    console.log('getUsers API response:', rows);
     res.status(200).json(Array.isArray(rows) ? rows : []);
   } catch (err) {
     console.error('❌ 사용자 조회 에러:', err);
