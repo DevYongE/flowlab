@@ -21,6 +21,7 @@ export const getUsers = async (req: Request, res: Response) => {
       params.company_code = company_code;
     }
     const rows = await sequelize.query(query, { replacements: params, type: QueryTypes.SELECT });
+    console.log('getUsers API response:', rows);
     res.status(200).json(Array.isArray(rows) ? rows : []);
   } catch (err) {
     console.error('❌ 사용자 조회 에러:', err);
