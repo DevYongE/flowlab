@@ -9,6 +9,13 @@ interface Project {
     name: string;
 }
 
+interface WbsItem {
+    content: string;
+    deadline?: string;
+    parent_id?: number | string | null;
+    order?: number;
+}
+
 const WbsMainPage: React.FC = () => {
     const [projects, setProjects] = useState<Project[]>([]);
     const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
@@ -43,11 +50,19 @@ const WbsMainPage: React.FC = () => {
         }
         setIsAnalyzing(true);
         try {
-            // TODO: AI 분석 API 호출 및 WBS 생성 로직 구현
-            console.log(`AI 분석 요청: 프로젝트 ID ${activeProjectId}, 내용: ${aiInputText}`);
-            // 임시로 3초 후 완료
-            await new Promise(resolve => setTimeout(resolve, 3000));
-            alert("AI 분석 및 WBS 생성이 완료되었습니다. (더미)");
+            // 1. AI 분석 API 호출
+            const aiResponse = await axios.post('/ai/generate-wbs', { projectDescription: aiInputText });
+            const aiWbsData: WbsItem[] = aiResponse.data.wbs; // AI가 반환한 WBS 데이터
+
+            if (!aiWbsData || aiWbsData.length === 0) {
+                alert("AI가 WBS를 생성하지 못했습니다. 내용을 다시 확인해주세요.");
+                return;
+            }
+
+            // 2. AI가 생성한 WBS를 일괄 저장 API 호출
+            await axios.post(`/projects/${activeProjectId}/notes/bulk`, { notes: aiWbsData });
+
+            alert("AI 분석 및 WBS 생성이 완료되었습니다.");
             setShowAIModal(false);
             setAIInputText('');
             // WBSBoard를 새로고침하기 위해 activeProjectId를 잠시 null로 설정 후 다시 설정
@@ -56,8 +71,8 @@ const WbsMainPage: React.FC = () => {
             setTimeout(() => setActiveProjectId(currentActiveProjectId), 0);
 
         } catch (error) {
-            console.error("AI 분석 실패:", error);
-            alert("AI 분석에 실패했습니다.");
+            console.error("AI 분석 또는 WBS 생성 실패:", error);
+            alert("AI 분석 또는 WBS 생성에 실패했습니다.");
         } finally {
             setIsAnalyzing(false);
         }

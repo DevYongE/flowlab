@@ -500,6 +500,77 @@ export const updateDevNotesStructure = async (req: Request, res: Response): Prom
   }
 };
 
+// AI 생성 WBS를 일괄 저장하는 함수
+export const bulkCreateDevNotes = async (req: Request, res: Response): Promise<void> => {
+  const { projectId } = req.params;
+  const { notes } = req.body; // notes는 WBS 항목 배열 [{ content, deadline, parent_id, order }, ...]
+  const authorId = req.user?.id;
+  const currentUserRole = req.user?.role;
+
+  if (!Array.isArray(notes) || notes.length === 0) {
+    res.status(400).json({ message: '저장할 WBS 항목이 없습니다.' });
+    return;
+  }
+
+  if (!authorId) {
+    res.status(401).json({ message: '로그인 정보가 필요합니다.' });
+    return;
+  }
+
+  try {
+    // 프로젝트 소유권 확인 (기존 createDevNote 로직 참고)
+    const [projectRows] = await sequelize.query('SELECT author_id FROM projects WHERE id = :project_id', { replacements: { project_id: projectId }, type: QueryTypes.SELECT });
+    let projectAuthorId = null;
+    if (Array.isArray(projectRows) && projectRows.length > 0) {
+      projectAuthorId = projectRows[0].author_id;
+    } else if (projectRows && typeof projectRows === 'object' && 'author_id' in projectRows) {
+      projectAuthorId = projectRows.author_id;
+    } else {
+      res.status(404).json({ message: '프로젝트를 찾을 수 없습니다.', projectRows });
+      return;
+    }
+
+    if (currentUserRole !== 'ADMIN' && authorId !== projectAuthorId) {
+      res.status(403).json({ message: '이 프로젝트에 요구사항을 추가할 권한이 없습니다.' });
+      return;
+    }
+
+    await sequelize.query('BEGIN'); // 트랜잭션 시작
+
+    for (const note of notes) {
+      const { content, deadline, parent_id, order } = note;
+      const status = 'TODO'; // AI 생성 시 기본 상태는 'TODO'
+      const progress = 0; // AI 생성 시 기본 진행률은 0
+      const completedAt = null; // AI 생성 시 완료일은 null
+
+      await sequelize.query(
+        'INSERT INTO dev_notes (project_id, content, deadline, status, progress, author_id, parent_id, "order", completed_at) VALUES (:projectId, :content, :deadline, :status, :progress, :authorId, :parent_id, :order, :completedAt)',
+        {
+          replacements: {
+            projectId,
+            content,
+            deadline: deadline ?? null,
+            status,
+            progress,
+            authorId,
+            parent_id: parent_id ?? null,
+            order: order ?? 0, // order가 없으면 0으로 기본값 설정
+            completedAt
+          },
+          type: QueryTypes.INSERT
+        }
+      );
+    }
+
+    await sequelize.query('COMMIT'); // 트랜잭션 커밋
+    res.status(201).json({ message: 'WBS 항목들이 성공적으로 생성되었습니다.' });
+  } catch (error) {
+    await sequelize.query('ROLLBACK'); // 오류 발생 시 롤백
+    console.error('WBS 항목 일괄 생성 오류:', error);
+    res.status(500).json({ message: 'WBS 항목 일괄 생성 실패', error });
+  }
+};
+
 // 특정 노트의 댓글 조회
 export const getDevNoteComments = async (req: Request, res: Response): Promise<void> => {
   const { noteId } = req.params;

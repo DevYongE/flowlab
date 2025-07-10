@@ -17,7 +17,8 @@ import {
   getProjectAssignees,
   assignUserToProject,
   getDevNoteAssignees,
-  assignUserToDevNote
+  assignUserToDevNote,
+  bulkCreateDevNotes // bulkCreateDevNotes 추가
 } from '../controllers/project.controller';
 import { authenticate } from '../middlewares/auth.middleware';
 import { requireAdmin } from '../middlewares/admin.middleware';
@@ -40,6 +41,7 @@ router.delete('/:id', authenticate, deleteProject);
 
 // DevNote routes
 router.post('/:projectId/notes', authenticate, createDevNote);
+router.post('/:projectId/notes/bulk', authenticate, bulkCreateDevNotes); // 새로운 라우트 추가
 router.put('/notes/:noteId', authenticate, updateDevNote);
 router.delete('/notes/:noteId', authenticate, deleteDevNote);
 
