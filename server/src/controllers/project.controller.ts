@@ -111,7 +111,7 @@ export const getProjectById = async (req: Request, res: Response): Promise<void>
     project.details = Array.isArray(detailsRes) && detailsRes.length > 0 ? detailsRes[0] : {};
     
     const notesRes = await sequelize.query(
-      `SELECT dn.*, u.name as "authorName", TO_CHAR(dn.registered_at, 'YYYY-MM-DD') as "registeredAt" 
+      `SELECT dn.*, u.name as "authorName", TO_CHAR(dn.registered_at, 'YYYY-MM-DD') as "registeredAt", TO_CHAR(dn.completed_at, 'YYYY-MM-DD') as "completedAt" 
        FROM dev_notes dn
        LEFT JOIN users u ON dn.author_id = u.id
        WHERE dn.project_id = :project_id ORDER BY dn.registered_at DESC`, 
@@ -130,10 +130,10 @@ export const getDevNotesAsWbs = async (req: Request, res: Response): Promise<voi
   const { projectId } = req.params;
   try {
     const notesRes = await sequelize.query(
-      `SELECT dn.*, u.name as "authorName", TO_CHAR(dn.registered_at, 'YYYY-MM-DD') as "registeredAt" 
+      `SELECT dn.*, u.name as "authorName", TO_CHAR(dn.registered_at, 'YYYY-MM-DD') as "registeredAt", TO_CHAR(dn.completed_at, 'YYYY-MM-DD') as "completedAt" 
        FROM dev_notes dn
        LEFT JOIN users u ON dn.author_id = u.id
-       WHERE dn.project_id = :project_id 
+       WHERE dn.project_id = :projectId 
        ORDER BY dn.parent_id, dn."order" ASC`,
       { replacements: { project_id: projectId }, type: QueryTypes.SELECT }
     );
@@ -411,6 +411,7 @@ export const updateDevNote = async (req: Request, res: Response): Promise<void> 
   // 한글→영문 변환 적용
   const status = toStatusCode(req.body.status);
   const { content, deadline, progress } = req.body;
+  const completedAt = status === 'DONE' ? new Date() : null;
   const currentUserId = req.user?.id;
   const currentUserRole = req.user?.role;
   try {
@@ -429,8 +430,8 @@ export const updateDevNote = async (req: Request, res: Response): Promise<void> 
       return;
     }
     const [rows] = await sequelize.query(
-      'UPDATE dev_notes SET content=:content, deadline=:deadline, status=:status, progress=:progress WHERE id=:noteId RETURNING *',
-      { replacements: { content, deadline, status, progress, noteId }, type: QueryTypes.SELECT }
+      'UPDATE dev_notes SET content=:content, deadline=:deadline, status=:status, progress=:progress, completed_at=:completedAt WHERE id=:noteId RETURNING *',
+      { replacements: { content, deadline, status, progress, completedAt, noteId }, type: QueryTypes.SELECT }
     );
     res.json((rows as any[])[0]);
   } catch (error) {

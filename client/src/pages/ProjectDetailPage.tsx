@@ -15,6 +15,7 @@ interface DevNote {
   progress: number;
   authorName: string;
   author_id: string;
+  completedAt: string | null;
 }
 
 interface Comment {
@@ -616,6 +617,7 @@ const ProjectDetailPage = () => {
                   <th className="py-2 px-4 border-b">내용</th>
                   <th className="py-2 px-4 border-b">등록일</th>
                   <th className="py-2 px-4 border-b">마감일</th>
+                  <th className="py-2 px-4 border-b">완료일</th>
                   <th className="py-2 px-4 border-b">작성자</th>
                   <th className="py-2 px-4 border-b">상태</th>
                   <th className="py-2 px-4 border-b">진행률</th>
@@ -642,6 +644,9 @@ const ProjectDetailPage = () => {
                         <td className="py-3 px-4 border-b text-center text-sm">{note.registeredAt}</td>
                         <td className="py-3 px-4 border-b text-center text-sm">
                           {note.deadline ? note.deadline.split('T')[0] : '-'}
+                        </td>
+                        <td className="py-3 px-4 border-b text-center text-sm">
+                          {note.completedAt ? note.completedAt.split('T')[0] : '-'}
                         </td>
                         <td className="py-3 px-4 border-b text-center text-sm">{note.authorName}</td>
                         <td className="py-3 px-4 border-b text-center">
