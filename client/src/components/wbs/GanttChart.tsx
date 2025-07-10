@@ -10,7 +10,8 @@ import {
   isToday,
   isBefore,
   isAfter,
-  isWithinInterval
+  isWithinInterval,
+  getDay
 } from 'date-fns';
 
 /**
@@ -46,12 +47,59 @@ function getDateField(item: WbsItem, keys: (keyof WbsItem)[]): string | null {
   return null;
 }
 
+// 한국 공휴일 예시 (YYYY-MM-DD)
+const HOLIDAYS = [
+  '2024-07-17', // 제헌절
+  // 필요시 추가
+];
+
 /**
  * 간트 차트 컴포넌트 (최적 구조)
  */
 const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) => {
   const [wbs, setWbs] = useState<WbsItem[]>([]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
+
+  // 드래그로 월 넘기기 상태
+  const [dragStartX, setDragStartX] = useState<number | null>(null);
+  const [dragging, setDragging] = useState(false);
+
+  // 드래그 이벤트 핸들러 (PC)
+  const handleHeaderMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    setDragStartX(e.clientX);
+    setDragging(true);
+  };
+  const handleHeaderMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!dragging || dragStartX === null) return;
+    const dx = e.clientX - dragStartX;
+    if (Math.abs(dx) > 60) { // 60px 이상 드래그 시 월 이동
+      if (dx > 0) setCurrentMonth(d => addDays(startOfMonth(d), -1)); // 왼쪽으로 드래그: 이전달
+      else setCurrentMonth(d => addDays(endOfMonth(d), 1)); // 오른쪽: 다음달
+      setDragging(false);
+      setDragStartX(null);
+    }
+  };
+  const handleHeaderMouseUp = () => {
+    setDragging(false);
+    setDragStartX(null);
+  };
+  // 드래그 이벤트 핸들러 (모바일)
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const handleHeaderTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    setTouchStartX(e.touches[0].clientX);
+  };
+  const handleHeaderTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (touchStartX === null) return;
+    const dx = e.touches[0].clientX - touchStartX;
+    if (Math.abs(dx) > 60) {
+      if (dx > 0) setCurrentMonth(d => addDays(startOfMonth(d), -1));
+      else setCurrentMonth(d => addDays(endOfMonth(d), 1));
+      setTouchStartX(null);
+    }
+  };
+  const handleHeaderTouchEnd = () => {
+    setTouchStartX(null);
+  };
 
   useEffect(() => {
     if (!projectId) return;
@@ -133,42 +181,73 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
         }}
       >
         {/* 헤더 row */}
-        <div className="font-bold border-b py-1 bg-gray-50 sticky left-0 z-10" style={{ gridRow: 1, gridColumn: 1 }}>
+        <div
+          className="font-bold border-b py-1 bg-gray-50 sticky left-0 z-10"
+          style={{ gridRow: 1, gridColumn: 1 }}
+        >
           작업명
         </div>
-        {days.map((d, i) => (
-          <div
-            key={d.toISOString()}
-            className={`text-xs text-center border-b py-1 ${isToday(d) ? 'bg-orange-200' : ''}`}
-            style={{
-              gridRow: 1,
-              gridColumn: i + 2,
-              background: isToday(d) ? '#f59e42' : undefined,
-              color: isToday(d) ? '#fff' : undefined,
-              borderRadius: isToday(d) ? 4 : undefined,
-            }}
-          >
-            {format(d, 'd')}
-          </div>
-        ))}
+        {days.map((d, i) => {
+          const dayNum = getDay(d); // 0:일, 6:토
+          const dateStr = format(d, 'yyyy-MM-dd');
+          let bg = undefined;
+          let color = undefined;
+          let borderRadius = isToday(d) ? 4 : undefined;
+          if (HOLIDAYS.includes(dateStr)) {
+            bg = '#ef4444'; // 공휴일 빨강
+            color = '#fff';
+          } else if (dayNum === 0) {
+            bg = '#fee2e2'; // 일요일 연한 빨강
+            color = '#ef4444';
+          } else if (dayNum === 6) {
+            bg = '#dbeafe'; // 토요일 연한 파랑
+            color = '#2563eb';
+          } else if (isToday(d)) {
+            bg = '#f59e42';
+            color = '#fff';
+          }
+          return (
+            <div
+              key={d.toISOString()}
+              className={`text-xs text-center border-b py-1`}
+              style={{
+                gridRow: 1,
+                gridColumn: i + 2,
+                background: bg,
+                color,
+                borderRadius,
+                cursor: 'grab',
+                userSelect: 'none',
+              }}
+              onMouseDown={i === 0 ? handleHeaderMouseDown : undefined}
+              onMouseMove={i === 0 ? handleHeaderMouseMove : undefined}
+              onMouseUp={i === 0 ? handleHeaderMouseUp : undefined}
+              onMouseLeave={i === 0 ? handleHeaderMouseUp : undefined}
+              onTouchStart={i === 0 ? handleHeaderTouchStart : undefined}
+              onTouchMove={i === 0 ? handleHeaderTouchMove : undefined}
+              onTouchEnd={i === 0 ? handleHeaderTouchEnd : undefined}
+            >
+              {format(d, 'd')}
+            </div>
+          );
+        })}
         {/* 각 작업 row */}
         {wbs
           .filter(w => {
             // 시작/종료일 추출
             const s = getDateField(w, ['startDate', 'registered_at', 'deadline']);
-            const e = getDateField(w, ['completedAt']) || getDateField(w, ['endDate', 'deadline', 'startDate', 'registered_at']);
+            // 끝나는 날짜: 완료(completedAt)가 있으면 무조건 그 날짜, 없으면 기존 로직
+            const e = w.completedAt ? getDateField(w, ['completedAt']) : getDateField(w, ['endDate', 'deadline', 'startDate', 'registered_at']);
             if (!s || !e) return false;
             const startDate = parseISO(s);
             const endDate = parseISO(e);
-            // 완전히 이전달에만 존재하는 작업은 숨김
             if (isBefore(endDate, monthStart)) return false;
-            // 완전히 다음달에만 존재하는 작업도 숨김
             if (isAfter(startDate, monthEnd)) return false;
             return true;
           })
           .map((w, idx) => {
             const s = getDateField(w, ['startDate', 'registered_at', 'deadline']);
-            const e = getDateField(w, ['completedAt']) || getDateField(w, ['endDate', 'deadline', 'startDate', 'registered_at']);
+            const e = w.completedAt ? getDateField(w, ['completedAt']) : getDateField(w, ['endDate', 'deadline', 'startDate', 'registered_at']);
             if (!s || !e) return null;
             const completed = !!w.completedAt;
             const barStyle = getBarStyle(s, e, completed, w.deadline);
