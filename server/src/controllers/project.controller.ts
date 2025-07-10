@@ -120,6 +120,7 @@ export const getProjectById = async (req: Request, res: Response): Promise<void>
     project.devNotes = Array.isArray(notesRes) ? notesRes : [];
 
     res.json(project);
+    console.log('getProjectById API response (project):', project);
   } catch (error) {
     res.status(500).json({ message: '프로젝트 상세 정보 조회 실패', error });
   }
@@ -139,6 +140,7 @@ export const getDevNotesAsWbs = async (req: Request, res: Response): Promise<voi
     );
     const tree = buildDevNotesTree(notesRes);
     res.json(tree);
+    console.log('getDevNotesAsWbs API response (tree):', tree);
   } catch (error) {
     console.error('WBS(DevNotes) 조회 오류:', error);
     res.status(500).json({ message: 'WBS(DevNotes) 조회 실패', error });
