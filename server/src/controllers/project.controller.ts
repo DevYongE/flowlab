@@ -396,7 +396,6 @@ export const createDevNote = async (req: Request, res: Response): Promise<void> 
       }
       res.status(201).json(note);
       return;
-  }
   } catch (error) {
     const err = error as any;
     console.error('[createDevNote] error:', err, 'stack:', err?.stack);
