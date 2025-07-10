@@ -54,6 +54,12 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId, refreshTrigger, selected
     // 필터 상태
     const [filterAssignee, setFilterAssignee] = useState('');
     const [filterStatus, setFilterStatus] = useState('');
+    // Toast 상태
+    const [toast, setToast] = useState<{ message: string; type?: 'success' | 'error' } | null>(null);
+    const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+        setToast({ message, type });
+        setTimeout(() => setToast(null), 2000);
+    };
 
     // 트리형 WBS 데이터를 flat 구조로 변환
     function flattenTree(nodes: WbsItem[], parentId: number = 0): NodeModel[] {
@@ -152,8 +158,9 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId, refreshTrigger, selected
             });
             setShowAddModal(false);
             fetchWbsData();
+            showToast('작업이 성공적으로 추가되었습니다.', 'success');
         } catch (error) {
-            alert('작업 추가 실패');
+            showToast('작업 추가 실패', 'error');
         } finally {
             setLoading(false);
         }
@@ -196,8 +203,9 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId, refreshTrigger, selected
             });
             setShowEditModal(false);
             fetchWbsData();
+            showToast('작업이 수정되었습니다.', 'success');
         } catch (error) {
-            alert('작업 수정 실패');
+            showToast('작업 수정 실패', 'error');
         } finally {
             setLoading(false);
         }
@@ -407,6 +415,13 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId, refreshTrigger, selected
                             <button type="submit" className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" disabled={loading}>{loading ? '저장중...' : '저장'}</button>
                         </div>
                     </form>
+                </div>
+            )}
+            {/* Toast 알림 */}
+            {toast && (
+                <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded shadow-lg text-white ${toast.type === 'success' ? 'bg-green-500' : 'bg-red-500'}`}
+                >
+                    {toast.message}
                 </div>
             )}
         </>
