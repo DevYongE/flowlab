@@ -48,12 +48,17 @@ const WbsPage: React.FC = () => {
                 onSelectProject={(id) => {
                     setSelectedProjectId(id);
                     setShowProjectSelectionModal(false);
-                    // 여기에 선택된 프로젝트 ID를 가지고 AI 분석을 시작하는 로직 추가
-                    console.log("Selected project for AI analysis:", id);
+                    handleAIAnalysis(id);
                 }}
             />
         </MainLayout>
     );
+};
+
+const handleAIAnalysis = (projectId: string) => {
+    console.log("Starting AI analysis for project:", projectId);
+    // 여기에 실제 AI 분석 로직을 구현합니다.
+    // 예: axios.post('/ai/analyze', { projectId });
 };
 
 export default WbsPage; 
