@@ -102,37 +102,23 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
           </div>
         ))}
         {wbs.filter(w => w.startDate || w.endDate || w.deadline || w.registered_at).map(w => {
-          // 시작일/마감일 우선순위 fallback 및 날짜 포맷 보정
           const sRaw = w.startDate || w.registered_at || w.deadline;
           const eRaw = w.endDate || w.deadline || w.startDate || w.registered_at;
           const s = sRaw ? sRaw.slice(0, 10) : null;
           const e = eRaw ? eRaw.slice(0, 10) : null;
           if (!s || !e) return null;
-          // 디버깅: 실제 값 콘솔 출력
-          console.log('Gantt bar:', w.name || w.content, 'start:', s, 'end:', e);
-          // 바가 월 범위 내에 있는지 체크
-          const sDate = parseISO(s);
-          const eDate = parseISO(e);
-          if (
-            isWithinInterval(sDate, { start: monthStart, end: monthEnd }) ||
-            isWithinInterval(eDate, { start: monthStart, end: monthEnd }) ||
-            (sDate < monthStart && eDate > monthEnd)
-          ) {
-            const barColor = w.completedAt ? '#22c55e' : '#3b82f6';
-            const style = {
-              ...getBarStyle(s < format(monthStart, 'yyyy-MM-dd') ? format(monthStart, 'yyyy-MM-dd') : s, e > format(monthEnd, 'yyyy-MM-dd') ? format(monthEnd, 'yyyy-MM-dd') : e),
-              background: barColor
-            };
-            return (
-              <React.Fragment key={w.id}>
-                <div className="border-r py-1 pr-2 text-xs whitespace-nowrap overflow-hidden overflow-ellipsis" style={{ maxWidth: 180 }}>{w.name || w.content}</div>
-                <div className="col-span-full flex items-center" style={{ gridColumn: `2 / span ${days.length}` }}>
-                  <div style={style}>{w.name || w.content}</div>
-                </div>
-              </React.Fragment>
-            );
-          }
-          return null;
+          const barColor = w.completedAt ? '#22c55e' : '#3b82f6';
+          const style = {
+            ...getBarStyle(s, e),
+            background: barColor,
+            gridRow: 'auto',
+          };
+          return (
+            <React.Fragment key={w.id}>
+              <div className="border-r py-1 pr-2 text-xs whitespace-nowrap overflow-hidden overflow-ellipsis" style={{ maxWidth: 180 }}>{w.name || w.content}</div>
+              <div style={style}>{w.name || w.content}</div>
+            </React.Fragment>
+          );
         })}
       </div>
     </div>
