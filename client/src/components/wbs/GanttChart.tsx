@@ -357,10 +357,6 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
         })}
         {/* 각 작업 row */}
         {wbs
-          .filter(w => {
-            // 모든 작업을 표시하되, 날짜가 있는 경우만 막대 차트 표시
-            return true;
-          })
           .map((w, idx) => {
             const s = getDateField(w, ['startDate', 'registered_at', 'deadline']);
             const e = w.completedAt ? getDateField(w, ['completedAt']) : getDateField(w, ['endDate', 'deadline', 'startDate', 'registered_at']);
