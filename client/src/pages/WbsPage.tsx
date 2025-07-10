@@ -6,6 +6,7 @@ import axios from '../lib/axios';
 import { Button } from '../components/ui/button';
 // 달력 라이브러리 임포트 (간단한 달력 구현)
 import { addMonths, subMonths, format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay } from 'date-fns';
+import GanttChart from '../components/wbs/GanttChart';
 
 const AI_PROMPT = `넌 숙련된 프로젝트 매니저야. 내가 제공하는 프로젝트 요구사항을 기반으로 WBS(Work Breakdown Structure)를 작성해줘.  
 ※ 현재 등록된 프로젝트의 요구사항을 확인하고, 그에 맞춰 작업을 구조화해줘.
@@ -37,6 +38,7 @@ const WbsPage: React.FC = () => {
     // 달력 상태
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState(new Date());
+    const [showGantt, setShowGantt] = useState(false);
 
     useEffect(() => {
         if (projectId) {
@@ -134,7 +136,7 @@ const WbsPage: React.FC = () => {
     return (
         <MainLayout>
             <div className="container mx-auto p-4">
-                <div className="mb-6">
+                <div className="mb-6 flex items-center justify-between">
                     <h1 className="text-3xl font-bold">
                         <span className="text-gray-500 cursor-pointer hover:underline" onClick={() => navigate(`/projects/${projectId}`)}>
                             {project?.name || '프로젝트'}
@@ -142,9 +144,14 @@ const WbsPage: React.FC = () => {
                         <span className="text-gray-400 mx-2">/</span>
                         WBS
                     </h1>
-                    <Button className="ml-4" onClick={handleAIAnalysis} disabled={isAnalyzing}>
-                        {isAnalyzing ? '분석 중...' : 'AI 분석'}
-                    </Button>
+                    <div className="flex gap-2">
+                        <Button className="ml-4" onClick={handleAIAnalysis} disabled={isAnalyzing}>
+                            {isAnalyzing ? '분석 중...' : 'AI 분석'}
+                        </Button>
+                        <Button variant="outline" onClick={() => setShowGantt(v => !v)}>
+                            {showGantt ? '트리 보기' : '간트 차트'}
+                        </Button>
+                    </div>
                 </div>
                 {/* 달력 UI */}
                 <div className="mb-8 bg-white rounded shadow p-4 max-w-lg mx-auto">
@@ -152,7 +159,11 @@ const WbsPage: React.FC = () => {
                     {renderDays()}
                     {renderCells()}
                 </div>
-                <WbsBoard projectId={projectId} refreshTrigger={refreshWbsTrigger} selectedDate={selectedDate} />
+                {showGantt ? (
+                    <GanttChart projectId={projectId} refreshTrigger={refreshWbsTrigger} />
+                ) : (
+                    <WbsBoard projectId={projectId} refreshTrigger={refreshWbsTrigger} selectedDate={selectedDate} />
+                )}
             </div>
         </MainLayout>
     );
