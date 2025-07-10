@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from '../../lib/axios';
-import { startOfMonth, endOfMonth, addDays, format, differenceInCalendarDays, isWithinInterval, parseISO } from 'date-fns';
+import { startOfMonth, endOfMonth, addDays, format, differenceInCalendarDays, isWithinInterval, parseISO, isToday } from 'date-fns';
 
 interface GanttChartProps {
   projectId: string;
@@ -13,6 +13,7 @@ interface WbsItem {
   content?: string;
   startDate?: string | null;
   endDate?: string | null;
+  completedAt?: string | null; // 추가: 완료일
 }
 
 /**
@@ -89,7 +90,11 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
       <div className="grid" style={{ gridTemplateColumns: `200px repeat(${days.length}, 1fr)` }}>
         <div className="font-bold border-b py-1">작업명</div>
         {days.map(d => (
-          <div key={d.toISOString()} className="text-xs text-center border-b py-1">
+          <div
+            key={d.toISOString()}
+            className={`text-xs text-center border-b py-1 ${isToday(d) ? 'bg-orange-200' : ''}`}
+            style={isToday(d) ? { background: '#f59e42', color: '#fff', borderRadius: 4 } : {}}
+          >
             {format(d, 'd')}
           </div>
         ))}
@@ -107,7 +112,11 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
             (sDate < monthStart && eDate > monthEnd)
           ) {
             // 바 스타일 계산
-            const style = getBarStyle(s < format(monthStart, 'yyyy-MM-dd') ? format(monthStart, 'yyyy-MM-dd') : s, e > format(monthEnd, 'yyyy-MM-dd') ? format(monthEnd, 'yyyy-MM-dd') : e);
+            const barColor = w.completedAt ? '#22c55e' : '#3b82f6'; // 초록색(완료) or 파랑(진행중)
+            const style = {
+              ...getBarStyle(s < format(monthStart, 'yyyy-MM-dd') ? format(monthStart, 'yyyy-MM-dd') : s, e > format(monthEnd, 'yyyy-MM-dd') ? format(monthEnd, 'yyyy-MM-dd') : e),
+              background: barColor
+            };
             return (
               <React.Fragment key={w.id}>
                 <div className="border-r py-1 pr-2 text-xs whitespace-nowrap overflow-hidden overflow-ellipsis" style={{ maxWidth: 180 }}>{w.name || w.content}</div>
