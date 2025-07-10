@@ -685,4 +685,65 @@ export const assignUserToDevNote = async (req: Request, res: Response) => {
   } catch (error) {
     res.status(500).json({ message: '요구사항 담당자 할당 실패', error });
   }
+};
+
+// 프로젝트의 모든 WBS(DevNotes) 삭제
+export const clearProjectWbs = async (req: Request, res: Response): Promise<void> => {
+  const { projectId } = req.params;
+  const currentUserId = req.user?.id;
+  const currentUserRole = req.user?.role;
+
+  if (!currentUserId) {
+    res.status(401).json({ message: '로그인 정보가 필요합니다.' });
+    return;
+  }
+
+  try {
+    // 프로젝트 소유권 확인
+    const projectQuery = await sequelize.query(
+      'SELECT author_id, company_code FROM projects WHERE id = :project_id', 
+      { replacements: { project_id: projectId }, type: QueryTypes.SELECT }
+    );
+
+    if (!Array.isArray(projectQuery) || projectQuery.length === 0) {
+      res.status(404).json({ message: '프로젝트를 찾을 수 없습니다.' });
+      return;
+    }
+
+    const project = projectQuery[0] as any;
+    
+    // 권한 확인 (ADMIN, 프로젝트 소유자, 또는 같은 회사의 MANAGER만 가능)
+    if (currentUserRole !== 'ADMIN' && 
+        currentUserId !== project.author_id && 
+        !(currentUserRole === 'MANAGER' && req.user?.company_code === project.company_code)) {
+      res.status(403).json({ message: '이 프로젝트의 WBS를 삭제할 권한이 없습니다.' });
+      return;
+    }
+
+    await sequelize.query('BEGIN'); // 트랜잭션 시작
+
+    try {
+      // 프로젝트의 모든 dev_notes 삭제
+      const deleteResult = await sequelize.query(
+        'DELETE FROM dev_notes WHERE project_id = :project_id',
+        { replacements: { project_id: projectId }, type: QueryTypes.DELETE }
+      );
+
+      await sequelize.query('COMMIT'); // 트랜잭션 커밋
+
+      console.log(`프로젝트 ${projectId}의 WBS 전체 삭제 완료`);
+      res.json({ 
+        message: '프로젝트의 모든 WBS 항목이 삭제되었습니다.',
+        deletedCount: Array.isArray(deleteResult) ? deleteResult.length : 0
+      });
+
+    } catch (dbError) {
+      await sequelize.query('ROLLBACK'); // 오류 발생 시 롤백
+      throw dbError;
+    }
+
+  } catch (error) {
+    console.error('WBS 전체 삭제 오류:', error);
+    res.status(500).json({ message: 'WBS 전체 삭제에 실패했습니다.', error });
+  }
 }; 

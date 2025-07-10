@@ -18,7 +18,8 @@ import {
   assignUserToProject,
   getDevNoteAssignees,
   assignUserToDevNote,
-  bulkCreateDevNotes // bulkCreateDevNotes 추가
+  bulkCreateDevNotes,
+  clearProjectWbs // WBS 전체 삭제 함수 추가
 } from '../controllers/project.controller';
 import { authenticate } from '../middlewares/auth.middleware';
 import { requireAdmin } from '../middlewares/admin.middleware';
@@ -35,6 +36,7 @@ router.get('/ongoing', authenticate, getOngoingProjects);
 router.get('/status-summary', authenticate, getProjectStatusSummary);
 router.get('/:id', authenticate, getProjectById);
 router.get('/:projectId/wbs', authenticate, getDevNotesAsWbs);
+router.delete('/:projectId/wbs/clear', authenticate, clearProjectWbs); // WBS 전체 삭제
 router.post('/', authenticate, createProject);
 router.put('/:id', authenticate, updateProject);
 router.delete('/:id', authenticate, deleteProject);

@@ -64,6 +64,15 @@ const WbsPage: React.FC = () => {
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [dayTasks, setDayTasks] = useState<TaskItem[]>([]);
 
+    // AI 분석 모달 상태
+    const [showAIModal, setShowAIModal] = useState(false);
+    const [aiOptions, setAiOptions] = useState({
+        clearExisting: false,
+        customPrompt: '',
+        includeTimeline: true,
+        detailLevel: 'medium' as 'basic' | 'medium' | 'detailed'
+    });
+
     useEffect(() => {
         if (projectId) {
             axios.get(`/projects/${projectId}`)
@@ -136,35 +145,71 @@ const WbsPage: React.FC = () => {
         return null;
     };
 
-    // AI 버튼 클릭 시: 프롬프트 + 프로젝트 설명 조합하여 바로 분석
-    const handleAIAnalysis = async () => {
+    // AI 분석 버튼 클릭 (모달 열기)
+    const handleAIAnalysisClick = () => {
         if (!projectId || !project || !project.description) {
             alert("프로젝트 설명이 없거나 프로젝트 정보를 불러오지 못했습니다.");
             return;
         }
+        setShowAIModal(true);
+    };
+
+    // AI 분석 실행
+    const handleAIAnalysis = async () => {
+        setShowAIModal(false);
         setIsAnalyzing(true);
+
         try {
-            // 프롬프트 + 프로젝트 설명 조합
-            const prompt = `${AI_PROMPT}\n\n프로젝트 요구사항:\n${project.description}`;
-            // AI WBS 생성 API 호출
-            const aiRes = await axios.post('/ai/generate-wbs', {
+            // 기존 WBS 삭제 (옵션 선택 시)
+            if (aiOptions.clearExisting) {
+                await axios.delete(`/projects/${projectId}/wbs/clear`);
+            }
+
+            // 상세도에 따른 프롬프트 조정
+            let detailPrompt = AI_PROMPT;
+            if (aiOptions.detailLevel === 'basic') {
+                detailPrompt += "\n\n**추가 지시사항**: WBS를 간단하게 2-3레벨로만 구성하고, 각 레벨당 3-5개 항목으로 제한해주세요.";
+            } else if (aiOptions.detailLevel === 'detailed') {
+                detailPrompt += "\n\n**추가 지시사항**: WBS를 매우 상세하게 4-5레벨까지 구성하고, 실제 개발 작업 단위까지 세분화해주세요. 각 작업의 예상 소요시간도 고려해주세요.";
+            }
+
+            // 타임라인 포함 옵션
+            if (aiOptions.includeTimeline) {
+                detailPrompt += "\n\n**타임라인 지시사항**: 각 작업에 현실적인 시작일과 마감일을 포함해주세요. 프로젝트 시작일부터 논리적 순서를 고려하여 일정을 배분해주세요.";
+            }
+
+            // 커스텀 프롬프트 추가
+            if (aiOptions.customPrompt.trim()) {
+                detailPrompt += `\n\n**사용자 추가 요구사항**: ${aiOptions.customPrompt}`;
+            }
+
+            // AI WBS 생성 및 저장 API 호출
+            const response = await axios.post('/ai/generate-wbs', {
                 projectId: projectId,
-                prompt: prompt,
+                prompt: detailPrompt,
                 projectDescription: project.description
             });
-            // AI가 트리 구조 WBS(JSON) 반환한다고 가정
-            const aiWbs = aiRes.data.wbs || aiRes.data; // wbs 필드 또는 전체
-            if (!aiWbs || !Array.isArray(aiWbs) || aiWbs.length === 0) {
-                alert("AI가 WBS를 생성하지 못했습니다. 내용을 다시 확인해주세요.");
-                return;
-            }
-            // bulk 저장 API 호출
-            await axios.post(`/projects/${projectId}/notes/bulk`, { notes: aiWbs });
-            alert("AI 분석 및 WBS 생성이 완료되었습니다.");
+
+            const { message, itemsCreated } = response.data;
+            alert(`✅ ${message}\n📝 생성된 항목: ${itemsCreated}개`);
+            
+            // WBS 데이터 새로고침
             setRefreshWbsTrigger(prev => prev + 1);
-        } catch (error) {
-            console.error("AI WBS 생성/저장 실패:", error);
-            alert("AI WBS 생성 또는 저장 중 오류가 발생했습니다.");
+            
+            // 트리구조 탭으로 자동 전환하여 결과 확인
+            setActiveTab('tree');
+            
+        } catch (error: any) {
+            console.error("AI WBS 생성 실패:", error);
+            
+            let errorMessage = "AI WBS 생성 중 오류가 발생했습니다.";
+            if (error.response?.data?.message) {
+                errorMessage = error.response.data.message;
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+            
+            alert(`❌ ${errorMessage}`);
         } finally {
             setIsAnalyzing(false);
         }
@@ -389,8 +434,20 @@ const WbsPage: React.FC = () => {
                         WBS
                     </h1>
                     <div className="flex gap-2">
-                        <Button className="ml-4" onClick={handleAIAnalysis} disabled={isAnalyzing}>
-                            {isAnalyzing ? '분석 중...' : 'AI 분석'}
+                        <Button 
+                            className="ml-4 relative" 
+                            onClick={handleAIAnalysisClick} 
+                            disabled={isAnalyzing}
+                            variant={isAnalyzing ? "outline" : "default"}
+                        >
+                            {isAnalyzing && (
+                                <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                                    <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                                </div>
+                            )}
+                            <span className={isAnalyzing ? "ml-6" : ""}>
+                                {isAnalyzing ? '🤖 AI 분석 중...' : '🤖 AI 분석'}
+                            </span>
                         </Button>
                     </div>
                 </div>
@@ -400,6 +457,114 @@ const WbsPage: React.FC = () => {
 
                 {/* 탭 컨텐츠 */}
                 {renderTabContent()}
+
+                {/* AI 분석 설정 모달 */}
+                {showAIModal && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
+                            <h3 className="text-lg font-semibold mb-4 flex items-center">
+                                🤖 AI WBS 생성 설정
+                            </h3>
+                            
+                            <div className="space-y-4">
+                                {/* 기존 WBS 처리 */}
+                                <div>
+                                    <label className="flex items-center space-x-2">
+                                        <input
+                                            type="checkbox"
+                                            checked={aiOptions.clearExisting}
+                                            onChange={(e) => setAiOptions(prev => ({
+                                                ...prev,
+                                                clearExisting: e.target.checked
+                                            }))}
+                                            className="rounded border-gray-300"
+                                        />
+                                        <span className="text-sm">기존 WBS 항목을 모두 삭제하고 새로 생성</span>
+                                    </label>
+                                    <p className="text-xs text-gray-500 ml-6">
+                                        체크 해제 시 기존 항목에 추가로 생성됩니다
+                                    </p>
+                                </div>
+
+                                {/* 상세도 선택 */}
+                                <div>
+                                    <label className="block text-sm font-medium mb-2">WBS 상세도</label>
+                                    <select
+                                        value={aiOptions.detailLevel}
+                                        onChange={(e) => setAiOptions(prev => ({
+                                            ...prev,
+                                            detailLevel: e.target.value as 'basic' | 'medium' | 'detailed'
+                                        }))}
+                                        className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                                    >
+                                        <option value="basic">간단 (2-3레벨, 빠른 생성)</option>
+                                        <option value="medium">보통 (3-4레벨, 균형잡힌 구조)</option>
+                                        <option value="detailed">상세 (4-5레벨, 실무 단위까지)</option>
+                                    </select>
+                                </div>
+
+                                {/* 타임라인 포함 */}
+                                <div>
+                                    <label className="flex items-center space-x-2">
+                                        <input
+                                            type="checkbox"
+                                            checked={aiOptions.includeTimeline}
+                                            onChange={(e) => setAiOptions(prev => ({
+                                                ...prev,
+                                                includeTimeline: e.target.checked
+                                            }))}
+                                            className="rounded border-gray-300"
+                                        />
+                                        <span className="text-sm">시작일/마감일 자동 설정</span>
+                                    </label>
+                                    <p className="text-xs text-gray-500 ml-6">
+                                        프로젝트 일정에 맞춰 작업별 타임라인을 생성합니다
+                                    </p>
+                                </div>
+
+                                {/* 커스텀 프롬프트 */}
+                                <div>
+                                    <label className="block text-sm font-medium mb-2">추가 요구사항 (선택)</label>
+                                    <textarea
+                                        value={aiOptions.customPrompt}
+                                        onChange={(e) => setAiOptions(prev => ({
+                                            ...prev,
+                                            customPrompt: e.target.value
+                                        }))}
+                                        placeholder="예: 보안 관련 작업을 중점적으로 포함해주세요..."
+                                        className="w-full border border-gray-300 rounded px-3 py-2 text-sm h-20 resize-none"
+                                    />
+                                </div>
+
+                                {/* 프로젝트 설명 미리보기 */}
+                                <div className="bg-gray-50 rounded p-3">
+                                    <h4 className="text-sm font-medium mb-1">분석할 프로젝트 설명:</h4>
+                                    <p className="text-xs text-gray-600 max-h-20 overflow-y-auto">
+                                        {project?.description || '설명이 없습니다.'}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* 버튼들 */}
+                            <div className="flex justify-end gap-2 mt-6">
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setShowAIModal(false)}
+                                    disabled={isAnalyzing}
+                                >
+                                    취소
+                                </Button>
+                                <Button
+                                    onClick={handleAIAnalysis}
+                                    disabled={isAnalyzing}
+                                    className="bg-blue-600 hover:bg-blue-700"
+                                >
+                                    🤖 AI 분석 시작
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </MainLayout>
     );
