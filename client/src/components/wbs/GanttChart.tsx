@@ -26,6 +26,9 @@ interface WbsItem {
   completedAt?: string | null;
   deadline?: string | null;
   registered_at?: string | null;
+  children?: WbsItem[];
+  parent_id?: number | string | null;
+  depth?: number; // 트리 구조 깊이
 }
 
 /**
@@ -170,24 +173,28 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
   useEffect(() => {
     if (!projectId) return;
     axios.get(`/projects/${projectId}/wbs`).then(res => {
-      // 평면화 + 날짜 필드 매핑
-      const flat = (nodes: any[]): WbsItem[] => {
+      // 계층구조 유지하면서 평면화 + 날짜 필드 매핑
+      const flatWithHierarchy = (nodes: any[], depth: number = 0): WbsItem[] => {
         let arr: WbsItem[] = [];
         nodes.forEach(n => {
           arr.push({
             ...n,
             startDate: n.startDate || n.start_id || n.registered_at || null,
             endDate: n.endDate || n.end_id || n.deadline || null,
+            depth: depth, // 현재 깊이 정보 추가
           });
-          if (n.children && n.children.length > 0) arr = arr.concat(flat(n.children));
+          if (n.children && n.children.length > 0) {
+            arr = arr.concat(flatWithHierarchy(n.children, depth + 1)); // 자식들은 깊이 +1
+          }
         });
         return arr;
       };
-      const flatData = flat(res.data);
+      const flatData = flatWithHierarchy(res.data);
       setWbs(flatData);
       console.log('📊 간트 차트 데이터 로드:', flatData.length + '개 작업');
-      console.log('📅 날짜 정보 요약:', flatData.map(w => ({
+      console.log('📅 날짜 정보 요약:', flatData.map((w: WbsItem) => ({
         name: w.name || w.content,
+        depth: w.depth,
         start: getDateField(w, ['startDate', 'registered_at', 'deadline']),
         end: w.completedAt ? getDateField(w, ['completedAt']) : getDateField(w, ['endDate', 'deadline', 'startDate', 'registered_at'])
       })));
@@ -256,7 +263,10 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
   return (
     <div className="bg-white rounded shadow p-4 overflow-x-auto">
       <div className="flex justify-between items-center mb-2">
-        <h2 className="text-xl font-bold">간트 차트</h2>
+        <h2 className="text-xl font-bold flex items-center">
+          <span className="text-blue-600 mr-2">📊</span>
+          간트 차트 (계층구조)
+        </h2>
         <div className="flex gap-2">
           <button onClick={() => setCurrentMonth(d => addDays(startOfMonth(d), -1))} className="px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 transition-colors">◀</button>
           <span className="font-semibold">{format(currentMonth, 'yyyy년 MM월')}</span>
@@ -272,7 +282,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
       <div
         className="grid"
         style={{
-          gridTemplateColumns: `250px repeat(${days.length}, 1fr)`,
+          gridTemplateColumns: `300px repeat(${days.length}, 1fr)`, // 작업명 컬럼 더 넓게
           gridAutoRows: '36px',
           alignItems: 'center',
           gap: '1px',
@@ -280,10 +290,11 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
       >
         {/* 헤더 row */}
         <div
-          className="font-bold border-b py-1 bg-gray-50 sticky left-0 z-10 select-none"
+          className="font-bold border-b py-1 bg-gray-50 sticky left-0 z-10 select-none flex items-center"
           style={{ gridRow: 1, gridColumn: 1 }}
         >
-          작업명
+          <span className="text-blue-600 mr-2">🌲</span>
+          <span>작업 구조</span>
         </div>
         
         {/* 날짜 헤더들 (드래그 가능한 영역) */}
@@ -418,17 +429,48 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
               <React.Fragment key={w.id}>
                 {/* 작업명 셀 */}
                 <div
-                  className="border-r py-1 pr-2 text-xs whitespace-nowrap overflow-hidden overflow-ellipsis bg-white sticky left-0 z-10 select-none"
+                  className="border-r py-1 pr-2 text-xs whitespace-nowrap overflow-hidden overflow-ellipsis bg-white sticky left-0 z-10 select-none flex items-center"
                   style={{ 
                     gridRow: idx + 2, 
                     gridColumn: 1, 
-                    maxWidth: 180, // 폭 늘림
-                    cursor: 'default'
+                    maxWidth: 280, // 컬럼 크기에 맞춰 조정
+                    cursor: 'default',
+                    paddingLeft: `${(w.depth || 0) * 20 + 8}px`, // 들여쓰기 적용
                   }}
-                  title={`${displayName}${dateInfo ? ' ' + dateInfo : ' (날짜 없음)'}`}
+                  title={`${displayName}${dateInfo ? ' ' + dateInfo : ' (날짜 없음)'} (레벨: ${w.depth || 0})`}
                 >
-                  {shortName}
-                  {!hasValidDates && <span className="text-gray-400 ml-1">(날짜없음)</span>}
+                  {/* 트리 구조 표시를 위한 인디케이터 */}
+                  <div className="flex items-center flex-1">
+                    {(w.depth || 0) > 0 && (
+                      <div className="flex items-center mr-2">
+                        {/* 들여쓰기 선 */}
+                        {Array.from({ length: (w.depth || 0) - 1 }, (_, i) => (
+                          <span key={i} className="text-gray-300 mr-1">│</span>
+                        ))}
+                        {/* 마지막 연결선 */}
+                        <span className="text-gray-300 mr-1">├</span>
+                      </div>
+                    )}
+                    
+                    {/* 레벨에 따른 색상 표시 */}
+                    <div 
+                      className={`w-2 h-2 rounded-full mr-2 flex-shrink-0 ${
+                        (w.depth || 0) === 0 ? 'bg-blue-500' :
+                        (w.depth || 0) === 1 ? 'bg-green-500' :
+                        (w.depth || 0) === 2 ? 'bg-orange-500' :
+                        'bg-gray-400'
+                      }`}
+                    />
+                    
+                    <span className="flex-1 font-medium" style={{
+                      fontSize: `${Math.max(10, 12 - (w.depth || 0))}px`,
+                      fontWeight: (w.depth || 0) === 0 ? '600' : '400'
+                    }}>
+                      {shortName}
+                      {!hasValidDates && <span className="text-gray-400 ml-1">(날짜없음)</span>}
+                      {(w.depth || 0) === 0 && <span className="text-blue-600 ml-1 text-xs">📁</span>}
+                    </span>
+                  </div>
                 </div>
                 
                 {/* 바 셀 - 날짜가 있는 경우에만 표시 */}
