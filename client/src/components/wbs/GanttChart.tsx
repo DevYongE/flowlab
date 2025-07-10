@@ -156,12 +156,14 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
           .filter(w => {
             // 시작/종료일 추출
             const s = getDateField(w, ['startDate', 'registered_at', 'deadline']);
-            // 끝나는 날짜: 완료(completedAt)가 있으면 그 날짜, 없으면 기존 로직
             const e = getDateField(w, ['completedAt']) || getDateField(w, ['endDate', 'deadline', 'startDate', 'registered_at']);
             if (!s || !e) return false;
-            // 완전히 이전달에만 존재하는 작업은 숨김
+            const startDate = parseISO(s);
             const endDate = parseISO(e);
+            // 완전히 이전달에만 존재하는 작업은 숨김
             if (isBefore(endDate, monthStart)) return false;
+            // 완전히 다음달에만 존재하는 작업도 숨김
+            if (isAfter(startDate, monthEnd)) return false;
             return true;
           })
           .map((w, idx) => {
@@ -171,22 +173,24 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
             const completed = !!w.completedAt;
             const barStyle = getBarStyle(s, e, completed, w.deadline);
             const displayName = w.name || w.content || '';
+            const maxLen = 10;
+            const shortName = displayName.length > maxLen ? displayName.slice(0, maxLen) + '...' : displayName;
             return (
               <React.Fragment key={w.id}>
                 {/* 작업명 셀 */}
                 <div
                   className="border-r py-1 pr-2 text-xs whitespace-nowrap overflow-hidden overflow-ellipsis bg-white sticky left-0 z-10"
-                  style={{ gridRow: idx + 2, gridColumn: 1, maxWidth: 180 }}
+                  style={{ gridRow: idx + 2, gridColumn: 1, maxWidth: 120 }}
                   title={displayName}
                 >
-                  {displayName.length > 18 ? `${displayName.slice(0, 16)}...` : displayName}
+                  {shortName}
                 </div>
                 {/* 바 셀 */}
                 <div
-                  style={{ ...barStyle, gridRow: idx + 2 }}
-                  title={`${s} ~ ${e}${completed ? ' (완료)' : ''}`}
+                  style={{ ...barStyle, gridRow: idx + 2, maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                  title={`${displayName} (${s} ~ ${e}${completed ? ' (완료)' : ''})`}
                 >
-                  {displayName.length > 18 ? `${displayName.slice(0, 16)}...` : displayName}
+                  {shortName}
                 </div>
               </React.Fragment>
             );
