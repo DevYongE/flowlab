@@ -257,25 +257,26 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
       
       {/* 드래그 안내 텍스트 */}
       <div className="text-xs text-gray-500 mb-2 text-center">
-        💡 날짜 헤더를 좌우로 드래그하여 월을 이동할 수 있습니다
+        💡 날짜 부분(1,2,3...)을 좌우로 드래그하여 월을 이동할 수 있습니다
       </div>
 
       <div
-        className="grid select-none"
+        className="grid"
         style={{
           gridTemplateColumns: `200px repeat(${days.length}, 1fr)`,
           gridAutoRows: '32px',
           alignItems: 'center',
-          ...getDragFeedbackStyle(),
         }}
       >
         {/* 헤더 row */}
         <div
-          className="font-bold border-b py-1 bg-gray-50 sticky left-0 z-10"
+          className="font-bold border-b py-1 bg-gray-50 sticky left-0 z-10 select-none"
           style={{ gridRow: 1, gridColumn: 1 }}
         >
           작업명
         </div>
+        
+        {/* 날짜 헤더들 (드래그 가능한 영역) */}
         {days.map((d, i) => {
           const dayNum = getDay(d); // 0:일, 6:토
           const dateStr = format(d, 'yyyy-MM-dd');
@@ -301,10 +302,13 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
           const isDragActive = dragging;
           const dragCursor = isDragActive ? 'grabbing' : 'grab';
 
+          // 드래그 피드백 스타일을 개별 적용
+          const dragFeedback = getDragFeedbackStyle();
+          
           return (
             <div
               key={d.toISOString()}
-              className={`text-xs text-center border-b py-1 transition-all duration-150 ${isDragActive ? 'scale-95' : 'hover:scale-105'}`}
+              className={`text-xs text-center border-b py-1 transition-all duration-150 select-none ${isDragActive ? 'scale-95' : 'hover:scale-105'}`}
               style={{
                 gridRow: 1,
                 gridColumn: i + 2,
@@ -315,6 +319,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
                 userSelect: 'none',
                 transform: isDragActive ? 'scale(0.98)' : undefined,
                 boxShadow: isDragActive ? '0 2px 8px rgba(0,0,0,0.1)' : undefined,
+                ...dragFeedback,
               }}
               onMouseDown={handleHeaderMouseDown}
               onMouseMove={handleHeaderMouseMove}
@@ -356,8 +361,13 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
               <React.Fragment key={w.id}>
                 {/* 작업명 셀 */}
                 <div
-                  className="border-r py-1 pr-2 text-xs whitespace-nowrap overflow-hidden overflow-ellipsis bg-white sticky left-0 z-10"
-                  style={{ gridRow: idx + 2, gridColumn: 1, maxWidth: 120 }}
+                  className="border-r py-1 pr-2 text-xs whitespace-nowrap overflow-hidden overflow-ellipsis bg-white sticky left-0 z-10 select-none"
+                  style={{ 
+                    gridRow: idx + 2, 
+                    gridColumn: 1, 
+                    maxWidth: 120,
+                    cursor: 'default'
+                  }}
                   title={displayName}
                 >
                   {shortName}
