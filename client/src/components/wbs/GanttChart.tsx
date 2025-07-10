@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from '../../lib/axios';
-import { startOfMonth, endOfMonth, addDays, format, differenceInCalendarDays, isWithinInterval, parseISO, isToday } from 'date-fns';
+import { startOfMonth, endOfMonth, addDays, format, differenceInCalendarDays, parseISO, isToday } from 'date-fns';
 
 interface GanttChartProps {
   projectId: string;
