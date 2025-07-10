@@ -59,7 +59,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
     const s = parseISO(start);
     const e = parseISO(end);
     const left = differenceInCalendarDays(s, monthStart);
-    const width = differenceInCalendarDays(e, s) + 1;
+    const width = Math.max(1, differenceInCalendarDays(e, s) + 1); // 최소 1일
     return {
       gridColumnStart: left + 1,
       gridColumnEnd: left + width + 1,
@@ -90,32 +90,32 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
             {format(d, 'd')}
           </div>
         ))}
-        {wbs.filter(w => w.startDate && w.endDate).map(w => (
-          <React.Fragment key={w.id}>
-            <div className="border-r py-1 pr-2 text-xs whitespace-nowrap overflow-hidden overflow-ellipsis" style={{ maxWidth: 180 }}>{w.name || w.content}</div>
-            <div className="col-span-full flex items-center" style={{ gridColumn: `2 / span ${days.length}` }}>
-              {/* 바 표시 */}
-              {(() => {
-                const s = w.startDate!;
-                const e = w.endDate!;
-                if (!s || !e) return null;
-                // 바가 월 범위 내에 있는지 체크
-                const sDate = parseISO(s);
-                const eDate = parseISO(e);
-                if (
-                  isWithinInterval(sDate, { start: monthStart, end: monthEnd }) ||
-                  isWithinInterval(eDate, { start: monthStart, end: monthEnd }) ||
-                  (sDate < monthStart && eDate > monthEnd)
-                ) {
-                  // 바 스타일 계산
-                  const style = getBarStyle(s < format(monthStart, 'yyyy-MM-dd') ? format(monthStart, 'yyyy-MM-dd') : s, e > format(monthEnd, 'yyyy-MM-dd') ? format(monthEnd, 'yyyy-MM-dd') : e);
-                  return <div style={style}>{w.name || w.content}</div>;
-                }
-                return null;
-              })()}
-            </div>
-          </React.Fragment>
-        ))}
+        {wbs.filter(w => w.startDate || w.endDate).map(w => {
+          // 시작일/마감일이 모두 없으면 표시하지 않음
+          const s = w.startDate || w.endDate;
+          const e = w.endDate || w.startDate;
+          if (!s || !e) return null;
+          // 바가 월 범위 내에 있는지 체크
+          const sDate = parseISO(s);
+          const eDate = parseISO(e);
+          if (
+            isWithinInterval(sDate, { start: monthStart, end: monthEnd }) ||
+            isWithinInterval(eDate, { start: monthStart, end: monthEnd }) ||
+            (sDate < monthStart && eDate > monthEnd)
+          ) {
+            // 바 스타일 계산
+            const style = getBarStyle(s < format(monthStart, 'yyyy-MM-dd') ? format(monthStart, 'yyyy-MM-dd') : s, e > format(monthEnd, 'yyyy-MM-dd') ? format(monthEnd, 'yyyy-MM-dd') : e);
+            return (
+              <React.Fragment key={w.id}>
+                <div className="border-r py-1 pr-2 text-xs whitespace-nowrap overflow-hidden overflow-ellipsis" style={{ maxWidth: 180 }}>{w.name || w.content}</div>
+                <div className="col-span-full flex items-center" style={{ gridColumn: `2 / span ${days.length}` }}>
+                  <div style={style}>{w.name || w.content}</div>
+                </div>
+              </React.Fragment>
+            );
+          }
+          return null;
+        })}
       </div>
     </div>
   );
