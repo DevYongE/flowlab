@@ -353,7 +353,7 @@ export const getOngoingProjects = async (req: Request, res: Response): Promise<v
 export const createDevNote = async (req: Request, res: Response): Promise<void> => {
   const { projectId } = req.params;
   const status = toStatusCode(req.body.status);
-  const { content, deadline, progress, parent_id, order } = req.body;
+  const { content, deadline, progress, completedAt } = req.body;
   const authorId = req.user?.id;
   const currentUserRole = req.user?.role;
   try {
@@ -382,8 +382,8 @@ export const createDevNote = async (req: Request, res: Response): Promise<void> 
     console.log('[createDevNote] Inserting dev_note:', { projectId, content, deadline, status, progress, authorId, parent_id, order });
 
     const [rows] = await sequelize.query(
-      'INSERT INTO dev_notes (project_id, content, deadline, status, progress, author_id, parent_id, "order") VALUES (:projectId, :content, :deadline, :status, :progress, :authorId, :parent_id, :order) RETURNING *',
-      { replacements: { projectId, content, deadline, status, progress, authorId, parent_id: parent_id ?? null, order: order ?? null }, type: QueryTypes.SELECT }
+      'INSERT INTO dev_notes (project_id, content, deadline, status, progress, author_id, parent_id, "order", completed_at) VALUES (:projectId, :content, :deadline, :status, :progress, :authorId, :parent_id, :order, :completedAt) RETURNING *',
+      { replacements: { projectId, content, deadline, status, progress, authorId, parent_id: parent_id ?? null, order: order ?? null, completedAt: completedAt ?? null }, type: QueryTypes.SELECT }
     );
     console.log('[createDevNote] Insert result rows:', rows);
 
@@ -412,8 +412,7 @@ export const updateDevNote = async (req: Request, res: Response): Promise<void> 
   const { noteId } = req.params;
   // 한글→영문 변환 적용
   const status = toStatusCode(req.body.status);
-  const { content, deadline, progress } = req.body;
-  const completedAt = status === 'DONE' ? new Date() : null;
+  const { content, deadline, progress, completedAt } = req.body;
   const currentUserId = req.user?.id;
   const currentUserRole = req.user?.role;
   try {

@@ -53,7 +53,7 @@ const ProjectDetailPage = () => {
   const [project, setProject] = useState<Project | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [editingNote, setEditingNote] = useState<DevNote | null>(null);
-  const [newNote, setNewNote] = useState({ content: '', deadline: '', status: 'TODO', progress: 0 });
+  const [newNote, setNewNote] = useState({ content: '', deadline: '', status: 'TODO', progress: 0, completedAt: '' });
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [editingProgressNoteId, setEditingProgressNoteId] = useState<number | null>(null);
@@ -139,9 +139,9 @@ const ProjectDetailPage = () => {
     };
 
     if (editingNote) {
-      setEditingNote(prev => prev ? getUpdatedValues(prev) : null);
+      setEditingNote(prev => prev ? { ...prev, [name]: value, status: newStatus, progress: newProgress } : null);
     } else {
-      setNewNote(prev => getUpdatedValues(prev as any) as any);
+      setNewNote(prev => ({ ...prev, [name]: value, status: newStatus, progress: newProgress }));
     }
   };
   
@@ -155,8 +155,9 @@ const ProjectDetailPage = () => {
       await axios.post(`/projects/${id}/notes`, {
         ...newNote,
         status: newNote.status,
+        completedAt: newNote.completedAt || null,
       });
-      setNewNote({ content: '', deadline: '', status: 'TODO', progress: 0 });
+      setNewNote({ content: '', deadline: '', status: 'TODO', progress: 0, completedAt: '' });
       setShowModal(false);
       fetchProject();
     } catch (error) {
@@ -212,7 +213,7 @@ const ProjectDetailPage = () => {
 
   const openAddModal = () => {
     setEditingNote(null);
-    setNewNote({ content: '', deadline: '', status: 'TODO', progress: 0 });
+    setNewNote({ content: '', deadline: '', status: 'TODO', progress: 0, completedAt: '' });
     setShowModal(true);
   };
 
@@ -776,6 +777,16 @@ const ProjectDetailPage = () => {
                       min="0" 
                       max="100" 
                       value={editingNote ? editingNote.progress : newNote.progress} 
+                      onChange={handleNoteChange} 
+                      className="w-full border border-gray-300 rounded-md shadow-sm p-2" 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">완료일</label>
+                    <input 
+                      type="date" 
+                      name="completedAt" 
+                      value={editingNote ? (editingNote.completedAt?.split('T')[0] || '') : newNote.completedAt} 
                       onChange={handleNoteChange} 
                       className="w-full border border-gray-300 rounded-md shadow-sm p-2" 
                     />
