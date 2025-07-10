@@ -27,16 +27,22 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
   useEffect(() => {
     if (!projectId) return;
     axios.get(`/projects/${projectId}/wbs`).then(res => {
-      // 평면화
+      // 평면화 + 날짜 필드 매핑
       const flat = (nodes: any[]): WbsItem[] => {
         let arr: WbsItem[] = [];
         nodes.forEach(n => {
-          arr.push(n);
+          arr.push({
+            ...n,
+            startDate: n.startDate || n.start_id || null,
+            endDate: n.endDate || n.end_id || null,
+          });
           if (n.children && n.children.length > 0) arr = arr.concat(flat(n.children));
         });
         return arr;
       };
-      setWbs(flat(res.data));
+      const data = flat(res.data);
+      console.log('WBS for Gantt:', data); // 디버깅용
+      setWbs(data);
     });
   }, [projectId, refreshTrigger]);
 
