@@ -153,7 +153,21 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId, refreshTrigger, selected
 
     const handleAddFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-        setAddForm(prev => ({ ...prev, [name]: value }));
+        
+        // 새로운 상태로 업데이트
+        const updatedForm = { ...addForm, [name]: value };
+        
+        // 상태가 '완료'이거나 진행률이 100%일 때 자동으로 완료일 설정
+        if ((name === 'status' && value === '완료') || (name === 'progress' && Number(value) === 100) || 
+            (updatedForm.status === '완료') || (Number(updatedForm.progress) === 100)) {
+            updatedForm.completedAt = new Date().toISOString().split('T')[0]; // 오늘 날짜 (YYYY-MM-DD)
+        } 
+        // 상태가 '완료'가 아니고 진행률도 100%가 아니면 완료일 초기화
+        else if (updatedForm.status !== '완료' && Number(updatedForm.progress) !== 100) {
+            updatedForm.completedAt = null;
+        }
+        
+        setAddForm(updatedForm);
     };
 
     const handleAddSubmit = async (e: React.FormEvent) => {
@@ -201,7 +215,21 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId, refreshTrigger, selected
 
     const handleEditFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-        setEditForm((prev: any) => ({ ...prev, [name]: value }));
+        
+        // 새로운 상태로 업데이트
+        const updatedForm = { ...editForm, [name]: value };
+        
+        // 상태가 '완료'이거나 진행률이 100%일 때 자동으로 완료일 설정
+        if ((name === 'status' && value === '완료') || (name === 'progress' && Number(value) === 100) || 
+            (updatedForm.status === '완료') || (Number(updatedForm.progress) === 100)) {
+            updatedForm.completedAt = new Date().toISOString().split('T')[0]; // 오늘 날짜 (YYYY-MM-DD)
+        } 
+        // 상태가 '완료'가 아니고 진행률도 100%가 아니면 완료일 초기화
+        else if (updatedForm.status !== '완료' && Number(updatedForm.progress) !== 100) {
+            updatedForm.completedAt = null;
+        }
+        
+        setEditForm(updatedForm);
     };
 
     const handleEditSubmit = async (e: React.FormEvent) => {
