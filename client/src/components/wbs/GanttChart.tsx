@@ -33,8 +33,8 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
         nodes.forEach(n => {
           arr.push({
             ...n,
-            startDate: n.startDate || n.start_id || null,
-            endDate: n.endDate || n.end_id || null,
+            startDate: n.startDate || n.start_id || n.registered_at || null, // 등록일을 시작일로 활용
+            endDate: n.endDate || n.end_id || n.deadline || null,            // deadline을 마감일로 활용
           });
           if (n.children && n.children.length > 0) arr = arr.concat(flat(n.children));
         });
