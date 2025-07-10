@@ -46,7 +46,7 @@ const WbsPage: React.FC = () => {
                 isOpen={showProjectSelectionModal}
                 onClose={() => setShowProjectSelectionModal(false)}
                 onSelectProject={(id) => {
-                    setSelectedProjectId(id);
+                    navigate(`/wbs/${id}`);
                     setShowProjectSelectionModal(false);
                     handleAIAnalysis(id);
                 }}
