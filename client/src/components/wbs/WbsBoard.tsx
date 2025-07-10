@@ -111,7 +111,8 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId }) => {
             endDate: '',
             status: '미완료',
             progress: 0,
-            parent: Number(parent)
+            parent: Number(parent),
+            completedAt: '' // 이 부분을 추가합니다.
         });
         setShowAddModal(true);
     };
