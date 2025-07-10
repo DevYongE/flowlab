@@ -351,50 +351,52 @@ export const getOngoingProjects = async (req: Request, res: Response): Promise<v
 
 // 개발 노트 생성
 export const createDevNote = async (req: Request, res: Response): Promise<void> => {
-  const { projectId } = req.params;
-  const status = toStatusCode(req.body.status);
-  const { content, deadline, progress, completedAt, parent_id, order } = req.body;
-    console.log('[createDevNote] req.body:', req.body);
-    console.log('[createDevNote] params:', req.params);
+  try {
+    const { projectId } = req.params;
+    const status = toStatusCode(req.body.status);
+    const { content, deadline, progress, completedAt, parent_id, order } = req.body;
+      console.log('[createDevNote] req.body:', req.body);
+      console.log('[createDevNote] params:', req.params);
 
-    const [projectRows] = await sequelize.query('SELECT author_id FROM projects WHERE id = :project_id', { replacements: { project_id: projectId }, type: QueryTypes.SELECT });
-    console.log('[createDevNote] projectRows:', projectRows);
+      const [projectRows] = await sequelize.query('SELECT author_id FROM projects WHERE id = :project_id', { replacements: { project_id: projectId }, type: QueryTypes.SELECT });
+      console.log('[createDevNote] projectRows:', projectRows);
 
-    // projectRows가 배열이 아니어도 author_id가 있으면 통과
-    let projectAuthorId = null;
-    if (Array.isArray(projectRows) && projectRows.length > 0) {
-      projectAuthorId = projectRows[0].author_id;
-    } else if (projectRows && typeof projectRows === 'object' && 'author_id' in projectRows) {
-      projectAuthorId = projectRows.author_id;
-    } else {
-      res.status(404).json({ message: '프로젝트를 찾을 수 없습니다.', projectRows });
+      // projectRows가 배열이 아니어도 author_id가 있으면 통과
+      let projectAuthorId = null;
+      if (Array.isArray(projectRows) && projectRows.length > 0) {
+        projectAuthorId = projectRows[0].author_id;
+      } else if (projectRows && typeof projectRows === 'object' && 'author_id' in projectRows) {
+        projectAuthorId = projectRows.author_id;
+      } else {
+        res.status(404).json({ message: '프로젝트를 찾을 수 없습니다.', projectRows });
+        return;
+      }
+
+      if (currentUserRole !== 'ADMIN' && authorId !== projectAuthorId) {
+        res.status(403).json({ message: '이 프로젝트에 요구사항을 추가할 권한이 없습니다.' });
+        return;
+      }
+      console.log('[createDevNote] Inserting dev_note:', { projectId, content, deadline, status, progress, authorId, parent_id, order });
+
+      const [rows] = await sequelize.query(
+        'INSERT INTO dev_notes (project_id, content, deadline, status, progress, author_id, parent_id, "order", completed_at) VALUES (:projectId, :content, :deadline, :status, :progress, :authorId, :parent_id, :order, :completedAt) RETURNING *',
+        { replacements: { projectId, content, deadline, status, progress, authorId, parent_id: parent_id ?? null, order: order ?? null, completedAt: completedAt ?? null }, type: QueryTypes.SELECT }
+      );
+      console.log('[createDevNote] Insert result rows:', rows);
+
+      let note = null;
+      if (Array.isArray(rows)) {
+        note = rows[0];
+      } else if (rows && typeof rows === 'object' && 'id' in rows) {
+        note = rows;
+      }
+      if (!note) {
+        res.status(500).json({ message: '노트 생성 결과가 올바르지 않습니다.', rows });
+        return;
+      }
+      res.status(201).json(note);
       return;
-    }
-
-    if (currentUserRole !== 'ADMIN' && authorId !== projectAuthorId) {
-      res.status(403).json({ message: '이 프로젝트에 요구사항을 추가할 권한이 없습니다.' });
-      return;
-    }
-    console.log('[createDevNote] Inserting dev_note:', { projectId, content, deadline, status, progress, authorId, parent_id, order });
-
-    const [rows] = await sequelize.query(
-      'INSERT INTO dev_notes (project_id, content, deadline, status, progress, author_id, parent_id, "order", completed_at) VALUES (:projectId, :content, :deadline, :status, :progress, :authorId, :parent_id, :order, :completedAt) RETURNING *',
-      { replacements: { projectId, content, deadline, status, progress, authorId, parent_id: parent_id ?? null, order: order ?? null, completedAt: completedAt ?? null }, type: QueryTypes.SELECT }
-    );
-    console.log('[createDevNote] Insert result rows:', rows);
-
-    let note = null;
-    if (Array.isArray(rows)) {
-      note = rows[0];
-    } else if (rows && typeof rows === 'object' && 'id' in rows) {
-      note = rows;
-    }
-    if (!note) {
-      res.status(500).json({ message: '노트 생성 결과가 올바르지 않습니다.', rows });
-      return;
-    }
-    res.status(201).json(note);
-    return;
+  }
   } catch (error) {
     const err = error as any;
     console.error('[createDevNote] error:', err, 'stack:', err?.stack);
