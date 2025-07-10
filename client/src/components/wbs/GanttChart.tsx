@@ -300,7 +300,6 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
           // 드래그 중일 때 커서와 배경 스타일 변경
           const isDragActive = dragging;
           const dragCursor = isDragActive ? 'grabbing' : 'grab';
-          const hoverBg = isDragActive ? bg : (bg || '#f8f9fa');
 
           return (
             <div
