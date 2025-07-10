@@ -59,16 +59,24 @@ const WbsPage: React.FC = () => {
             // 프롬프트 + 프로젝트 설명 조합
             const prompt = `${AI_PROMPT}\n\n프로젝트 요구사항:\n${project.description}`;
             // AI WBS 생성 API 호출
-            await axios.post('/ai/generate-wbs', {
+            const aiRes = await axios.post('/ai/generate-wbs', {
                 projectId: projectId,
                 prompt: prompt,
                 projectDescription: project.description
             });
-            alert("AI 분석이 완료되었습니다. WBS가 업데이트되었습니다.");
+            // AI가 트리 구조 WBS(JSON) 반환한다고 가정
+            const aiWbs = aiRes.data.wbs || aiRes.data; // wbs 필드 또는 전체
+            if (!aiWbs || !Array.isArray(aiWbs) || aiWbs.length === 0) {
+                alert("AI가 WBS를 생성하지 못했습니다. 내용을 다시 확인해주세요.");
+                return;
+            }
+            // bulk 저장 API 호출
+            await axios.post(`/projects/${projectId}/notes/bulk`, { notes: aiWbs });
+            alert("AI 분석 및 WBS 생성이 완료되었습니다.");
             setRefreshWbsTrigger(prev => prev + 1);
         } catch (error) {
-            console.error("AI WBS 생성 실패:", error);
-            alert("AI WBS 생성 중 오류가 발생했습니다.");
+            console.error("AI WBS 생성/저장 실패:", error);
+            alert("AI WBS 생성 또는 저장 중 오류가 발생했습니다.");
         } finally {
             setIsAnalyzing(false);
         }
