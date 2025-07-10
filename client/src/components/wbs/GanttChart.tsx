@@ -156,7 +156,8 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
           .filter(w => {
             // 시작/종료일 추출
             const s = getDateField(w, ['startDate', 'registered_at', 'deadline']);
-            const e = getDateField(w, ['endDate', 'deadline', 'startDate', 'registered_at']);
+            // 끝나는 날짜: 완료(completedAt)가 있으면 그 날짜, 없으면 기존 로직
+            const e = getDateField(w, ['completedAt']) || getDateField(w, ['endDate', 'deadline', 'startDate', 'registered_at']);
             if (!s || !e) return false;
             // 완전히 이전달에만 존재하는 작업은 숨김
             const endDate = parseISO(e);
@@ -165,7 +166,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
           })
           .map((w, idx) => {
             const s = getDateField(w, ['startDate', 'registered_at', 'deadline']);
-            const e = getDateField(w, ['endDate', 'deadline', 'startDate', 'registered_at']);
+            const e = getDateField(w, ['completedAt']) || getDateField(w, ['endDate', 'deadline', 'startDate', 'registered_at']);
             if (!s || !e) return null;
             const completed = !!w.completedAt;
             const barStyle = getBarStyle(s, e, completed, w.deadline);
