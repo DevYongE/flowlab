@@ -97,8 +97,8 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
   useEffect(() => {
     const fetchWbs = async () => {
       try {
-        const response = await axios.get(`/api/project/${projectId}/dev-notes`);
-        const rawData = response.data.devNotes || [];
+        const response = await axios.get(`/projects/${projectId}/wbs`);
+        const rawData = response.data || [];
         
         // 계층구조로 변환
         const flatWithHierarchy = (nodes: any[], depth: number = 0): WbsItem[] => {
