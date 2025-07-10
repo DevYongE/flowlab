@@ -183,7 +183,14 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
         });
         return arr;
       };
-      setWbs(flat(res.data));
+      const flatData = flat(res.data);
+      setWbs(flatData);
+      console.log('📊 간트 차트 데이터 로드:', flatData.length + '개 작업');
+      console.log('📅 날짜 정보 요약:', flatData.map(w => ({
+        name: w.name || w.content,
+        start: getDateField(w, ['startDate', 'registered_at', 'deadline']),
+        end: w.completedAt ? getDateField(w, ['completedAt']) : getDateField(w, ['endDate', 'deadline', 'startDate', 'registered_at'])
+      })));
     });
   }, [projectId, refreshTrigger]);
 
@@ -215,16 +222,18 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
     }
     return {
       gridColumnStart: left + 2, // 1은 작업명, 2부터 날짜
-      gridColumnEnd: right + 3,  // 끝나는 날짜 포함, grid는 end-exclusive
+      gridColumnEnd: Math.max(right + 3, left + 4),  // 최소 2일 너비 보장
       background: bg,
       color: 'white',
-      borderRadius: 4,
-      padding: '2px 8px',
-      fontSize: 12,
-      minWidth: 40,
+      borderRadius: 6,
+      padding: '4px 8px',
+      fontSize: 11,
+      minWidth: 60,
       textAlign: 'center',
       zIndex: 2,
       position: 'relative',
+      boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+      fontWeight: '500',
     } as React.CSSProperties;
   }
 
@@ -263,9 +272,10 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
       <div
         className="grid"
         style={{
-          gridTemplateColumns: `200px repeat(${days.length}, 1fr)`,
-          gridAutoRows: '32px',
+          gridTemplateColumns: `250px repeat(${days.length}, 1fr)`,
+          gridAutoRows: '36px',
           alignItems: 'center',
+          gap: '1px',
         }}
       >
         {/* 헤더 row */}
@@ -337,26 +347,73 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
         {/* 각 작업 row */}
         {wbs
           .filter(w => {
-            // 시작/종료일 추출
-            const s = getDateField(w, ['startDate', 'registered_at', 'deadline']);
-            // 끝나는 날짜: 완료(completedAt)가 있으면 무조건 그 날짜, 없으면 기존 로직
-            const e = w.completedAt ? getDateField(w, ['completedAt']) : getDateField(w, ['endDate', 'deadline', 'startDate', 'registered_at']);
-            if (!s || !e) return false;
-            const startDate = parseISO(s);
-            const endDate = parseISO(e);
-            if (isBefore(endDate, monthStart)) return false;
-            if (isAfter(startDate, monthEnd)) return false;
+            // 모든 작업을 표시하되, 날짜가 있는 경우만 막대 차트 표시
             return true;
           })
           .map((w, idx) => {
             const s = getDateField(w, ['startDate', 'registered_at', 'deadline']);
             const e = w.completedAt ? getDateField(w, ['completedAt']) : getDateField(w, ['endDate', 'deadline', 'startDate', 'registered_at']);
-            if (!s || !e) return null;
-            const completed = !!w.completedAt;
-            const barStyle = getBarStyle(s, e, completed, w.deadline);
             const displayName = w.name || w.content || '';
-            const maxLen = 10;
+            const maxLen = 15; // 작업명 길이 늘림
             const shortName = displayName.length > maxLen ? displayName.slice(0, maxLen) + '...' : displayName;
+            
+            // 날짜가 있고 현재 월 범위와 겹치는지 확인
+            let hasValidDates = false;
+            let barStyle = {};
+            let dateInfo = '';
+            
+                        if (s && e) {
+              try {
+                const startDate = parseISO(s);
+                const endDate = parseISO(e);
+                // 날짜 범위 확인 (더 관대하게 - 3개월 전후까지 표시)
+                const extendedStart = addDays(monthStart, -90);
+                const extendedEnd = addDays(monthEnd, 90);
+                if (!(isBefore(endDate, extendedStart) || isAfter(startDate, extendedEnd))) {
+                  hasValidDates = true;
+                  const completed = !!w.completedAt;
+                  barStyle = getBarStyle(s, e, completed, w.deadline);
+                  dateInfo = `(${s} ~ ${e}${completed ? ' (완료)' : ''})`;
+                }
+              } catch (error) {
+                console.warn('날짜 파싱 오류:', error, { s, e });
+              }
+            } else if (s && !e) {
+              // 시작일만 있는 경우 - 시작일부터 일주일로 설정
+              try {
+                const startDate = parseISO(s);
+                const estimatedEnd = addDays(startDate, 7);
+                const eStr = format(estimatedEnd, 'yyyy-MM-dd');
+                const extendedStart = addDays(monthStart, -90);
+                const extendedEnd = addDays(monthEnd, 90);
+                if (!(isBefore(estimatedEnd, extendedStart) || isAfter(startDate, extendedEnd))) {
+                  hasValidDates = true;
+                  const completed = !!w.completedAt;
+                  barStyle = getBarStyle(s, eStr, completed, w.deadline);
+                  dateInfo = `(${s} ~ ${eStr} 추정)`;
+                }
+              } catch (error) {
+                console.warn('시작일 파싱 오류:', error, { s });
+              }
+            } else if (!s && e) {
+              // 종료일만 있는 경우 - 일주일 전부터 종료일까지
+              try {
+                const endDate = parseISO(e);
+                const estimatedStart = addDays(endDate, -7);
+                const sStr = format(estimatedStart, 'yyyy-MM-dd');
+                const extendedStart = addDays(monthStart, -90);
+                const extendedEnd = addDays(monthEnd, 90);
+                if (!(isBefore(endDate, extendedStart) || isAfter(estimatedStart, extendedEnd))) {
+                  hasValidDates = true;
+                  const completed = !!w.completedAt;
+                  barStyle = getBarStyle(sStr, e, completed, w.deadline);
+                  dateInfo = `(${sStr} 추정 ~ ${e})`;
+                }
+              } catch (error) {
+                console.warn('종료일 파싱 오류:', error, { e });
+              }
+            }
+            
             return (
               <React.Fragment key={w.id}>
                 {/* 작업명 셀 */}
@@ -365,20 +422,31 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
                   style={{ 
                     gridRow: idx + 2, 
                     gridColumn: 1, 
-                    maxWidth: 120,
+                    maxWidth: 180, // 폭 늘림
                     cursor: 'default'
                   }}
-                  title={displayName}
+                  title={`${displayName}${dateInfo ? ' ' + dateInfo : ' (날짜 없음)'}`}
                 >
                   {shortName}
+                  {!hasValidDates && <span className="text-gray-400 ml-1">(날짜없음)</span>}
                 </div>
-                {/* 바 셀 */}
-                <div
-                  style={{ ...barStyle, gridRow: idx + 2, maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                  title={`${displayName} (${s} ~ ${e}${completed ? ' (완료)' : ''})`}
-                >
-                  {shortName}
-                </div>
+                
+                {/* 바 셀 - 날짜가 있는 경우에만 표시 */}
+                {hasValidDates && (
+                  <div
+                    style={{ 
+                      ...barStyle, 
+                      gridRow: idx + 2, 
+                      maxWidth: 150, 
+                      overflow: 'hidden', 
+                      textOverflow: 'ellipsis', 
+                      whiteSpace: 'nowrap' 
+                    }}
+                    title={`${displayName} ${dateInfo}`}
+                  >
+                    {shortName}
+                  </div>
+                )}
               </React.Fragment>
             );
           })}
