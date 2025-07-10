@@ -11,6 +11,8 @@ interface WbsItem {
     parent_id?: number | string | null;
     children?: WbsItem[];
     completedAt?: string | null; // completedAt 타입을 string | null로 변경
+    startDate?: string | null;
+    endDate?: string | null;
     // TODO: assignee_name, start_date, end_date 등 추가 필드
 }
 
@@ -21,12 +23,13 @@ interface User {
 
 interface WbsBoardProps {
     projectId: string;
-    refreshTrigger?: number; // Add refreshTrigger prop
+    refreshTrigger?: number;
+    selectedDate?: Date;
 }
 
 const SafeTree = Tree as any;
 
-const WbsBoard: React.FC<WbsBoardProps> = ({ projectId, refreshTrigger }) => {
+const WbsBoard: React.FC<WbsBoardProps> = ({ projectId, refreshTrigger, selectedDate }) => {
     const [treeData, setTreeData] = useState<NodeModel[]>([]);
     const [users, setUsers] = useState<User[]>([]);
     const [showAddModal, setShowAddModal] = useState(false);
@@ -150,9 +153,18 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId, refreshTrigger }) => {
     // 트리 노드 렌더링
     const renderNode = (node: NodeModel, { isOpen, onToggle, depth }: any) => {
         const item = node.data as WbsItem;
+        // 날짜 하이라이트 로직
+        let highlight = false;
+        if (selectedDate) {
+            const yyyyMMdd = (d: string) => d?.split('T')[0];
+            const sel = selectedDate.toISOString().split('T')[0];
+            if ((item.startDate && yyyyMMdd(item.startDate) === sel) || (item.endDate && yyyyMMdd(item.endDate) === sel)) {
+                highlight = true;
+            }
+        }
         return (
             <div
-                className="flex items-center justify-between w-full p-2 border rounded bg-white my-1"
+                className={`flex items-center justify-between w-full p-2 border rounded bg-white my-1 ${highlight ? 'bg-yellow-100 border-yellow-400' : ''}`}
                 style={{ paddingLeft: depth > 0 ? `${depth * 24}px` : 0 }}
             >
                 <div className="flex items-center gap-2">

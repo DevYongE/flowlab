@@ -152,7 +152,7 @@ const WbsPage: React.FC = () => {
                     {renderDays()}
                     {renderCells()}
                 </div>
-                <WbsBoard projectId={projectId} refreshTrigger={refreshWbsTrigger} />
+                <WbsBoard projectId={projectId} refreshTrigger={refreshWbsTrigger} selectedDate={selectedDate} />
             </div>
         </MainLayout>
     );
