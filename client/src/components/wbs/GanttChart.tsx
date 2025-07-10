@@ -10,8 +10,7 @@ import {
   addDays, 
   getDay, 
   isToday,
-  differenceInCalendarDays,
-  isWithinInterval
+  differenceInCalendarDays
 } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import axios from '../../lib/axios';
@@ -63,7 +62,6 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [dragging, setDragging] = useState(false);
   const [dragStartX, setDragStartX] = useState<number | null>(null);
-  const [dragCurrentX, setDragCurrentX] = useState<number | null>(null);
 
   const DRAG_THRESHOLD = 40;
 
@@ -75,12 +73,10 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
   const handleHeaderMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     setDragging(true);
     setDragStartX(e.clientX);
-    setDragCurrentX(e.clientX);
   };
 
   const handleHeaderMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (dragging && dragStartX !== null) {
-      setDragCurrentX(e.clientX);
       const dx = e.clientX - dragStartX;
       if (Math.abs(dx) > DRAG_THRESHOLD) {
         const direction = dx > 0 ? 1 : -1;
@@ -88,7 +84,6 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
         setCurrentMonth(newMonth);
         setDragging(false);
         setDragStartX(null);
-        setDragCurrentX(null);
       }
     }
   };
@@ -96,7 +91,6 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
   const handleHeaderMouseUp = () => {
     setDragging(false);
     setDragStartX(null);
-    setDragCurrentX(null);
   };
 
   // WBS 데이터 로드
