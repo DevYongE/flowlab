@@ -21,11 +21,12 @@ interface User {
 
 interface WbsBoardProps {
     projectId: string;
+    refreshTrigger?: number; // Add refreshTrigger prop
 }
 
 const SafeTree = Tree as any;
 
-const WbsBoard: React.FC<WbsBoardProps> = ({ projectId }) => {
+const WbsBoard: React.FC<WbsBoardProps> = ({ projectId, refreshTrigger }) => {
     const [treeData, setTreeData] = useState<NodeModel[]>([]);
     const [users, setUsers] = useState<User[]>([]);
     const [showAddModal, setShowAddModal] = useState(false);
@@ -83,7 +84,7 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId }) => {
     useEffect(() => {
         fetchWbsData();
         fetchUsers();
-    }, [fetchWbsData, fetchUsers]);
+    }, [fetchWbsData, fetchUsers, refreshTrigger]);
 
     // 트리뷰 드래그앤드롭 핸들러
     const handleDrop = async (newTree: NodeModel[]) => {

@@ -9,28 +9,35 @@ import { Button } from '../components/ui/button';
 const WbsPage: React.FC = () => {
     const { id: projectId } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const [projectName, setProjectName] = useState('');
+    const [project, setProject] = useState<any>(null);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [refreshWbsTrigger, setRefreshWbsTrigger] = useState(0);
 
     useEffect(() => {
         if (projectId) {
             axios.get(`/projects/${projectId}`)
-                .then(res => setProjectName(res.data.name))
-                .catch(err => console.error("프로젝트 이름 로딩 실패:", err));
+                .then(res => setProject(res.data))
+                .catch(err => console.error("프로젝트 정보 로딩 실패:", err));
         }
     }, [projectId]);
 
     const handleAIAnalysis = async () => {
-        if (!projectId) return;
+        if (!projectId || !project || !project.description) {
+            alert("프로젝트 설명이 없거나 프로젝트 정보를 불러오지 못했습니다.");
+            return;
+        }
         setIsAnalyzing(true);
         console.log("Starting AI analysis for project:", projectId);
         try {
-            // 여기에 실제 AI 분석 로직을 구현합니다.
-            // 예: await axios.post('/ai/analyze', { projectId });
-            alert("AI 분석이 시작되었습니다. 잠시 후 WBS가 업데이트됩니다.");
+            await axios.post('/ai/generate-wbs', {
+                projectId: projectId,
+                projectDescription: project.description
+            });
+            alert("AI 분석이 완료되었습니다. WBS가 업데이트되었습니다.");
+            setRefreshWbsTrigger(prev => prev + 1); // Trigger WBS board refresh
         } catch (error) {
-            console.error("AI 분석 실패:", error);
-            alert("AI 분석 중 오류가 발생했습니다.");
+            console.error("AI WBS 생성 실패:", error);
+            alert("AI WBS 생성 중 오류가 발생했습니다.");
         } finally {
             setIsAnalyzing(false);
         }
@@ -47,7 +54,7 @@ const WbsPage: React.FC = () => {
                 <div className="mb-6">
                     <h1 className="text-3xl font-bold">
                         <span className="text-gray-500 cursor-pointer hover:underline" onClick={() => navigate(`/projects/${projectId}`)}>
-                            {projectName || '프로젝트'}
+                            {project?.name || '프로젝트'}
                         </span>
                         <span className="text-gray-400 mx-2">/</span>
                         WBS
@@ -57,7 +64,7 @@ const WbsPage: React.FC = () => {
                     </Button>
                 </div>
 
-                <WbsBoard projectId={projectId} />
+                <WbsBoard projectId={projectId} refreshTrigger={refreshWbsTrigger} />
             </div>
         </MainLayout>
     );
