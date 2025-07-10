@@ -10,7 +10,7 @@ interface WbsItem {
     content?: string;
     parent_id?: number | string | null;
     children?: WbsItem[];
-    completedAt?: string;
+    completedAt?: string | null; // completedAt 타입을 string | null로 변경
     // TODO: assignee_name, start_date, end_date 등 추가 필드
 }
 
@@ -37,7 +37,7 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId }) => {
         status: '미완료',
         progress: 0,
         parent: 0 as number,
-        completedAt: ''
+        completedAt: null as string | null // 초기값을 null로 변경
     });
     const [loading, setLoading] = useState(false);
     const [openIds, setOpenIds] = useState<number[]>([]);
@@ -112,7 +112,7 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId }) => {
             status: '미완료',
             progress: 0,
             parent: Number(parent),
-            completedAt: '' // 이 부분을 추가합니다.
+            completedAt: null // null로 초기화
         });
         setShowAddModal(true);
     };
@@ -225,7 +225,7 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId }) => {
                             </div>
                             <div className="flex-1">
                                 <label className="block text-sm mb-1">완료일</label>
-                                <input type="date" name="completedAt" value={addForm.completedAt} onChange={handleAddFormChange} className="w-full border rounded p-2" />
+                                <input type="date" name="completedAt" value={addForm.completedAt || ''} onChange={handleAddFormChange} className="w-full border rounded p-2" />
                             </div>
                         </div>
                         <div className="flex gap-2">
