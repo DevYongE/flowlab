@@ -351,6 +351,8 @@ export const getOngoingProjects = async (req: Request, res: Response): Promise<v
 
 // 개발 노트 생성
 export const createDevNote = async (req: Request, res: Response): Promise<void> => {
+  const authorId = req.user?.id;
+  const currentUserRole = req.user?.role;
   try {
     const { projectId } = req.params;
     const status = toStatusCode(req.body.status);
@@ -396,7 +398,8 @@ export const createDevNote = async (req: Request, res: Response): Promise<void> 
       }
       res.status(201).json(note);
       return;
-  } catch (error) {
+  } 
+  catch (error) {
     const err = error as any;
     console.error('[createDevNote] error:', err, 'stack:', err?.stack);
     res.status(500).json({ message: '개발 노트 생성 실패', error: JSON.stringify(error) });
