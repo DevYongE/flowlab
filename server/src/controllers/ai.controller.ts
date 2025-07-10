@@ -44,4 +44,55 @@ Example output: { "requirements": [{ "content": "로그인 기능 구현", "dead
     console.error('OpenAI API 오류:', error.message);
     res.status(500).json({ message: 'AI 요구사항 분석에 실패했습니다.' });
   }
+};
+
+// AI를 사용하여 프로젝트 설명에서 WBS를 생성하는 함수
+export const generateWbsFromProjectDescription = async (req: Request, res: Response) => {
+  const { projectDescription } = req.body;
+
+  if (!projectDescription) {
+    res.status(400).json({ message: '프로젝트 설명이 필요합니다.' });
+    return;
+  }
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o", // 또는 gpt-4
+      messages: [
+        {
+          role: "system",
+          content: `You are an expert project manager and WBS (Work Breakdown Structure) specialist. Based on the provided project description, generate a hierarchical WBS. Each WBS item should have a 'content' (task description), an optional 'deadline' (in YYYY-MM-DD format), and a 'parent_id' to indicate its hierarchy (null for top-level tasks). Assign a sequential 'order' for siblings at the same level. The output must be a single JSON object with one key: "wbs". This key should hold an array of objects, where each object represents a WBS item. Ensure the content is in Korean if the input is Korean.
+Example output:
+{
+  "wbs": [
+    { "content": "웹사이트 개발", "deadline": null, "parent_id": null, "order": 0 },
+    { "content": "프론트엔드 개발", "deadline": null, "parent_id": 1, "order": 0 },
+    { "content": "사용자 인증 기능", "deadline": "2024-08-20", "parent_id": 2, "order": 0 },
+    { "content": "로그인 페이지 구현", "deadline": "2024-08-15", "parent_id": 3, "order": 0 },
+    { "content": "회원가입 페이지 구현", "deadline": "2024-08-20", "parent_id": 3, "order": 1 },
+    { "content": "상품 목록 페이지", "deadline": "2024-08-25", "parent_id": 2, "order": 1 },
+    { "content": "백엔드 개발", "deadline": null, "parent_id": 1, "order": 1 },
+    { "content": "API 설계", "deadline": "2024-08-10", "parent_id": 7, "order": 0 }
+  ]
+}`
+        },
+        {
+          role: "user",
+          content: projectDescription
+        }
+      ],
+      response_format: { type: "json_object" },
+    });
+
+    const result = completion.choices[0].message?.content;
+    if (result) {
+      res.json(JSON.parse(result));
+    } else {
+      throw new Error('AI WBS 생성 결과를 파싱하는데 실패했습니다.');
+    }
+
+  } catch (error: any) {
+    console.error('OpenAI API 오류 (WBS 생성):', error.message);
+    res.status(500).json({ message: 'AI WBS 생성에 실패했습니다.' });
+  }
 }; 
