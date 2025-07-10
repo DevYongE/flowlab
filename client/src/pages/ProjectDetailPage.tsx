@@ -107,36 +107,29 @@ const ProjectDetailPage = () => {
 
   const handleNoteChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value: rawValue } = e.target;
-    
-    const getUpdatedValues = (prev: DevNote) => {
-      let value: string | number = rawValue;
-      if (name === 'progress') {
-        value = parseInt(rawValue, 10);
-        if (isNaN(value)) value = 0;
-      }
 
-      let newStatus = name === 'status' ? String(value) : prev.status;
-      let newProgress = name === 'progress' ? Number(value) : prev.progress;
+    let value: string | number = rawValue;
+    if (name === 'progress') {
+      value = parseInt(rawValue, 10);
+      if (isNaN(value)) value = 0;
+    }
 
-      if (name === 'status') {
-        if (value === 'DONE') newProgress = 100;
-        else if (value === 'TODO') newProgress = 0;
-      } else if (name === 'progress') {
-        if (value === 100) newStatus = 'DONE';
-        else if (Number(value) > 0 && prev.status === 'TODO') newStatus = 'IN_PROGRESS';
-        else if (value === 0 && prev.status !== 'TODO') newStatus = 'TODO';
-      }
-      
-      const updatedNote = { ...prev, [name]: value, status: newStatus, progress: newProgress };
-      
-      // Ensure correct types before returning
-      return {
-        ...updatedNote,
-        status: String(updatedNote.status),
-        progress: Number(updatedNote.progress),
-        [name]: name === 'progress' ? Number(value) : String(value)
-      };
-    };
+    // prev.status와 prev.progress는 editingNote 또는 newNote의 현재 상태를 참조해야 합니다.
+    // 여기서는 editingNote 또는 newNote의 현재 값을 사용하여 newStatus와 newProgress를 계산합니다.
+    const currentStatus = editingNote ? editingNote.status : newNote.status;
+    const currentProgress = editingNote ? editingNote.progress : newNote.progress;
+
+    let newStatus = name === 'status' ? String(value) : currentStatus;
+    let newProgress = name === 'progress' ? Number(value) : currentProgress;
+
+    if (name === 'status') {
+      if (value === 'DONE') newProgress = 100;
+      else if (value === 'TODO') newProgress = 0;
+    } else if (name === 'progress') {
+      if (value === 100) newStatus = 'DONE';
+      else if (Number(value) > 0 && currentStatus === 'TODO') newStatus = 'IN_PROGRESS';
+      else if (value === 0 && currentStatus !== 'TODO') newStatus = 'TODO';
+    }
 
     if (editingNote) {
       setEditingNote(prev => prev ? { ...prev, [name]: value, status: newStatus, progress: newProgress } : null);
