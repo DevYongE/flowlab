@@ -8,29 +8,6 @@ import { Button } from '../components/ui/button';
 import { addMonths, subMonths, format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, parseISO, isWithinInterval } from 'date-fns';
 import GanttChart from '../components/wbs/GanttChart';
 
-const AI_PROMPT = `넌 숙련된 프로젝트 매니저야. 내가 제공하는 프로젝트 요구사항을 기반으로 WBS(Work Breakdown Structure)를 작성해줘.  
-※ 현재 등록된 프로젝트의 요구사항을 확인하고, 그에 맞춰 작업을 구조화해줘.
-
-WBS는 다음과 같은 3단계 구조로 작성해:
-1. **대분류 (Phase or Major Task)**: 전체 프로젝트를 큰 작업 단위로 나눈다.
-2. **중분류 (Deliverables or Sub-task)**: 각 대분류 아래 세부 작업을 나눈다.
-3. **소분류 (Work Package or Action Item)**: 실제 작업자들이 수행할 수 있는 최소 단위의 작업이다.
-
-형식은 다음과 같아:
-- 1. 대분류 제목  
-  - 1.1 중분류 제목  
-    - 1.1.1 소분류 작업  
-    - 1.1.2 소분류 작업  
-  - 1.2 중분류 제목  
-    - 1.2.1 소분류 작업  
-
-주의사항:  
-- 중복 없이, 논리적 순서에 맞게 정리해줘.  
-- 소분류는 되도록 **작업 단위(예: "디자인 시안 작성", "DB 테이블 설계")**로 명확히 작성해.  
-- 가능하면 각 작업이 **산출물 중심(deliverable-based)**이 되도록 해줘.  
-- **각 작업마다 논리적으로 배분된 시작일(startDate)과 마감일(endDate)도 반드시 포함해서 JSON 트리 구조로 반환해줘.** (예: 2025-07-01 ~ 2025-07-10)
-`;
-
 // 탭 타입 정의
 type TabType = 'tree' | 'gantt' | 'schedule';
 
