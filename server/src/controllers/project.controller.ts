@@ -414,9 +414,19 @@ export const updateDevNote = async (req: Request, res: Response): Promise<void> 
   const { noteId } = req.params;
   // 한글→영문 변환 적용
   const status = toStatusCode(req.body.status);
-  const { content, deadline, progress, completedAt, parent_id, order } = req.body;
+  const { content, deadline, progress } = req.body; // completedAt은 여기서 제거하고 아래에서 동적으로 설정
   const currentUserId = req.user?.id;
   const currentUserRole = req.user?.role;
+
+  let completedAt = req.body.completedAt; // 기존 completedAt 값 유지 (수동 입력 시)
+
+  // 상태가 '완료'로 변경되면 completedAt을 현재 시간으로 설정
+  if (status === 'DONE') {
+    completedAt = new Date().toISOString(); // ISO 8601 형식으로 현재 시간 설정
+  } else {
+    completedAt = null; // '완료'가 아니면 completedAt을 null로 설정
+  }
+
   try {
     const [noteRows] = await sequelize.query('SELECT author_id FROM dev_notes WHERE id = :note_id', { replacements: { note_id: noteId }, type: QueryTypes.SELECT });
     let noteAuthorId = null;
