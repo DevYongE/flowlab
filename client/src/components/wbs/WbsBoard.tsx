@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Tree } from '@minoru/react-dnd-treeview';
 import type { NodeModel } from '@minoru/react-dnd-treeview';
 import axios from '../../lib/axios';
+import { CheckCircle, Clock, Loader2 } from 'lucide-react';
 
 // 타입 정의
 interface WbsItem {
@@ -50,6 +51,9 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId, refreshTrigger, selected
     const [openIds, setOpenIds] = useState<number[]>([]);
     const [showEditModal, setShowEditModal] = useState(false);
     const [editForm, setEditForm] = useState<any>(null);
+    // 필터 상태
+    const [filterAssignee, setFilterAssignee] = useState('');
+    const [filterStatus, setFilterStatus] = useState('');
 
     // 트리형 WBS 데이터를 flat 구조로 변환
     function flattenTree(nodes: WbsItem[], parentId: number = 0): NodeModel[] {
@@ -199,6 +203,15 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId, refreshTrigger, selected
         }
     };
 
+    // 필터링된 트리 데이터
+    const filteredTreeData = treeData.filter(node => {
+        const item = node.data as WbsItem;
+        let assigneeOk = true, statusOk = true;
+        if (filterAssignee) assigneeOk = item.assignee === filterAssignee;
+        if (filterStatus) statusOk = item.status === filterStatus;
+        return assigneeOk && statusOk;
+    });
+
     // 트리 노드 렌더링
     const renderNode = (node: NodeModel, { isOpen, onToggle, depth }: any) => {
         const item = node.data as WbsItem;
@@ -213,9 +226,16 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId, refreshTrigger, selected
         }
         // 담당자 이름 찾기
         const assigneeName = item.assignee ? (users.find(u => u.id === item.assignee)?.name || item.assignee) : '';
+        // 상태별 색상/아이콘
+        let statusColor = 'bg-gray-200', statusIcon = <Clock className="w-4 h-4 text-gray-400" />;
+        if (item.status === '진행중') {
+            statusColor = 'bg-blue-200'; statusIcon = <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />;
+        } else if (item.status === '완료') {
+            statusColor = 'bg-green-200'; statusIcon = <CheckCircle className="w-4 h-4 text-green-500" />;
+        }
         return (
             <div
-                className={`flex items-center justify-between w-full p-2 border rounded bg-white my-1 ${highlight ? 'bg-yellow-100 border-yellow-400' : ''}`}
+                className={`flex items-center justify-between w-full p-2 border rounded my-1 ${highlight ? 'bg-yellow-100 border-yellow-400' : 'bg-white'} ${statusColor}`}
                 style={{ paddingLeft: depth > 0 ? `${depth * 24}px` : 0 }}
             >
                 <div className="flex flex-col gap-1 flex-1">
@@ -225,15 +245,21 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId, refreshTrigger, selected
                                 {isOpen ? '▼' : '▶'}
                             </button>
                         )}
+                        {statusIcon}
                         <span className="font-semibold">{node.text}</span>
                         {item.completedAt && (
                             <span className="text-xs text-gray-500 ml-2">완료일: {item.completedAt.split('T')[0]}</span>
                         )}
                     </div>
-                    <div className="flex gap-4 text-xs text-gray-600 mt-1">
+                    <div className="flex gap-4 text-xs text-gray-600 mt-1 items-center">
                         {assigneeName && <span>담당: {assigneeName}</span>}
                         <span>상태: {item.status || '미완료'}</span>
-                        <span>진행률: {item.progress || 0}%</span>
+                        <span className="flex items-center gap-1">진행률:
+                            <div className="w-20 h-2 bg-gray-100 rounded overflow-hidden">
+                                <div className="h-2 bg-blue-500" style={{ width: `${item.progress || 0}%` }}></div>
+                            </div>
+                            <span>{item.progress || 0}%</span>
+                        </span>
                     </div>
                 </div>
                 <div className="flex gap-2">
@@ -247,13 +273,26 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId, refreshTrigger, selected
 
     return (
         <>
+            {/* 필터 UI */}
+            <div className="flex gap-4 mb-2 items-center">
+                <select value={filterAssignee} onChange={e => setFilterAssignee(e.target.value)} className="border rounded p-1">
+                    <option value="">담당자 전체</option>
+                    {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                </select>
+                <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="border rounded p-1">
+                    <option value="">상태 전체</option>
+                    <option value="미완료">미완료</option>
+                    <option value="진행중">진행중</option>
+                    <option value="완료">완료</option>
+                </select>
+            </div>
             <div className="flex justify-end mb-4">
                 <button className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600" onClick={() => handleAddClick(0)}>
                     + 최상위 작업 추가
                 </button>
             </div>
             <SafeTree
-                tree={treeData}
+                tree={filteredTreeData}
                 rootId={0}
                 render={renderNode}
                 dragPreviewRender={(monitor: { item: NodeModel }) => <div>{monitor.item.text}</div>}
