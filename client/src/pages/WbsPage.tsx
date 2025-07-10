@@ -147,10 +147,32 @@ const WbsPage: React.FC = () => {
 
     // AI 분석 버튼 클릭 (모달 열기)
     const handleAIAnalysisClick = () => {
-        if (!projectId || !project || !project.description) {
-            alert("프로젝트 설명이 없거나 프로젝트 정보를 불러오지 못했습니다.");
+        // 프로젝트 ID 확인
+        if (!projectId) {
+            alert("❌ 프로젝트 ID를 찾을 수 없습니다. 페이지를 새로고침해보세요.");
             return;
         }
+
+        // 프로젝트 정보 로딩 확인
+        if (!project) {
+            alert("⏳ 프로젝트 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
+            return;
+        }
+
+        // 프로젝트 설명 확인
+        if (!project.description || project.description.trim() === '') {
+            const userWantsToAdd = window.confirm(
+                "📝 프로젝트 설명이 없습니다.\n\n" +
+                "AI가 WBS를 생성하려면 프로젝트 설명이 필요합니다.\n" +
+                "프로젝트 상세 페이지에서 설명을 추가하시겠습니까?"
+            );
+            
+            if (userWantsToAdd) {
+                navigate(`/projects/${projectId}`);
+            }
+            return;
+        }
+
         setShowAIModal(true);
     };
 
@@ -160,6 +182,16 @@ const WbsPage: React.FC = () => {
         setIsAnalyzing(true);
 
         try {
+            // 프로젝트 설명 확정 (기존 설명 또는 사용자 입력)
+            const finalDescription = project?.description?.trim() || aiOptions.customPrompt.trim();
+            
+            if (!finalDescription) {
+                alert("❌ 프로젝트 설명이나 추가 요구사항을 입력해주세요.");
+                setIsAnalyzing(false);
+                setShowAIModal(true);
+                return;
+            }
+
             // 기존 WBS 삭제 (옵션 선택 시)
             if (aiOptions.clearExisting) {
                 await axios.delete(`/projects/${projectId}/wbs/clear`);
@@ -178,8 +210,8 @@ const WbsPage: React.FC = () => {
                 detailPrompt += "\n\n**타임라인 지시사항**: 각 작업에 현실적인 시작일과 마감일을 포함해주세요. 프로젝트 시작일부터 논리적 순서를 고려하여 일정을 배분해주세요.";
             }
 
-            // 커스텀 프롬프트 추가
-            if (aiOptions.customPrompt.trim()) {
+            // 커스텀 프롬프트 추가 (프로젝트 설명이 없는 경우는 이미 finalDescription에 포함됨)
+            if (project?.description?.trim() && aiOptions.customPrompt.trim()) {
                 detailPrompt += `\n\n**사용자 추가 요구사항**: ${aiOptions.customPrompt}`;
             }
 
@@ -187,7 +219,7 @@ const WbsPage: React.FC = () => {
             const response = await axios.post('/ai/generate-wbs', {
                 projectId: projectId,
                 prompt: detailPrompt,
-                projectDescription: project.description
+                projectDescription: finalDescription
             });
 
             const { message, itemsCreated } = response.data;
@@ -437,8 +469,11 @@ const WbsPage: React.FC = () => {
                         <Button 
                             className="ml-4 relative" 
                             onClick={handleAIAnalysisClick} 
-                            disabled={isAnalyzing}
+                            disabled={isAnalyzing || !project}
                             variant={isAnalyzing ? "outline" : "default"}
+                            title={!project ? "프로젝트 정보를 불러오는 중..." : 
+                                   !project?.description ? "프로젝트 설명이 필요합니다" : 
+                                   "AI를 사용하여 WBS를 생성합니다"}
                         >
                             {isAnalyzing && (
                                 <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
@@ -446,7 +481,10 @@ const WbsPage: React.FC = () => {
                                 </div>
                             )}
                             <span className={isAnalyzing ? "ml-6" : ""}>
-                                {isAnalyzing ? '🤖 AI 분석 중...' : '🤖 AI 분석'}
+                                {isAnalyzing ? '🤖 AI 분석 중...' : 
+                                 !project ? '⏳ 로딩 중...' :
+                                 !project?.description ? '📝 설명 필요' :
+                                 '🤖 AI 분석'}
                             </span>
                         </Button>
                     </div>
@@ -538,10 +576,35 @@ const WbsPage: React.FC = () => {
 
                                 {/* 프로젝트 설명 미리보기 */}
                                 <div className="bg-gray-50 rounded p-3">
-                                    <h4 className="text-sm font-medium mb-1">분석할 프로젝트 설명:</h4>
-                                    <p className="text-xs text-gray-600 max-h-20 overflow-y-auto">
-                                        {project?.description || '설명이 없습니다.'}
-                                    </p>
+                                    <h4 className="text-sm font-medium mb-2">분석할 프로젝트 설명:</h4>
+                                    {project?.description && project.description.trim() ? (
+                                        <div>
+                                            <p className="text-xs text-gray-600 max-h-20 overflow-y-auto whitespace-pre-wrap">
+                                                {project.description}
+                                            </p>
+                                            <div className="mt-2 text-xs text-green-600">
+                                                ✅ 프로젝트 설명이 있습니다 ({project.description.length}자)
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div>
+                                            <p className="text-xs text-red-500 mb-2">
+                                                ❌ 프로젝트 설명이 없습니다.
+                                            </p>
+                                            <textarea
+                                                value={aiOptions.customPrompt}
+                                                onChange={(e) => setAiOptions(prev => ({
+                                                    ...prev,
+                                                    customPrompt: e.target.value
+                                                }))}
+                                                placeholder="프로젝트 설명을 여기에 입력해주세요...&#10;예: 온라인 쇼핑몰 개발 프로젝트&#10;- 사용자 회원가입/로그인&#10;- 상품 목록 및 상세보기&#10;- 장바구니 및 결제 시스템"
+                                                className="w-full border border-gray-300 rounded px-3 py-2 text-xs h-20 resize-none"
+                                            />
+                                            <div className="mt-1 text-xs text-amber-600">
+                                                💡 위에 프로젝트 설명을 입력하면 AI가 분석할 수 있습니다.
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -556,10 +619,18 @@ const WbsPage: React.FC = () => {
                                 </Button>
                                 <Button
                                     onClick={handleAIAnalysis}
-                                    disabled={isAnalyzing}
-                                    className="bg-blue-600 hover:bg-blue-700"
+                                    disabled={isAnalyzing || (!project?.description?.trim() && !aiOptions.customPrompt.trim())}
+                                    className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400"
+                                    title={
+                                        (!project?.description?.trim() && !aiOptions.customPrompt.trim()) 
+                                            ? "프로젝트 설명을 입력해주세요" 
+                                            : "AI 분석을 시작합니다"
+                                    }
                                 >
                                     🤖 AI 분석 시작
+                                    {(!project?.description?.trim() && !aiOptions.customPrompt.trim()) && (
+                                        <span className="ml-1 text-xs opacity-75">(설명 필요)</span>
+                                    )}
                                 </Button>
                             </div>
                         </div>
