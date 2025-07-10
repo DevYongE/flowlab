@@ -14,6 +14,8 @@ interface WbsItem {
   startDate?: string | null;
   endDate?: string | null;
   completedAt?: string | null; // 추가: 완료일
+  deadline?: string | null;
+  registered_at?: string | null;
 }
 
 /**
@@ -98,11 +100,13 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
             {format(d, 'd')}
           </div>
         ))}
-        {wbs.filter(w => w.startDate || w.endDate).map(w => {
-          // 시작일/마감일이 모두 없으면 표시하지 않음
-          const s = w.startDate || w.endDate;
-          const e = w.endDate || w.startDate;
+        {wbs.filter(w => w.startDate || w.endDate || w.deadline || w.registered_at).map(w => {
+          // 시작일/마감일 우선순위 fallback
+          const s = w.startDate || w.registered_at || w.deadline;
+          const e = w.endDate || w.deadline || w.startDate || w.registered_at;
           if (!s || !e) return null;
+          // 디버깅: 실제 값 콘솔 출력
+          console.log('Gantt bar:', w.name || w.content, 'start:', s, 'end:', e);
           // 바가 월 범위 내에 있는지 체크
           const sDate = parseISO(s);
           const eDate = parseISO(e);
@@ -111,8 +115,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
             isWithinInterval(eDate, { start: monthStart, end: monthEnd }) ||
             (sDate < monthStart && eDate > monthEnd)
           ) {
-            // 바 스타일 계산
-            const barColor = w.completedAt ? '#22c55e' : '#3b82f6'; // 초록색(완료) or 파랑(진행중)
+            const barColor = w.completedAt ? '#22c55e' : '#3b82f6';
             const style = {
               ...getBarStyle(s < format(monthStart, 'yyyy-MM-dd') ? format(monthStart, 'yyyy-MM-dd') : s, e > format(monthEnd, 'yyyy-MM-dd') ? format(monthEnd, 'yyyy-MM-dd') : e),
               background: barColor
