@@ -125,6 +125,7 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId }) => {
         e.preventDefault();
         setLoading(true);
         try {
+            console.log('completedAt value:', addForm.completedAt); // 추가할 로그
             await axios.post(`/projects/${projectId}/notes`, {
                 content: addForm.name,
                 assignee: addForm.assignee,
