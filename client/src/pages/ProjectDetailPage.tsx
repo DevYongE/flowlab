@@ -53,7 +53,7 @@ const ProjectDetailPage = () => {
   const [project, setProject] = useState<Project | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [editingNote, setEditingNote] = useState<DevNote | null>(null);
-  const [newNote, setNewNote] = useState({ content: '', deadline: '', status: 'TODO', progress: 0, completedAt: '' });
+  const [newNote, setNewNote] = useState({ content: '', deadline: '', status: 'TODO', progress: 0, completedAt: '' as string | null });
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [editingProgressNoteId, setEditingProgressNoteId] = useState<number | null>(null);
@@ -121,20 +121,33 @@ const ProjectDetailPage = () => {
 
     let newStatus = name === 'status' ? String(value) : currentStatus;
     let newProgress = name === 'progress' ? Number(value) : currentProgress;
+    let newCompletedAt = editingNote ? editingNote.completedAt : newNote.completedAt;
 
     if (name === 'status') {
-      if (value === 'DONE') newProgress = 100;
-      else if (value === 'TODO') newProgress = 0;
+      if (value === 'DONE') {
+        newProgress = 100;
+        newCompletedAt = new Date().toISOString().split('T')[0];
+      } else if (value === 'TODO') {
+        newProgress = 0;
+        newCompletedAt = null;
+      }
     } else if (name === 'progress') {
-      if (value === 100) newStatus = 'DONE';
-      else if (Number(value) > 0 && currentStatus === 'TODO') newStatus = 'IN_PROGRESS';
-      else if (value === 0 && currentStatus !== 'TODO') newStatus = 'TODO';
+      if (value === 100) {
+        newStatus = 'DONE';
+        newCompletedAt = new Date().toISOString().split('T')[0];
+      } else if (Number(value) > 0 && currentStatus === 'TODO') {
+        newStatus = 'IN_PROGRESS';
+        newCompletedAt = null;
+      } else if (value === 0 && currentStatus !== 'TODO') {
+        newStatus = 'TODO';
+        newCompletedAt = null;
+      }
     }
 
     if (editingNote) {
-      setEditingNote(prev => prev ? { ...prev, [name]: value, status: newStatus, progress: newProgress } : null);
+      setEditingNote(prev => prev ? { ...prev, [name]: value, status: newStatus, progress: newProgress, completedAt: newCompletedAt } : null);
     } else {
-      setNewNote(prev => ({ ...prev, [name]: value, status: newStatus, progress: newProgress }));
+      setNewNote(prev => ({ ...prev, [name]: value, status: newStatus, progress: newProgress, completedAt: newCompletedAt }));
     }
   };
   
@@ -310,17 +323,20 @@ const ProjectDetailPage = () => {
   const handleStatusClick = async (note: DevNote) => {
     const newStatus = cycleStatus(note.status);
     let newProgress = note.progress;
+    let newCompletedAt = note.completedAt;
 
     if (newStatus === 'DONE') {
       newProgress = 100;
+      newCompletedAt = new Date().toISOString().split('T')[0];
     } else if (newStatus === 'TODO') {
       newProgress = 0;
+      newCompletedAt = null;
     } else if (newStatus === 'IN_PROGRESS' && note.status === 'DONE') {
-      // Not a standard cycle, but handle it sanely
-      newProgress = 50; // Or some other default
+      newProgress = 50;
+      newCompletedAt = null;
     }
     
-    const updatedNote = { ...note, status: newStatus, progress: newProgress };
+    const updatedNote = { ...note, status: newStatus, progress: newProgress, completedAt: newCompletedAt };
     await handleNoteUpdate(updatedNote);
   };
 
@@ -332,11 +348,20 @@ const ProjectDetailPage = () => {
     newProgress = Math.max(0, Math.min(100, newProgress)); // 0-100 범위 유지
 
     let newStatus = note.status;
-    if (newProgress === 100) newStatus = 'DONE';
-    else if (newProgress === 0) newStatus = 'TODO';
-    else newStatus = 'IN_PROGRESS';
+    let newCompletedAt = note.completedAt;
+    
+    if (newProgress === 100) {
+      newStatus = 'DONE';
+      newCompletedAt = new Date().toISOString().split('T')[0];
+    } else if (newProgress === 0) {
+      newStatus = 'TODO';
+      newCompletedAt = null;
+    } else {
+      newStatus = 'IN_PROGRESS';
+      newCompletedAt = null;
+    }
 
-    const updatedNote = { ...note, progress: newProgress, status: newStatus };
+    const updatedNote = { ...note, progress: newProgress, status: newStatus, completedAt: newCompletedAt };
     await handleNoteUpdate(updatedNote);
   };
 
@@ -358,12 +383,20 @@ const ProjectDetailPage = () => {
 
     const newProgress = inlineProgressValue;
     let newStatus = note.status;
+    let newCompletedAt = note.completedAt;
 
-    if (newProgress === 100) newStatus = 'DONE';
-    else if (newProgress === 0) newStatus = 'TODO';
-    else newStatus = 'IN_PROGRESS';
+    if (newProgress === 100) {
+      newStatus = 'DONE';
+      newCompletedAt = new Date().toISOString().split('T')[0];
+    } else if (newProgress === 0) {
+      newStatus = 'TODO';
+      newCompletedAt = null;
+    } else {
+      newStatus = 'IN_PROGRESS';
+      newCompletedAt = null;
+    }
     
-    const updatedNote = { ...note, progress: newProgress, status: newStatus };
+    const updatedNote = { ...note, progress: newProgress, status: newStatus, completedAt: newCompletedAt };
     await handleNoteUpdate(updatedNote);
 
     setEditingProgressNoteId(null);
@@ -779,7 +812,7 @@ const ProjectDetailPage = () => {
                     <input 
                       type="date" 
                       name="completedAt" 
-                      value={editingNote ? (editingNote.completedAt?.split('T')[0] || '') : newNote.completedAt} 
+                      value={editingNote ? (editingNote.completedAt?.split('T')[0] || '') : (newNote.completedAt || '')} 
                       onChange={handleNoteChange} 
                       className="w-full border border-gray-300 rounded-md shadow-sm p-2" 
                     />
