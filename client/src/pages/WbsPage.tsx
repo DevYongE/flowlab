@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
 import WbsBoard from '../components/wbs/WbsBoard';
-import ProjectSelectionModal from '../components/wbs/ProjectSelectionModal';
+
 import axios from '../lib/axios';
 import { Button } from '../components/ui/button';
 
@@ -10,8 +10,7 @@ const WbsPage: React.FC = () => {
     const { id: projectId } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const [projectName, setProjectName] = useState('');
-    const [showProjectSelectionModal, setShowProjectSelectionModal] = useState(false);
-    
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
 
     useEffect(() => {
         if (projectId) {
@@ -20,6 +19,22 @@ const WbsPage: React.FC = () => {
                 .catch(err => console.error("프로젝트 이름 로딩 실패:", err));
         }
     }, [projectId]);
+
+    const handleAIAnalysis = async () => {
+        if (!projectId) return;
+        setIsAnalyzing(true);
+        console.log("Starting AI analysis for project:", projectId);
+        try {
+            // 여기에 실제 AI 분석 로직을 구현합니다.
+            // 예: await axios.post('/ai/analyze', { projectId });
+            alert("AI 분석이 시작되었습니다. 잠시 후 WBS가 업데이트됩니다.");
+        } catch (error) {
+            console.error("AI 분석 실패:", error);
+            alert("AI 분석 중 오류가 발생했습니다.");
+        } finally {
+            setIsAnalyzing(false);
+        }
+    };
 
     if (!projectId) {
         // 혹은 에러 페이지로 리디렉션
@@ -37,28 +52,15 @@ const WbsPage: React.FC = () => {
                         <span className="text-gray-400 mx-2">/</span>
                         WBS
                     </h1>
-                    <Button className="ml-4" onClick={() => setShowProjectSelectionModal(true)}>AI 분석</Button>
+                    <Button className="ml-4" onClick={handleAIAnalysis} disabled={isAnalyzing}>
+                        {isAnalyzing ? '분석 중...' : 'AI 분석'}
+                    </Button>
                 </div>
 
                 <WbsBoard projectId={projectId} />
             </div>
-            <ProjectSelectionModal
-                isOpen={showProjectSelectionModal}
-                onClose={() => setShowProjectSelectionModal(false)}
-                onSelectProject={(id) => {
-                    navigate(`/wbs/${id}`);
-                    setShowProjectSelectionModal(false);
-                    handleAIAnalysis(id);
-                }}
-            />
         </MainLayout>
     );
-};
-
-const handleAIAnalysis = (projectId: string) => {
-    console.log("Starting AI analysis for project:", projectId);
-    // 여기에 실제 AI 분석 로직을 구현합니다.
-    // 예: axios.post('/ai/analyze', { projectId });
 };
 
 export default WbsPage; 
