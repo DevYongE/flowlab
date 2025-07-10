@@ -353,11 +353,7 @@ export const getOngoingProjects = async (req: Request, res: Response): Promise<v
 export const createDevNote = async (req: Request, res: Response): Promise<void> => {
   const { projectId } = req.params;
   const status = toStatusCode(req.body.status);
-  const { content, deadline, progress, completedAt } = req.body;
-  const authorId = req.user?.id;
-  const currentUserRole = req.user?.role;
-  try {
-    console.log('[createDevNote] req.user:', req.user);
+  const { content, deadline, progress, completedAt, parent_id, order } = req.body;
     console.log('[createDevNote] req.body:', req.body);
     console.log('[createDevNote] params:', req.params);
 
@@ -412,7 +408,7 @@ export const updateDevNote = async (req: Request, res: Response): Promise<void> 
   const { noteId } = req.params;
   // 한글→영문 변환 적용
   const status = toStatusCode(req.body.status);
-  const { content, deadline, progress, completedAt } = req.body;
+  const { content, deadline, progress, completedAt, parent_id, order } = req.body;
   const currentUserId = req.user?.id;
   const currentUserRole = req.user?.role;
   try {
