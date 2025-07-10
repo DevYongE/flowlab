@@ -54,12 +54,15 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
     days.push(d);
   }
 
-  // 작업 바 계산
+  // 작업 바 계산 (월 경계 보정 및 마감일까지 포함)
   const getBarStyle = (start: string, end: string) => {
     const s = parseISO(start);
     const e = parseISO(end);
-    const left = differenceInCalendarDays(s, monthStart);
-    const width = Math.max(1, differenceInCalendarDays(e, s) + 1); // 최소 1일
+    // 월 경계 보정
+    const barStart = s < monthStart ? monthStart : s;
+    const barEnd = e > monthEnd ? monthEnd : e;
+    const left = differenceInCalendarDays(barStart, monthStart);
+    const width = Math.max(1, differenceInCalendarDays(barEnd, barStart) + 1); // 최소 1일, 마감일까지 포함
     return {
       gridColumnStart: left + 1,
       gridColumnEnd: left + width + 1,
