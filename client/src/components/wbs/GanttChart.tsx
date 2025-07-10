@@ -1,22 +1,27 @@
-import React, { useEffect, useState } from 'react';
-import axios from '../../lib/axios';
-import {
-  startOfMonth,
-  endOfMonth,
-  addDays,
-  format,
-  differenceInCalendarDays,
-  parseISO,
+import React, { useState, useEffect } from 'react';
+import { 
+  format, 
+  startOfMonth, 
+  endOfMonth, 
+  eachDayOfInterval, 
+  parseISO, 
+  isBefore, 
+  isAfter, 
+  addDays, 
+  getDay, 
   isToday,
-  isBefore,
-  isAfter,
-  isWithinInterval,
-  getDay
+  differenceInCalendarDays,
+  isWithinInterval
 } from 'date-fns';
+import { ko } from 'date-fns/locale';
+import axios from '../../lib/axios';
 
-/**
- * WBS 항목 타입
- */
+const HOLIDAYS = [
+  '2025-01-01', '2025-01-28', '2025-01-29', '2025-01-30',
+  '2025-03-01', '2025-05-05', '2025-06-06', '2025-08-15',
+  '2025-10-03', '2025-10-09', '2025-12-25'
+];
+
 interface WbsItem {
   id: number | string;
   name?: string;
@@ -28,75 +33,63 @@ interface WbsItem {
   registered_at?: string | null;
   children?: WbsItem[];
   parent_id?: number | string | null;
-  depth?: number; // 트리 구조 깊이
+  depth?: number;
 }
 
-/**
- * GanttChart 컴포넌트 Props
- */
 interface GanttChartProps {
   projectId: string;
   refreshTrigger?: number;
 }
 
-/**
- * 날짜 필드에서 유효한 날짜(YYYY-MM-DD)를 추출
- */
+// 날짜 필드 우선순위에 따라 가져오기
 function getDateField(item: WbsItem, keys: (keyof WbsItem)[]): string | null {
-  for (const k of keys) {
-    const v = item[k];
-    if (typeof v === 'string' && v.length >= 10) return v.slice(0, 10);
+  for (const key of keys) {
+    const value = item[key];
+    if (value && typeof value === 'string' && value.trim() !== '') {
+      // 날짜 형식 검증
+      try {
+        parseISO(value);
+        return value;
+      } catch {
+        continue;
+      }
+    }
   }
   return null;
 }
 
-// 한국 공휴일 예시 (YYYY-MM-DD)
-const HOLIDAYS = [
-  '2024-07-17', // 제헌절
-  // 필요시 추가
-];
-
-/**
- * 간트 차트 컴포넌트 (개선된 드래그 기능)
- */
 const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) => {
   const [wbs, setWbs] = useState<WbsItem[]>([]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
-
-  // 개선된 드래그 상태 관리
+  const [dragging, setDragging] = useState(false);
   const [dragStartX, setDragStartX] = useState<number | null>(null);
   const [dragCurrentX, setDragCurrentX] = useState<number | null>(null);
-  const [dragging, setDragging] = useState(false);
-  const [touchStartX, setTouchStartX] = useState<number | null>(null);
 
-  // 드래그 임계값 (픽셀)
   const DRAG_THRESHOLD = 40;
 
-  // PC 드래그 이벤트 핸들러 (개선됨)
+  const monthStart = startOfMonth(currentMonth);
+  const monthEnd = endOfMonth(currentMonth);
+  const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
+
+  // 드래그 핸들러들은 기존과 동일하므로 생략...
   const handleHeaderMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    e.preventDefault();
+    setDragging(true);
     setDragStartX(e.clientX);
     setDragCurrentX(e.clientX);
-    setDragging(true);
   };
 
   const handleHeaderMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!dragging || dragStartX === null) return;
-    
-    setDragCurrentX(e.clientX);
-    const dx = e.clientX - dragStartX;
-    
-    if (Math.abs(dx) > DRAG_THRESHOLD) {
-      if (dx > 0) {
-        // 오른쪽으로 드래그: 이전달로 이동
-        setCurrentMonth(d => addDays(startOfMonth(d), -1));
-      } else {
-        // 왼쪽으로 드래그: 다음달로 이동
-        setCurrentMonth(d => addDays(endOfMonth(d), 1));
+    if (dragging && dragStartX !== null) {
+      setDragCurrentX(e.clientX);
+      const dx = e.clientX - dragStartX;
+      if (Math.abs(dx) > DRAG_THRESHOLD) {
+        const direction = dx > 0 ? 1 : -1;
+        const newMonth = addDays(startOfMonth(currentMonth), direction > 0 ? 32 : -1);
+        setCurrentMonth(newMonth);
+        setDragging(false);
+        setDragStartX(null);
+        setDragCurrentX(null);
       }
-      setDragging(false);
-      setDragStartX(null);
-      setDragCurrentX(null);
     }
   };
 
@@ -106,388 +99,335 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
     setDragCurrentX(null);
   };
 
-  // 모바일 터치 이벤트 핸들러 (개선됨)
-  const handleHeaderTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setTouchStartX(e.touches[0].clientX);
-  };
+  // WBS 데이터 로드
+  useEffect(() => {
+    const fetchWbs = async () => {
+      try {
+        const response = await axios.get(`/api/project/${projectId}/dev-notes`);
+        const rawData = response.data.devNotes || [];
+        
+        // 계층구조로 변환
+        const flatWithHierarchy = (nodes: any[], depth: number = 0): WbsItem[] => {
+          return nodes.reduce((acc: WbsItem[], node: any) => {
+            const item: WbsItem = {
+              id: node.id,
+              name: node.name,
+              content: node.content,
+              startDate: node.startDate,
+              endDate: node.endDate,
+              completedAt: node.completedAt,
+              deadline: node.deadline,
+              registered_at: node.registered_at,
+              parent_id: node.parent_id,
+              depth
+            };
+            acc.push(item);
+            if (node.children && node.children.length > 0) {
+              acc.push(...flatWithHierarchy(node.children, depth + 1));
+            }
+            return acc;
+          }, []);
+        };
 
-  const handleHeaderTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (touchStartX === null) return;
-    
-    const dx = e.touches[0].clientX - touchStartX;
-    
-    if (Math.abs(dx) > DRAG_THRESHOLD) {
-      if (dx > 0) {
-        // 오른쪽으로 터치 드래그: 이전달로 이동
-        setCurrentMonth(d => addDays(startOfMonth(d), -1));
-      } else {
-        // 왼쪽으로 터치 드래그: 다음달로 이동
-        setCurrentMonth(d => addDays(endOfMonth(d), 1));
+        const hierarchicalData = flatWithHierarchy(rawData);
+        setWbs(hierarchicalData);
+        console.log('WBS 데이터 로드 완료:', hierarchicalData);
+      } catch (error) {
+        console.error('WBS 데이터 로드 실패:', error);
       }
-      setTouchStartX(null);
+    };
+
+    if (projectId) {
+      fetchWbs();
     }
-  };
-
-  const handleHeaderTouchEnd = () => {
-    setTouchStartX(null);
-  };
-
-  // 전역 마우스 이벤트 리스너 (드래그 중 마우스가 영역을 벗어나도 추적)
-  useEffect(() => {
-    if (!dragging) return;
-
-    const handleGlobalMouseMove = (e: MouseEvent) => {
-      if (dragStartX === null) return;
-      
-      setDragCurrentX(e.clientX);
-      const dx = e.clientX - dragStartX;
-      
-      if (Math.abs(dx) > DRAG_THRESHOLD) {
-        if (dx > 0) {
-          setCurrentMonth(d => addDays(startOfMonth(d), -1));
-        } else {
-          setCurrentMonth(d => addDays(endOfMonth(d), 1));
-        }
-        setDragging(false);
-        setDragStartX(null);
-        setDragCurrentX(null);
-      }
-    };
-
-    const handleGlobalMouseUp = () => {
-      setDragging(false);
-      setDragStartX(null);
-      setDragCurrentX(null);
-    };
-
-    document.addEventListener('mousemove', handleGlobalMouseMove);
-    document.addEventListener('mouseup', handleGlobalMouseUp);
-
-    return () => {
-      document.removeEventListener('mousemove', handleGlobalMouseMove);
-      document.removeEventListener('mouseup', handleGlobalMouseUp);
-    };
-  }, [dragging, dragStartX]);
-
-  useEffect(() => {
-    if (!projectId) return;
-    axios.get(`/projects/${projectId}/wbs`).then(res => {
-      // 계층구조 유지하면서 평면화 + 날짜 필드 매핑
-      const flatWithHierarchy = (nodes: any[], depth: number = 0): WbsItem[] => {
-        let arr: WbsItem[] = [];
-        nodes.forEach(n => {
-          arr.push({
-            ...n,
-            startDate: n.startDate || n.start_id || n.registered_at || null,
-            endDate: n.endDate || n.end_id || n.deadline || null,
-            depth: depth, // 현재 깊이 정보 추가
-          });
-          if (n.children && n.children.length > 0) {
-            arr = arr.concat(flatWithHierarchy(n.children, depth + 1)); // 자식들은 깊이 +1
-          }
-        });
-        return arr;
-      };
-      const flatData = flatWithHierarchy(res.data);
-      setWbs(flatData);
-      console.log('📊 간트 차트 데이터 로드:', flatData.length + '개 작업');
-      console.log('📅 날짜 정보 요약:', flatData.map((w: WbsItem) => ({
-        name: w.name || w.content,
-        depth: w.depth,
-        start: getDateField(w, ['startDate', 'registered_at', 'deadline']),
-        end: w.completedAt ? getDateField(w, ['completedAt']) : getDateField(w, ['endDate', 'deadline', 'startDate', 'registered_at'])
-      })));
-    });
   }, [projectId, refreshTrigger]);
 
-  // 월간 날짜 배열
-  const monthStart = startOfMonth(currentMonth);
-  const monthEnd = endOfMonth(currentMonth);
-  const days: Date[] = [];
-  for (let d = monthStart; d <= monthEnd; d = addDays(d, 1)) {
-    days.push(d);
-  }
-
-  // 작업 바 스타일 계산
-  function getBarStyle(start: string, end: string, completed: boolean, deadline?: string | null) {
-    const s = parseISO(start);
-    const e = parseISO(end);
-    // 월 경계 보정
-    const barStart = isBefore(s, monthStart) ? monthStart : s;
-    const barEnd = isAfter(e, monthEnd) ? monthEnd : e;
-    // 날짜 인덱스 계산 (0-based)
-    const left = differenceInCalendarDays(barStart, monthStart);
-    const right = differenceInCalendarDays(barEnd, monthStart);
-    // 색상
-    let bg = completed ? '#22c55e' : '#3b82f6';
-    if (!completed && deadline) {
-      const d = parseISO(deadline);
-      if (isWithinInterval(d, { start: monthStart, end: monthEnd }) && isBefore(d, new Date())) {
-        bg = '#ef4444'; // 마감일 지남(빨강)
+  // 간트 바 스타일 계산 - 완전히 새로 작성
+  function getBarStyle(startStr: string, endStr: string, completed: boolean, deadline?: string | null, rowIndex: number = 0) {
+    try {
+      const startDate = parseISO(startStr);
+      const endDate = parseISO(endStr);
+      
+      // 현재 월 범위 내에서의 시작/끝 날짜 계산
+      const barStart = isBefore(startDate, monthStart) ? monthStart : startDate;
+      const barEnd = isAfter(endDate, monthEnd) ? monthEnd : endDate;
+      
+      // 그리드 컬럼 위치 계산 (1-based, 첫 번째 컬럼은 작업명)
+      const startColumn = differenceInCalendarDays(barStart, monthStart) + 2;
+      const endColumn = differenceInCalendarDays(barEnd, monthStart) + 3;
+      
+      // 최소 1일 폭 보장
+      const finalEndColumn = Math.max(endColumn, startColumn + 1);
+      
+      // 색상 결정
+      let backgroundColor = '#3b82f6'; // 기본 파란색
+      if (completed) {
+        backgroundColor = '#22c55e'; // 완료된 작업은 초록색
+      } else if (deadline) {
+        try {
+          const deadlineDate = parseISO(deadline);
+          if (isBefore(deadlineDate, new Date())) {
+            backgroundColor = '#ef4444'; // 마감일 지난 작업은 빨간색
+          }
+        } catch (e) {
+          // deadline 파싱 실패 시 기본 색상 유지
+        }
       }
-    }
-    return {
-      gridColumnStart: left + 2, // 1은 작업명, 2부터 날짜
-      gridColumnEnd: Math.max(right + 3, left + 4),  // 최소 2일 너비 보장
-      background: bg,
-      color: 'white',
-      borderRadius: 6,
-      padding: '4px 8px',
-      fontSize: 11,
-      minWidth: 60,
-      textAlign: 'center',
-      zIndex: 2,
-      position: 'relative',
-      boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-      fontWeight: '500',
-    } as React.CSSProperties;
-  }
-
-  // 드래그 상태에 따른 스타일 계산
-  const getDragFeedbackStyle = () => {
-    if (!dragging || dragStartX === null || dragCurrentX === null) {
+      
+      console.log(`바 스타일 계산:`, {
+        작업: startStr + ' ~ ' + endStr,
+        컬럼범위: `${startColumn} ~ ${finalEndColumn}`,
+        색상: backgroundColor
+      });
+      
+      return {
+        gridColumnStart: startColumn,
+        gridColumnEnd: finalEndColumn,
+        gridRow: rowIndex + 2, // 헤더 다음부터 시작
+        backgroundColor,
+        color: 'white',
+        borderRadius: '4px',
+        padding: '2px 6px',
+        fontSize: '10px',
+        fontWeight: '500',
+        textAlign: 'center' as const,
+        zIndex: 1,
+        minHeight: '24px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap' as const
+      };
+    } catch (error) {
+      console.error('바 스타일 계산 오류:', error);
       return {};
     }
-
-    const dx = dragCurrentX - dragStartX;
-    const opacity = Math.min(Math.abs(dx) / DRAG_THRESHOLD, 1) * 0.3 + 0.7;
-    
-    return {
-      opacity,
-      transform: `translateX(${Math.max(-10, Math.min(10, dx * 0.1))}px)`,
-      transition: 'none',
-    };
-  };
+  }
 
   return (
     <div className="bg-white rounded shadow p-4 overflow-x-auto">
-      <div className="flex justify-between items-center mb-2">
+      <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold flex items-center">
           <span className="text-blue-600 mr-2">📊</span>
           간트 차트 (계층구조)
         </h2>
-        <div className="flex gap-2">
-          <button onClick={() => setCurrentMonth(d => addDays(startOfMonth(d), -1))} className="px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 transition-colors">◀</button>
-          <span className="font-semibold">{format(currentMonth, 'yyyy년 MM월')}</span>
-          <button onClick={() => setCurrentMonth(d => addDays(endOfMonth(d), 1))} className="px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 transition-colors">▶</button>
+        <div className="flex gap-2 items-center">
+          <button 
+            onClick={() => setCurrentMonth(addDays(startOfMonth(currentMonth), -1))} 
+            className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 transition-colors"
+          >
+            ◀ 이전월
+          </button>
+          <span className="font-semibold text-lg px-4">
+            {format(currentMonth, 'yyyy년 MM월', { locale: ko })}
+          </span>
+          <button 
+            onClick={() => setCurrentMonth(addDays(endOfMonth(currentMonth), 1))} 
+            className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 transition-colors"
+          >
+            다음월 ▶
+          </button>
         </div>
       </div>
       
-      {/* 드래그 안내 텍스트 */}
-      <div className="text-xs text-gray-500 mb-2 text-center">
-        💡 날짜 부분(1,2,3...)을 좌우로 드래그하여 월을 이동할 수 있습니다
+      <div className="text-xs text-gray-500 mb-4 text-center">
+        💡 날짜 헤더를 좌우로 드래그하여 월을 이동할 수 있습니다
       </div>
 
       <div
-        className="grid"
+        className="grid gap-0 border border-gray-200"
         style={{
-          gridTemplateColumns: `300px repeat(${days.length}, 1fr)`, // 작업명 컬럼 더 넓게
-          gridAutoRows: '36px',
-          alignItems: 'center',
-          gap: '1px',
+          gridTemplateColumns: `280px repeat(${days.length}, 1fr)`,
+          gridAutoRows: '32px',
+          minHeight: '400px'
         }}
       >
-        {/* 헤더 row */}
+        {/* 헤더 - 작업명 컬럼 */}
         <div
-          className="font-bold border-b py-1 bg-gray-50 sticky left-0 z-10 select-none flex items-center"
+          className="font-bold text-center py-2 bg-gray-100 border-r border-gray-200 flex items-center justify-center"
           style={{ gridRow: 1, gridColumn: 1 }}
         >
           <span className="text-blue-600 mr-2">🌲</span>
           <span>작업 구조</span>
         </div>
         
-        {/* 날짜 헤더들 (드래그 가능한 영역) */}
-        {days.map((d, i) => {
-          const dayNum = getDay(d); // 0:일, 6:토
-          const dateStr = format(d, 'yyyy-MM-dd');
-          let bg = undefined;
-          let color = undefined;
-          let borderRadius = isToday(d) ? 4 : undefined;
+        {/* 헤더 - 날짜 컬럼들 */}
+        {days.map((day, index) => {
+          const dayNum = getDay(day);
+          const dateStr = format(day, 'yyyy-MM-dd');
+          
+          let bgColor = 'bg-gray-50';
+          let textColor = 'text-gray-700';
           
           if (HOLIDAYS.includes(dateStr)) {
-            bg = '#ef4444'; // 공휴일 빨강
-            color = '#fff';
-          } else if (dayNum === 0) {
-            bg = '#fee2e2'; // 일요일 연한 빨강
-            color = '#ef4444';
-          } else if (dayNum === 6) {
-            bg = '#dbeafe'; // 토요일 연한 파랑
-            color = '#2563eb';
-          } else if (isToday(d)) {
-            bg = '#f59e42';
-            color = '#fff';
+            bgColor = 'bg-red-100';
+            textColor = 'text-red-600';
+          } else if (dayNum === 0) { // 일요일
+            bgColor = 'bg-red-50';
+            textColor = 'text-red-500';
+          } else if (dayNum === 6) { // 토요일
+            bgColor = 'bg-blue-50';
+            textColor = 'text-blue-500';
+          } else if (isToday(day)) {
+            bgColor = 'bg-orange-100';
+            textColor = 'text-orange-600';
           }
-
-          // 드래그 중일 때 커서와 배경 스타일 변경
-          const isDragActive = dragging;
-          const dragCursor = isDragActive ? 'grabbing' : 'grab';
-
-          // 드래그 피드백 스타일을 개별 적용
-          const dragFeedback = getDragFeedbackStyle();
           
           return (
             <div
-              key={d.toISOString()}
-              className={`text-xs text-center border-b py-1 transition-all duration-150 select-none ${isDragActive ? 'scale-95' : 'hover:scale-105'}`}
+              key={day.toISOString()}
+              className={`text-xs text-center py-2 border-r border-gray-200 cursor-grab hover:bg-gray-200 transition-colors ${bgColor} ${textColor}`}
               style={{
                 gridRow: 1,
-                gridColumn: i + 2,
-                background: isDragActive && !bg ? '#e3f2fd' : bg,
-                color,
-                borderRadius,
-                cursor: dragCursor,
-                userSelect: 'none',
-                transform: isDragActive ? 'scale(0.98)' : undefined,
-                boxShadow: isDragActive ? '0 2px 8px rgba(0,0,0,0.1)' : undefined,
-                ...dragFeedback,
+                gridColumn: index + 2
               }}
               onMouseDown={handleHeaderMouseDown}
               onMouseMove={handleHeaderMouseMove}
               onMouseUp={handleHeaderMouseUp}
               onMouseLeave={handleHeaderMouseUp}
-              onTouchStart={handleHeaderTouchStart}
-              onTouchMove={handleHeaderTouchMove}
-              onTouchEnd={handleHeaderTouchEnd}
-              title="드래그하여 월 이동"
+              title={`${format(day, 'yyyy-MM-dd')} (${format(day, 'E', { locale: ko })})`}
             >
-              {format(d, 'd')}
+              <div className="font-semibold">{format(day, 'd')}</div>
+              <div className="text-xs opacity-75">{format(day, 'E', { locale: ko })}</div>
             </div>
           );
         })}
-        {/* 각 작업 row */}
-        {wbs
-          .map((w, idx) => {
-            const s = getDateField(w, ['startDate', 'registered_at', 'deadline']);
-            const e = w.completedAt ? getDateField(w, ['completedAt']) : getDateField(w, ['endDate', 'deadline', 'startDate', 'registered_at']);
-            const displayName = w.name || w.content || '';
-            const maxLen = 15; // 작업명 길이 늘림
-            const shortName = displayName.length > maxLen ? displayName.slice(0, maxLen) + '...' : displayName;
-            
-            // 날짜가 있고 현재 월 범위와 겹치는지 확인
-            let hasValidDates = false;
-            let barStyle = {};
-            let dateInfo = '';
-            
-                        if (s && e) {
-              try {
-                const startDate = parseISO(s);
-                const endDate = parseISO(e);
-                // 날짜 범위 확인 (더 관대하게 - 3개월 전후까지 표시)
-                const extendedStart = addDays(monthStart, -90);
-                const extendedEnd = addDays(monthEnd, 90);
-                if (!(isBefore(endDate, extendedStart) || isAfter(startDate, extendedEnd))) {
-                  hasValidDates = true;
-                  const completed = !!w.completedAt;
-                  barStyle = getBarStyle(s, e, completed, w.deadline);
-                  dateInfo = `(${s} ~ ${e}${completed ? ' (완료)' : ''})`;
-                }
-              } catch (error) {
-                console.warn('날짜 파싱 오류:', error, { s, e });
+        
+        {/* 작업 행들 */}
+        {wbs.map((task, index) => {
+          // 날짜 추출
+          const startDate = getDateField(task, ['startDate', 'registered_at']);
+          const endDate = task.completedAt ? 
+            getDateField(task, ['completedAt']) : 
+            getDateField(task, ['endDate', 'deadline']);
+          
+          const displayName = task.name || task.content || '무제';
+          const isCompleted = !!task.completedAt;
+          
+          // 현재 월 범위에 있는지 확인
+          let showBar = false;
+          let actualStartDate = startDate;
+          let actualEndDate = endDate;
+          
+          if (startDate && endDate) {
+            try {
+              const start = parseISO(startDate);
+              const end = parseISO(endDate);
+              // 작업 기간이 현재 월과 겹치는지 확인
+              if (!(isBefore(end, monthStart) || isAfter(start, monthEnd))) {
+                showBar = true;
               }
-            } else if (s && !e) {
-              // 시작일만 있는 경우 - 시작일부터 일주일로 설정
-              try {
-                const startDate = parseISO(s);
-                const estimatedEnd = addDays(startDate, 7);
-                const eStr = format(estimatedEnd, 'yyyy-MM-dd');
-                const extendedStart = addDays(monthStart, -90);
-                const extendedEnd = addDays(monthEnd, 90);
-                if (!(isBefore(estimatedEnd, extendedStart) || isAfter(startDate, extendedEnd))) {
-                  hasValidDates = true;
-                  const completed = !!w.completedAt;
-                  barStyle = getBarStyle(s, eStr, completed, w.deadline);
-                  dateInfo = `(${s} ~ ${eStr} 추정)`;
-                }
-              } catch (error) {
-                console.warn('시작일 파싱 오류:', error, { s });
-              }
-            } else if (!s && e) {
-              // 종료일만 있는 경우 - 일주일 전부터 종료일까지
-              try {
-                const endDate = parseISO(e);
-                const estimatedStart = addDays(endDate, -7);
-                const sStr = format(estimatedStart, 'yyyy-MM-dd');
-                const extendedStart = addDays(monthStart, -90);
-                const extendedEnd = addDays(monthEnd, 90);
-                if (!(isBefore(endDate, extendedStart) || isAfter(estimatedStart, extendedEnd))) {
-                  hasValidDates = true;
-                  const completed = !!w.completedAt;
-                  barStyle = getBarStyle(sStr, e, completed, w.deadline);
-                  dateInfo = `(${sStr} 추정 ~ ${e})`;
-                }
-              } catch (error) {
-                console.warn('종료일 파싱 오류:', error, { e });
-              }
+            } catch (e) {
+              console.warn('날짜 파싱 오류:', e);
             }
-            
-            return (
-              <React.Fragment key={w.id}>
-                {/* 작업명 셀 */}
-                <div
-                  className="border-r py-1 pr-2 text-xs whitespace-nowrap overflow-hidden overflow-ellipsis bg-white sticky left-0 z-10 select-none flex items-center"
-                  style={{ 
-                    gridRow: idx + 2, 
-                    gridColumn: 1, 
-                    maxWidth: 280, // 컬럼 크기에 맞춰 조정
-                    cursor: 'default',
-                    paddingLeft: `${(w.depth || 0) * 20 + 8}px`, // 들여쓰기 적용
-                  }}
-                  title={`${displayName}${dateInfo ? ' ' + dateInfo : ' (날짜 없음)'} (레벨: ${w.depth || 0})`}
-                >
-                  {/* 트리 구조 표시를 위한 인디케이터 */}
-                  <div className="flex items-center flex-1">
-                    {(w.depth || 0) > 0 && (
-                      <div className="flex items-center mr-2">
-                        {/* 들여쓰기 선 */}
-                        {Array.from({ length: (w.depth || 0) - 1 }, (_, i) => (
-                          <span key={i} className="text-gray-300 mr-1">│</span>
-                        ))}
-                        {/* 마지막 연결선 */}
-                        <span className="text-gray-300 mr-1">├</span>
-                      </div>
-                    )}
-                    
-                    {/* 레벨에 따른 색상 표시 */}
-                    <div 
-                      className={`w-2 h-2 rounded-full mr-2 flex-shrink-0 ${
-                        (w.depth || 0) === 0 ? 'bg-blue-500' :
-                        (w.depth || 0) === 1 ? 'bg-green-500' :
-                        (w.depth || 0) === 2 ? 'bg-orange-500' :
-                        'bg-gray-400'
-                      }`}
-                    />
-                    
-                    <span className="flex-1 font-medium" style={{
-                      fontSize: `${Math.max(10, 12 - (w.depth || 0))}px`,
-                      fontWeight: (w.depth || 0) === 0 ? '600' : '400'
-                    }}>
-                      {shortName}
-                      {!hasValidDates && <span className="text-gray-400 ml-1">(날짜없음)</span>}
-                      {(w.depth || 0) === 0 && <span className="text-blue-600 ml-1 text-xs">📁</span>}
-                    </span>
-                  </div>
-                </div>
-                
-                {/* 바 셀 - 날짜가 있는 경우에만 표시 */}
-                {hasValidDates && (
-                  <div
-                    style={{ 
-                      ...barStyle, 
-                      gridRow: idx + 2, 
-                      maxWidth: 150, 
-                      overflow: 'hidden', 
-                      textOverflow: 'ellipsis', 
-                      whiteSpace: 'nowrap' 
+          } else if (startDate && !endDate) {
+            // 시작일만 있는 경우 3일 기간으로 가정
+            try {
+              const start = parseISO(startDate);
+              const estimatedEnd = addDays(start, 3);
+              actualEndDate = format(estimatedEnd, 'yyyy-MM-dd');
+              if (!(isBefore(estimatedEnd, monthStart) || isAfter(start, monthEnd))) {
+                showBar = true;
+              }
+            } catch (e) {
+              console.warn('시작일 파싱 오류:', e);
+            }
+          } else if (!startDate && endDate) {
+            // 종료일만 있는 경우 3일 기간으로 가정
+            try {
+              const end = parseISO(endDate);
+              const estimatedStart = addDays(end, -3);
+              actualStartDate = format(estimatedStart, 'yyyy-MM-dd');
+              if (!(isBefore(end, monthStart) || isAfter(estimatedStart, monthEnd))) {
+                showBar = true;
+              }
+            } catch (e) {
+              console.warn('종료일 파싱 오류:', e);
+            }
+          }
+          
+          const barStyle = showBar && actualStartDate && actualEndDate ? 
+            getBarStyle(actualStartDate, actualEndDate, isCompleted, task.deadline, index) : 
+            {};
+          
+          console.log(`작업 ${index}:`, {
+            이름: displayName,
+            시작일: actualStartDate,
+            종료일: actualEndDate,
+            바표시: showBar,
+            스타일: barStyle
+          });
+          
+          return (
+            <React.Fragment key={`task-${task.id}`}>
+              {/* 작업명 셀 */}
+              <div
+                className="px-2 py-1 text-xs border-r border-b border-gray-200 bg-white flex items-center"
+                style={{
+                  gridRow: index + 2,
+                  gridColumn: 1,
+                  paddingLeft: `${(task.depth || 0) * 16 + 8}px`
+                }}
+                title={`${displayName} (${actualStartDate || '시작일 없음'} ~ ${actualEndDate || '종료일 없음'})`}
+              >
+                {/* 계층 구조 표시 */}
+                <div className="flex items-center flex-1">
+                  {(task.depth || 0) > 0 && (
+                    <div className="flex items-center mr-2">
+                      {Array.from({ length: (task.depth || 0) - 1 }, (_, i) => (
+                        <span key={i} className="text-gray-300 mr-1">│</span>
+                      ))}
+                      <span className="text-gray-300 mr-1">├</span>
+                    </div>
+                  )}
+                  
+                  <div 
+                    className={`w-2 h-2 rounded-full mr-2 flex-shrink-0 ${
+                      (task.depth || 0) === 0 ? 'bg-blue-500' :
+                      (task.depth || 0) === 1 ? 'bg-green-500' :
+                      (task.depth || 0) === 2 ? 'bg-orange-500' : 'bg-gray-400'
+                    }`}
+                  />
+                  
+                  <span 
+                    className={`flex-1 ${isCompleted ? 'line-through text-gray-500' : ''}`}
+                    style={{
+                      fontSize: `${Math.max(10, 12 - (task.depth || 0))}px`,
+                      fontWeight: (task.depth || 0) === 0 ? '600' : '400'
                     }}
-                    title={`${displayName} ${dateInfo}`}
                   >
-                    {shortName}
-                  </div>
-                )}
-              </React.Fragment>
-            );
-          })}
+                    {displayName.length > 20 ? displayName.slice(0, 20) + '...' : displayName}
+                    {!showBar && <span className="text-gray-400 text-xs ml-1">(기간없음)</span>}
+                    {(task.depth || 0) === 0 && <span className="text-blue-600 ml-1">📁</span>}
+                  </span>
+                </div>
+              </div>
+              
+              {/* 간트 바 */}
+              {showBar && actualStartDate && actualEndDate && (
+                <div
+                  style={barStyle}
+                  title={`${displayName}: ${actualStartDate} ~ ${actualEndDate}${isCompleted ? ' (완료)' : ''}`}
+                >
+                  {displayName.length > 10 ? displayName.slice(0, 10) + '...' : displayName}
+                </div>
+              )}
+            </React.Fragment>
+          );
+        })}
+        
+        {/* 빈 상태 메시지 */}
+        {wbs.length === 0 && (
+          <div 
+            className="col-span-full text-center text-gray-500 py-8"
+            style={{ gridColumn: `1 / -1` }}
+          >
+            WBS 데이터가 없습니다.
+          </div>
+        )}
       </div>
     </div>
   );
