@@ -533,7 +533,7 @@ export const getProjectAssignees = async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
     const rows = await sequelize.query(
-      `SELECT u.id, d.department_name FROM project_assignees pa
+      `SELECT u.id, u.name, u.email, d.department_name FROM project_assignees pa
        JOIN users u ON pa.user_id = u.id
        LEFT JOIN departments d ON u.department = d.id
        WHERE pa.project_id = :project_id`,
