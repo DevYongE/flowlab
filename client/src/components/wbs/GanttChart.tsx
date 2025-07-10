@@ -15,6 +15,11 @@ interface WbsItem {
   endDate?: string | null;
 }
 
+/**
+ * WBS 간트 차트 컴포넌트
+ * @param projectId - 프로젝트 ID
+ * @param refreshTrigger - WBS 새로고침 트리거
+ */
 const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) => {
   const [wbs, setWbs] = useState<WbsItem[]>([]);
   const [currentMonth, setCurrentMonth] = useState(new Date());

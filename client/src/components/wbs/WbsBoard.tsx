@@ -33,6 +33,12 @@ interface WbsBoardProps {
 
 const SafeTree = Tree as any;
 
+/**
+ * WBS 트리 보드 컴포넌트
+ * @param projectId - 프로젝트 ID
+ * @param refreshTrigger - WBS 새로고침 트리거
+ * @param selectedDate - 달력에서 선택된 날짜(하이라이트용)
+ */
 const WbsBoard: React.FC<WbsBoardProps> = ({ projectId, refreshTrigger, selectedDate }) => {
     const [treeData, setTreeData] = useState<NodeModel[]>([]);
     const [users, setUsers] = useState<User[]>([]);
@@ -66,7 +72,11 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId, refreshTrigger, selected
         setHistory(prev => [{ type, name, time: new Date().toLocaleString() }, ...prev].slice(0, 5));
     };
 
-    // 트리형 WBS 데이터를 flat 구조로 변환
+    /**
+     * WBS 데이터를 트리에서 평면 구조로 변환
+     * @param nodes WBS 트리 노드 배열
+     * @param parentId 부모 ID
+     */
     function flattenTree(nodes: WbsItem[], parentId: number = 0): NodeModel[] {
         let arr: NodeModel[] = [];
         nodes.forEach((node) => {
