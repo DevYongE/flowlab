@@ -152,32 +152,44 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
           </div>
         ))}
         {/* 각 작업 row */}
-        {wbs.filter(w => getDateField(w, ['startDate', 'registered_at', 'deadline']) && getDateField(w, ['endDate', 'deadline', 'startDate', 'registered_at'])).map((w, idx) => {
-          const s = getDateField(w, ['startDate', 'registered_at', 'deadline']);
-          const e = getDateField(w, ['endDate', 'deadline', 'startDate', 'registered_at']);
-          if (!s || !e) return null;
-          const completed = !!w.completedAt;
-          const barStyle = getBarStyle(s, e, completed, w.deadline);
-          return (
-            <React.Fragment key={w.id}>
-              {/* 작업명 셀 */}
-              <div
-                className="border-r py-1 pr-2 text-xs whitespace-nowrap overflow-hidden overflow-ellipsis bg-white sticky left-0 z-10"
-                style={{ gridRow: idx + 2, gridColumn: 1, maxWidth: 180 }}
-                title={w.name || w.content}
-              >
-                {w.name || w.content}
-              </div>
-              {/* 바 셀 */}
-              <div
-                style={{ ...barStyle, gridRow: idx + 2 }}
-                title={`${s} ~ ${e}${completed ? ' (완료)' : ''}`}
-              >
-                {w.name || w.content}
-              </div>
-            </React.Fragment>
-          );
-        })}
+        {wbs
+          .filter(w => {
+            // 시작/종료일 추출
+            const s = getDateField(w, ['startDate', 'registered_at', 'deadline']);
+            const e = getDateField(w, ['endDate', 'deadline', 'startDate', 'registered_at']);
+            if (!s || !e) return false;
+            // 완전히 이전달에만 존재하는 작업은 숨김
+            const endDate = parseISO(e);
+            if (isBefore(endDate, monthStart)) return false;
+            return true;
+          })
+          .map((w, idx) => {
+            const s = getDateField(w, ['startDate', 'registered_at', 'deadline']);
+            const e = getDateField(w, ['endDate', 'deadline', 'startDate', 'registered_at']);
+            if (!s || !e) return null;
+            const completed = !!w.completedAt;
+            const barStyle = getBarStyle(s, e, completed, w.deadline);
+            const displayName = w.name || w.content || '';
+            return (
+              <React.Fragment key={w.id}>
+                {/* 작업명 셀 */}
+                <div
+                  className="border-r py-1 pr-2 text-xs whitespace-nowrap overflow-hidden overflow-ellipsis bg-white sticky left-0 z-10"
+                  style={{ gridRow: idx + 2, gridColumn: 1, maxWidth: 180 }}
+                  title={displayName}
+                >
+                  {displayName.length > 18 ? `${displayName.slice(0, 16)}...` : displayName}
+                </div>
+                {/* 바 셀 */}
+                <div
+                  style={{ ...barStyle, gridRow: idx + 2 }}
+                  title={`${s} ~ ${e}${completed ? ' (완료)' : ''}`}
+                >
+                  {displayName.length > 18 ? `${displayName.slice(0, 16)}...` : displayName}
+                </div>
+              </React.Fragment>
+            );
+          })}
       </div>
     </div>
   );
