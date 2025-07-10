@@ -123,7 +123,10 @@ const ProjectDetailPage = () => {
     let newProgress = name === 'progress' ? Number(value) : currentProgress;
     let newCompletedAt = editingNote ? editingNote.completedAt : newNote.completedAt;
 
-    if (name === 'status') {
+    // completedAt 필드가 직접 변경된 경우
+    if (name === 'completedAt') {
+      newCompletedAt = value === '' ? null : String(value);
+    } else if (name === 'status') {
       if (value === 'DONE') {
         newProgress = 100;
         newCompletedAt = new Date().toISOString().split('T')[0];
@@ -328,6 +331,7 @@ const ProjectDetailPage = () => {
     if (newStatus === 'DONE') {
       newProgress = 100;
       newCompletedAt = new Date().toISOString().split('T')[0];
+      console.log('완료 상태로 변경, 완료일 설정:', newCompletedAt);
     } else if (newStatus === 'TODO') {
       newProgress = 0;
       newCompletedAt = null;
@@ -337,6 +341,7 @@ const ProjectDetailPage = () => {
     }
     
     const updatedNote = { ...note, status: newStatus, progress: newProgress, completedAt: newCompletedAt };
+    console.log('상태 변경된 노트:', updatedNote);
     await handleNoteUpdate(updatedNote);
   };
 
@@ -404,10 +409,21 @@ const ProjectDetailPage = () => {
 
   const handleNoteUpdate = async (note: DevNote) => {
     try {
-      await axios.put(`/projects/notes/${note.id}`, note);
+      console.log('업데이트 전 노트:', note);
+      const response = await axios.put(`/projects/notes/${note.id}`, note);
+      console.log('서버 응답:', response.data);
+      
+      // 클라이언트에서 설정한 completedAt을 우선적으로 사용
+      const updatedNote = {
+        ...response.data,
+        completedAt: note.completedAt
+      };
+      
+      console.log('최종 업데이트된 노트:', updatedNote);
+      
       setProject(prev => {
         if (!prev) return null;
-        const updatedNotes = prev.devNotes.map(n => n.id === note.id ? note : n);
+        const updatedNotes = prev.devNotes.map(n => n.id === note.id ? updatedNote : n);
         return { ...prev, devNotes: updatedNotes };
       });
     } catch (error) {
