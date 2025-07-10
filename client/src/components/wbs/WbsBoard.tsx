@@ -13,6 +13,9 @@ interface WbsItem {
     completedAt?: string | null; // completedAt 타입을 string | null로 변경
     startDate?: string | null;
     endDate?: string | null;
+    assignee?: string | null;
+    status?: string | null;
+    progress?: number | null;
     // TODO: assignee_name, start_date, end_date 등 추가 필드
 }
 
@@ -45,6 +48,8 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId, refreshTrigger, selected
     });
     const [loading, setLoading] = useState(false);
     const [openIds, setOpenIds] = useState<number[]>([]);
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [editForm, setEditForm] = useState<any>(null);
 
     // 트리형 WBS 데이터를 flat 구조로 변환
     function flattenTree(nodes: WbsItem[], parentId: number = 0): NodeModel[] {
@@ -150,6 +155,50 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId, refreshTrigger, selected
         }
     };
 
+    // 수정 버튼 클릭 시
+    const handleEditClick = (node: NodeModel) => {
+        const item = node.data as WbsItem;
+        setEditForm({
+            id: item.id,
+            name: item.name || item.content || '',
+            assignee: item.assignee || '',
+            startDate: item.startDate || '',
+            endDate: item.endDate || '',
+            status: item.status || '미완료',
+            progress: item.progress || 0,
+            completedAt: item.completedAt || null,
+            parent: item.parent_id || 0
+        });
+        setShowEditModal(true);
+    };
+
+    const handleEditFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        const { name, value } = e.target;
+        setEditForm((prev: any) => ({ ...prev, [name]: value }));
+    };
+
+    const handleEditSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        try {
+            await axios.patch(`/projects/${projectId}/notes/${editForm.id}`, {
+                content: editForm.name,
+                assignee: editForm.assignee,
+                start_id: editForm.startDate,
+                end_id: editForm.endDate,
+                status: editForm.status,
+                progress: Number(editForm.progress),
+                completedAt: editForm.completedAt || null
+            });
+            setShowEditModal(false);
+            fetchWbsData();
+        } catch (error) {
+            alert('작업 수정 실패');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     // 트리 노드 렌더링
     const renderNode = (node: NodeModel, { isOpen, onToggle, depth }: any) => {
         const item = node.data as WbsItem;
@@ -162,25 +211,34 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId, refreshTrigger, selected
                 highlight = true;
             }
         }
+        // 담당자 이름 찾기
+        const assigneeName = item.assignee ? (users.find(u => u.id === item.assignee)?.name || item.assignee) : '';
         return (
             <div
                 className={`flex items-center justify-between w-full p-2 border rounded bg-white my-1 ${highlight ? 'bg-yellow-100 border-yellow-400' : ''}`}
                 style={{ paddingLeft: depth > 0 ? `${depth * 24}px` : 0 }}
             >
-                <div className="flex items-center gap-2">
-                    {node.droppable && (
-                        <button type="button" onClick={onToggle} className="focus:outline-none">
-                            {isOpen ? '▼' : '▶'}
-                        </button>
-                    )}
-                    <span>{node.text}</span>
-                    {item.completedAt && (
-                        <span className="text-xs text-gray-500 ml-2">완료일: {item.completedAt.split('T')[0]}</span>
-                    )}
+                <div className="flex flex-col gap-1 flex-1">
+                    <div className="flex items-center gap-2">
+                        {node.droppable && (
+                            <button type="button" onClick={onToggle} className="focus:outline-none">
+                                {isOpen ? '▼' : '▶'}
+                            </button>
+                        )}
+                        <span className="font-semibold">{node.text}</span>
+                        {item.completedAt && (
+                            <span className="text-xs text-gray-500 ml-2">완료일: {item.completedAt.split('T')[0]}</span>
+                        )}
+                    </div>
+                    <div className="flex gap-4 text-xs text-gray-600 mt-1">
+                        {assigneeName && <span>담당: {assigneeName}</span>}
+                        <span>상태: {item.status || '미완료'}</span>
+                        <span>진행률: {item.progress || 0}%</span>
+                    </div>
                 </div>
                 <div className="flex gap-2">
                     <button className="text-xs text-gray-500 hover:text-gray-800" onClick={() => handleAddClick(node.id)}>추가</button>
-                    <button className="text-xs text-gray-500 hover:text-gray-800">수정</button>
+                    <button className="text-xs text-gray-500 hover:text-gray-800" onClick={() => handleEditClick(node)}>수정</button>
                     <button className="text-xs text-red-500 hover:text-red-800">삭제</button>
                 </div>
             </div>
@@ -257,6 +315,56 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId, refreshTrigger, selected
                         </div>
                         <div className="flex justify-end gap-2 pt-2">
                             <button type="button" onClick={() => setShowAddModal(false)} className="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400">취소</button>
+                            <button type="submit" className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" disabled={loading}>{loading ? '저장중...' : '저장'}</button>
+                        </div>
+                    </form>
+                </div>
+            )}
+            {showEditModal && editForm && (
+                <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+                    <form onSubmit={handleEditSubmit} className="bg-white p-6 rounded-lg shadow-lg min-w-[350px] space-y-4">
+                        <h2 className="text-lg font-bold mb-2">작업 수정</h2>
+                        <div>
+                            <label className="block text-sm mb-1">이름 *</label>
+                            <input name="name" value={editForm.name} onChange={handleEditFormChange} className="w-full border rounded p-2" required />
+                        </div>
+                        <div>
+                            <label className="block text-sm mb-1">담당자</label>
+                            <select name="assignee" value={editForm.assignee} onChange={handleEditFormChange} className="w-full border rounded p-2">
+                                <option value="">선택</option>
+                                {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                            </select>
+                        </div>
+                        <div className="flex gap-2">
+                            <div className="flex-1">
+                                <label className="block text-sm mb-1">시작일</label>
+                                <input type="date" name="startDate" value={editForm.startDate} onChange={handleEditFormChange} className="w-full border rounded p-2" />
+                            </div>
+                            <div className="flex-1">
+                                <label className="block text-sm mb-1">마감일</label>
+                                <input type="date" name="endDate" value={editForm.endDate} onChange={handleEditFormChange} className="w-full border rounded p-2" />
+                            </div>
+                            <div className="flex-1">
+                                <label className="block text-sm mb-1">완료일</label>
+                                <input type="date" name="completedAt" value={editForm.completedAt || ''} onChange={handleEditFormChange} className="w-full border rounded p-2" />
+                            </div>
+                        </div>
+                        <div className="flex gap-2">
+                            <div className="flex-1">
+                                <label className="block text-sm mb-1">상태</label>
+                                <select name="status" value={editForm.status} onChange={handleEditFormChange} className="w-full border rounded p-2">
+                                    <option value="미완료">미완료</option>
+                                    <option value="진행중">진행중</option>
+                                    <option value="완료">완료</option>
+                                </select>
+                            </div>
+                            <div className="flex-1">
+                                <label className="block text-sm mb-1">진척률(%)</label>
+                                <input type="number" name="progress" value={editForm.progress} onChange={handleEditFormChange} min={0} max={100} className="w-full border rounded p-2" />
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-2 pt-2">
+                            <button type="button" onClick={() => setShowEditModal(false)} className="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400">취소</button>
                             <button type="submit" className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" disabled={loading}>{loading ? '저장중...' : '저장'}</button>
                         </div>
                     </form>
