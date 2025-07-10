@@ -10,6 +10,7 @@ interface WbsItem {
     content?: string;
     parent_id?: number | string | null;
     children?: WbsItem[];
+    completedAt?: string;
     // TODO: assignee_name, start_date, end_date 등 추가 필드
 }
 
@@ -35,7 +36,8 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId }) => {
         endDate: '',
         status: '미완료',
         progress: 0,
-        parent: 0 as number
+        parent: 0 as number,
+        completedAt: ''
     });
     const [loading, setLoading] = useState(false);
     const [openIds, setOpenIds] = useState<number[]>([]);
@@ -130,7 +132,8 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId }) => {
                 end_id: addForm.endDate,
                 status: addForm.status,
                 progress: Number(addForm.progress),
-                parent_id: addForm.parent === 0 ? null : addForm.parent
+                parent_id: addForm.parent === 0 ? null : addForm.parent,
+                completedAt: addForm.completedAt || null
             });
             setShowAddModal(false);
             fetchWbsData();
@@ -142,26 +145,32 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId }) => {
     };
 
     // 트리 노드 렌더링
-    const renderNode = (node: NodeModel, { isOpen, onToggle, depth }: any) => (
-        <div
-            className="flex items-center justify-between w-full p-2 border rounded bg-white my-1"
-            style={{ paddingLeft: depth > 0 ? `${depth * 24}px` : 0 }}
-        >
-            <div className="flex items-center gap-2">
-                {node.droppable && (
-                    <button type="button" onClick={onToggle} className="focus:outline-none">
-                        {isOpen ? '▼' : '▶'}
-                    </button>
-                )}
-                <span>{node.text}</span>
+    const renderNode = (node: NodeModel, { isOpen, onToggle, depth }: any) => {
+        const item = node.data as WbsItem;
+        return (
+            <div
+                className="flex items-center justify-between w-full p-2 border rounded bg-white my-1"
+                style={{ paddingLeft: depth > 0 ? `${depth * 24}px` : 0 }}
+            >
+                <div className="flex items-center gap-2">
+                    {node.droppable && (
+                        <button type="button" onClick={onToggle} className="focus:outline-none">
+                            {isOpen ? '▼' : '▶'}
+                        </button>
+                    )}
+                    <span>{node.text}</span>
+                    {item.completedAt && (
+                        <span className="text-xs text-gray-500 ml-2">완료일: {item.completedAt.split('T')[0]}</span>
+                    )}
+                </div>
+                <div className="flex gap-2">
+                    <button className="text-xs text-gray-500 hover:text-gray-800" onClick={() => handleAddClick(node.id)}>추가</button>
+                    <button className="text-xs text-gray-500 hover:text-gray-800">수정</button>
+                    <button className="text-xs text-red-500 hover:text-red-800">삭제</button>
+                </div>
             </div>
-            <div className="flex gap-2">
-                <button className="text-xs text-gray-500 hover:text-gray-800" onClick={() => handleAddClick(node.id)}>추가</button>
-                <button className="text-xs text-gray-500 hover:text-gray-800">수정</button>
-                <button className="text-xs text-red-500 hover:text-red-800">삭제</button>
-            </div>
-        </div>
-    );
+        );
+    };
 
     return (
         <>
@@ -211,6 +220,10 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId }) => {
                             <div className="flex-1">
                                 <label className="block text-sm mb-1">마감일</label>
                                 <input type="date" name="endDate" value={addForm.endDate} onChange={handleAddFormChange} className="w-full border rounded p-2" />
+                            </div>
+                            <div className="flex-1">
+                                <label className="block text-sm mb-1">완료일</label>
+                                <input type="date" name="completedAt" value={addForm.completedAt} onChange={handleAddFormChange} className="w-full border rounded p-2" />
                             </div>
                         </div>
                         <div className="flex gap-2">
