@@ -62,6 +62,12 @@ export const generateWbsFromProjectDescription = async (req: Request, res: Respo
         {
           role: "system",
           content: `You are an expert project manager and WBS (Work Breakdown Structure) specialist. Based on the provided project description, generate a hierarchical WBS. Each WBS item should have a 'content' (task description), an optional 'deadline' (in YYYY-MM-DD format), and a 'parent_id' to indicate its hierarchy (null for top-level tasks). Assign a sequential 'order' for siblings at the same level. The output must be a single JSON object with one key: "wbs". This key should hold an array of objects, where each object represents a WBS item. Ensure the content is in Korean if the input is Korean.
+
+Follow these 3-level WBS structure guidelines:
+1. **대분류 (Phase or Major Task)**: Divide the entire project into large work units.
+2. **중분류 (Deliverables or Sub-task)**: Divide detailed tasks under each major category.
+3. **소분류 (Work Package or Activity)**: Further break down sub-tasks into actionable work packages.
+
 Example output:
 {
   "wbs": [
