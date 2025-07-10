@@ -54,52 +54,118 @@ const HOLIDAYS = [
 ];
 
 /**
- * 간트 차트 컴포넌트 (최적 구조)
+ * 간트 차트 컴포넌트 (개선된 드래그 기능)
  */
 const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) => {
   const [wbs, setWbs] = useState<WbsItem[]>([]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
-  // 드래그로 월 넘기기 상태
+  // 개선된 드래그 상태 관리
   const [dragStartX, setDragStartX] = useState<number | null>(null);
+  const [dragCurrentX, setDragCurrentX] = useState<number | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
 
-  // 드래그 이벤트 핸들러 (PC)
+  // 드래그 임계값 (픽셀)
+  const DRAG_THRESHOLD = 40;
+
+  // PC 드래그 이벤트 핸들러 (개선됨)
   const handleHeaderMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
     setDragStartX(e.clientX);
+    setDragCurrentX(e.clientX);
     setDragging(true);
   };
+
   const handleHeaderMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!dragging || dragStartX === null) return;
+    
+    setDragCurrentX(e.clientX);
     const dx = e.clientX - dragStartX;
-    if (Math.abs(dx) > 60) { // 60px 이상 드래그 시 월 이동
-      if (dx > 0) setCurrentMonth(d => addDays(startOfMonth(d), -1)); // 왼쪽으로 드래그: 이전달
-      else setCurrentMonth(d => addDays(endOfMonth(d), 1)); // 오른쪽: 다음달
+    
+    if (Math.abs(dx) > DRAG_THRESHOLD) {
+      if (dx > 0) {
+        // 오른쪽으로 드래그: 이전달로 이동
+        setCurrentMonth(d => addDays(startOfMonth(d), -1));
+      } else {
+        // 왼쪽으로 드래그: 다음달로 이동
+        setCurrentMonth(d => addDays(endOfMonth(d), 1));
+      }
       setDragging(false);
       setDragStartX(null);
+      setDragCurrentX(null);
     }
   };
+
   const handleHeaderMouseUp = () => {
     setDragging(false);
     setDragStartX(null);
+    setDragCurrentX(null);
   };
-  // 드래그 이벤트 핸들러 (모바일)
-  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+
+  // 모바일 터치 이벤트 핸들러 (개선됨)
   const handleHeaderTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    e.preventDefault();
     setTouchStartX(e.touches[0].clientX);
   };
+
   const handleHeaderTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
     if (touchStartX === null) return;
+    
     const dx = e.touches[0].clientX - touchStartX;
-    if (Math.abs(dx) > 60) {
-      if (dx > 0) setCurrentMonth(d => addDays(startOfMonth(d), -1));
-      else setCurrentMonth(d => addDays(endOfMonth(d), 1));
+    
+    if (Math.abs(dx) > DRAG_THRESHOLD) {
+      if (dx > 0) {
+        // 오른쪽으로 터치 드래그: 이전달로 이동
+        setCurrentMonth(d => addDays(startOfMonth(d), -1));
+      } else {
+        // 왼쪽으로 터치 드래그: 다음달로 이동
+        setCurrentMonth(d => addDays(endOfMonth(d), 1));
+      }
       setTouchStartX(null);
     }
   };
+
   const handleHeaderTouchEnd = () => {
     setTouchStartX(null);
   };
+
+  // 전역 마우스 이벤트 리스너 (드래그 중 마우스가 영역을 벗어나도 추적)
+  useEffect(() => {
+    if (!dragging) return;
+
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      if (dragStartX === null) return;
+      
+      setDragCurrentX(e.clientX);
+      const dx = e.clientX - dragStartX;
+      
+      if (Math.abs(dx) > DRAG_THRESHOLD) {
+        if (dx > 0) {
+          setCurrentMonth(d => addDays(startOfMonth(d), -1));
+        } else {
+          setCurrentMonth(d => addDays(endOfMonth(d), 1));
+        }
+        setDragging(false);
+        setDragStartX(null);
+        setDragCurrentX(null);
+      }
+    };
+
+    const handleGlobalMouseUp = () => {
+      setDragging(false);
+      setDragStartX(null);
+      setDragCurrentX(null);
+    };
+
+    document.addEventListener('mousemove', handleGlobalMouseMove);
+    document.addEventListener('mouseup', handleGlobalMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleGlobalMouseMove);
+      document.removeEventListener('mouseup', handleGlobalMouseUp);
+    };
+  }, [dragging, dragStartX]);
 
   useEffect(() => {
     if (!projectId) return;
@@ -162,22 +228,45 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
     } as React.CSSProperties;
   }
 
+  // 드래그 상태에 따른 스타일 계산
+  const getDragFeedbackStyle = () => {
+    if (!dragging || dragStartX === null || dragCurrentX === null) {
+      return {};
+    }
+
+    const dx = dragCurrentX - dragStartX;
+    const opacity = Math.min(Math.abs(dx) / DRAG_THRESHOLD, 1) * 0.3 + 0.7;
+    
+    return {
+      opacity,
+      transform: `translateX(${Math.max(-10, Math.min(10, dx * 0.1))}px)`,
+      transition: 'none',
+    };
+  };
+
   return (
     <div className="bg-white rounded shadow p-4 overflow-x-auto">
       <div className="flex justify-between items-center mb-2">
         <h2 className="text-xl font-bold">간트 차트</h2>
         <div className="flex gap-2">
-          <button onClick={() => setCurrentMonth(d => addDays(startOfMonth(d), -1))} className="px-2 py-1 rounded bg-gray-100">◀</button>
+          <button onClick={() => setCurrentMonth(d => addDays(startOfMonth(d), -1))} className="px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 transition-colors">◀</button>
           <span className="font-semibold">{format(currentMonth, 'yyyy년 MM월')}</span>
-          <button onClick={() => setCurrentMonth(d => addDays(endOfMonth(d), 1))} className="px-2 py-1 rounded bg-gray-100">▶</button>
+          <button onClick={() => setCurrentMonth(d => addDays(endOfMonth(d), 1))} className="px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 transition-colors">▶</button>
         </div>
       </div>
+      
+      {/* 드래그 안내 텍스트 */}
+      <div className="text-xs text-gray-500 mb-2 text-center">
+        💡 날짜 헤더를 좌우로 드래그하여 월을 이동할 수 있습니다
+      </div>
+
       <div
-        className="grid"
+        className="grid select-none"
         style={{
           gridTemplateColumns: `200px repeat(${days.length}, 1fr)`,
           gridAutoRows: '32px',
           alignItems: 'center',
+          ...getDragFeedbackStyle(),
         }}
       >
         {/* 헤더 row */}
@@ -193,6 +282,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
           let bg = undefined;
           let color = undefined;
           let borderRadius = isToday(d) ? 4 : undefined;
+          
           if (HOLIDAYS.includes(dateStr)) {
             bg = '#ef4444'; // 공휴일 빨강
             color = '#fff';
@@ -206,26 +296,35 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
             bg = '#f59e42';
             color = '#fff';
           }
+
+          // 드래그 중일 때 커서와 배경 스타일 변경
+          const isDragActive = dragging;
+          const dragCursor = isDragActive ? 'grabbing' : 'grab';
+          const hoverBg = isDragActive ? bg : (bg || '#f8f9fa');
+
           return (
             <div
               key={d.toISOString()}
-              className={`text-xs text-center border-b py-1`}
+              className={`text-xs text-center border-b py-1 transition-all duration-150 ${isDragActive ? 'scale-95' : 'hover:scale-105'}`}
               style={{
                 gridRow: 1,
                 gridColumn: i + 2,
-                background: bg,
+                background: isDragActive && !bg ? '#e3f2fd' : bg,
                 color,
                 borderRadius,
-                cursor: 'grab',
+                cursor: dragCursor,
                 userSelect: 'none',
+                transform: isDragActive ? 'scale(0.98)' : undefined,
+                boxShadow: isDragActive ? '0 2px 8px rgba(0,0,0,0.1)' : undefined,
               }}
-              onMouseDown={i === 0 ? handleHeaderMouseDown : undefined}
-              onMouseMove={i === 0 ? handleHeaderMouseMove : undefined}
-              onMouseUp={i === 0 ? handleHeaderMouseUp : undefined}
-              onMouseLeave={i === 0 ? handleHeaderMouseUp : undefined}
-              onTouchStart={i === 0 ? handleHeaderTouchStart : undefined}
-              onTouchMove={i === 0 ? handleHeaderTouchMove : undefined}
-              onTouchEnd={i === 0 ? handleHeaderTouchEnd : undefined}
+              onMouseDown={handleHeaderMouseDown}
+              onMouseMove={handleHeaderMouseMove}
+              onMouseUp={handleHeaderMouseUp}
+              onMouseLeave={handleHeaderMouseUp}
+              onTouchStart={handleHeaderTouchStart}
+              onTouchMove={handleHeaderTouchMove}
+              onTouchEnd={handleHeaderTouchEnd}
+              title="드래그하여 월 이동"
             >
               {format(d, 'd')}
             </div>
