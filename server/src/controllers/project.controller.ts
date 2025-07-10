@@ -136,9 +136,11 @@ export const getDevNotesAsWbs = async (req: Request, res: Response): Promise<voi
        LEFT JOIN users u ON dn.author_id = u.id
        WHERE dn.project_id = :projectId 
        ORDER BY dn.parent_id, dn."order" ASC`,
-      { replacements: { project_id: projectId }, type: QueryTypes.SELECT }
+      { replacements: { projectId: projectId }, type: QueryTypes.SELECT }
     );
+    console.log('Raw notes from DB:', notesRes); // 추가할 로그
     const tree = buildDevNotesTree(notesRes);
+    console.log('Built WBS tree:', tree); // 추가할 로그
     res.json(tree);
     console.log('getDevNotesAsWbs API response (tree):', tree);
   } catch (error) {
