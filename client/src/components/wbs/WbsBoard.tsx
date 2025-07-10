@@ -60,6 +60,11 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId, refreshTrigger, selected
         setToast({ message, type });
         setTimeout(() => setToast(null), 2000);
     };
+    // 변경 이력 상태
+    const [history, setHistory] = useState<{ type: string; name: string; time: string }[]>([]);
+    const addHistory = (type: string, name: string) => {
+        setHistory(prev => [{ type, name, time: new Date().toLocaleString() }, ...prev].slice(0, 5));
+    };
 
     // 트리형 WBS 데이터를 flat 구조로 변환
     function flattenTree(nodes: WbsItem[], parentId: number = 0): NodeModel[] {
@@ -159,6 +164,7 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId, refreshTrigger, selected
             setShowAddModal(false);
             fetchWbsData();
             showToast('작업이 성공적으로 추가되었습니다.', 'success');
+            addHistory('추가', addForm.name);
         } catch (error) {
             showToast('작업 추가 실패', 'error');
         } finally {
@@ -204,6 +210,7 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId, refreshTrigger, selected
             setShowEditModal(false);
             fetchWbsData();
             showToast('작업이 수정되었습니다.', 'success');
+            addHistory('수정', editForm.name);
         } catch (error) {
             showToast('작업 수정 실패', 'error');
         } finally {
@@ -424,6 +431,23 @@ const WbsBoard: React.FC<WbsBoardProps> = ({ projectId, refreshTrigger, selected
                     {toast.message}
                 </div>
             )}
+            {/* 변경 이력 로그 */}
+            <div className="mt-8 bg-gray-50 rounded p-3 text-xs">
+                <div className="font-bold mb-2">최근 변경 이력</div>
+                {history.length === 0 ? (
+                    <div className="text-gray-400">이력이 없습니다.</div>
+                ) : (
+                    <ul className="space-y-1">
+                        {history.map((h, i) => (
+                            <li key={i} className="flex gap-2 items-center">
+                                <span className="font-semibold">[{h.type}]</span>
+                                <span>{h.name}</span>
+                                <span className="text-gray-400 ml-auto">{h.time}</span>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </div>
         </>
     );
 };
