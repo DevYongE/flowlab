@@ -420,11 +420,11 @@ export const updateDevNote = async (req: Request, res: Response): Promise<void> 
 
   let completedAt = req.body.completedAt; // 기존 completedAt 값 유지 (수동 입력 시)
 
-  // 상태가 '완료'로 변경되면 completedAt을 현재 시간으로 설정
-  if (status === 'DONE') {
+  // 상태가 '완료'로 변경되거나 진행률이 100%일 때 completedAt을 현재 시간으로 설정
+  if (status === 'DONE' || progress === 100) {
     completedAt = new Date().toISOString(); // ISO 8601 형식으로 현재 시간 설정
-  } else {
-    completedAt = null; // '완료'가 아니면 completedAt을 null로 설정
+  } else if (status !== 'DONE' && progress !== 100) {
+    completedAt = null; // 완료 상태가 아니고 진행률도 100%가 아니면 completedAt을 null로 설정
   }
 
   try {

@@ -145,8 +145,16 @@ export const generateAndSaveWbs = async (req: Request, res: Response) => {
     }
 
     // 2. AI를 사용하여 WBS 생성
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD 형식
+    const currentYear = new Date().getFullYear();
+    
     const systemPrompt = prompt || `당신은 숙련된 프로젝트 매니저이자 WBS(Work Breakdown Structure) 전문가입니다. 
 제공된 프로젝트 설명을 바탕으로 계층적 WBS를 생성해주세요. 
+
+**중요한 날짜 정보:**
+- 오늘 날짜: ${today}
+- 현재 연도: ${currentYear}
+- 모든 마감일은 오늘 날짜 이후로 설정해주세요.
 
 WBS는 다음과 같은 3단계 구조로 작성해주세요:
 1. **대분류 (Phase or Major Task)**: 전체 프로젝트를 큰 작업 단위로 나눕니다.
@@ -155,7 +163,7 @@ WBS는 다음과 같은 3단계 구조로 작성해주세요:
 
 각 WBS 항목은 다음을 포함해야 합니다:
 - 'content': 작업 설명 (한국어)
-- 'deadline': 마감일 (YYYY-MM-DD 형식, 선택사항)
+- 'deadline': 마감일 (YYYY-MM-DD 형식, 오늘 날짜 이후로 설정)
 - 'parent_id': 상위 작업 ID (최상위는 null)
 - 'order': 같은 레벨에서의 순서
 
@@ -165,14 +173,15 @@ WBS는 다음과 같은 3단계 구조로 작성해주세요:
 - 중복 없이, 논리적 순서에 맞게 정리해주세요.
 - 소분류는 구체적인 작업 단위로 명확히 작성해주세요.
 - 가능하면 각 작업이 산출물 중심이 되도록 해주세요.
-- 마감일은 프로젝트 일정에 맞게 현실적으로 배분해주세요.
+- 마감일은 오늘(${today}) 이후로 프로젝트 일정에 맞게 현실적으로 배분해주세요.
+- 작업의 복잡도와 의존관계를 고려하여 적절한 기간을 할당해주세요.
 
-예시 출력:
+예시 출력 (오늘이 ${today}인 경우):
 {
   "wbs": [
-    { "content": "프로젝트 계획 수립", "deadline": "2024-02-01", "parent_id": null, "order": 0 },
-    { "content": "요구사항 분석", "deadline": "2024-02-15", "parent_id": 1, "order": 0 },
-    { "content": "시스템 설계", "deadline": "2024-02-28", "parent_id": 1, "order": 1 }
+    { "content": "프로젝트 계획 수립", "deadline": "${currentYear}-02-01", "parent_id": null, "order": 0 },
+    { "content": "요구사항 분석", "deadline": "${currentYear}-02-15", "parent_id": 1, "order": 0 },
+    { "content": "시스템 설계", "deadline": "${currentYear}-02-28", "parent_id": 1, "order": 1 }
   ]
 }`;
 

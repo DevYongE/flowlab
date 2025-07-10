@@ -210,8 +210,16 @@ const WbsPage: React.FC = () => {
             }
 
             // AI 프롬프트 구성
+            const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD 형식
+            const currentYear = new Date().getFullYear();
+            
             let detailPrompt = `당신은 숙련된 프로젝트 매니저이자 WBS(Work Breakdown Structure) 전문가입니다. 
 제공된 요구사항 목록을 분석하여 체계적인 WBS로 재구성해주세요.
+
+**중요한 날짜 정보:**
+- 오늘 날짜: ${today}
+- 현재 연도: ${currentYear}
+- 모든 마감일은 오늘 날짜 이후로 설정해주세요.
 
 **중요**: 기존 요구사항들을 그대로 복사하지 말고, 논리적으로 분류하고 구조화해서 새로운 WBS를 만들어주세요.
 
@@ -222,11 +230,16 @@ WBS는 다음과 같은 3단계 구조로 작성해주세요:
 
 각 WBS 항목은 다음을 포함해야 합니다:
 - 'content': 작업 설명 (한국어)
-- 'deadline': 마감일 (YYYY-MM-DD 형식, 선택사항)
+- 'deadline': 마감일 (YYYY-MM-DD 형식, 오늘 날짜 이후로 설정)
 - 'parent_id': 상위 작업 ID (최상위는 null)
 - 'order': 같은 레벨에서의 순서
 
-출력은 반드시 "wbs" 키를 가진 JSON 객체여야 하며, 그 값은 WBS 항목들의 배열이어야 합니다.`;
+출력은 반드시 "wbs" 키를 가진 JSON 객체여야 하며, 그 값은 WBS 항목들의 배열이어야 합니다.
+
+**날짜 설정 가이드:**
+- 마감일은 반드시 오늘(${today}) 이후로 설정해주세요.
+- 작업의 복잡도와 의존관계를 고려하여 현실적인 기간을 할당해주세요.
+- 연속된 작업들은 논리적 순서에 맞게 일정을 배치해주세요.`;
 
             // 상세도에 따른 프롬프트 조정
             if (aiOptions.detailLevel === 'basic') {
@@ -237,7 +250,7 @@ WBS는 다음과 같은 3단계 구조로 작성해주세요:
 
             // 타임라인 포함 옵션
             if (aiOptions.includeTimeline) {
-                detailPrompt += "\n\n**타임라인 지시사항**: 각 작업에 현실적인 시작일과 마감일을 포함해주세요. 프로젝트 시작일부터 논리적 순서를 고려하여 일정을 배분해주세요.";
+                detailPrompt += `\n\n**타임라인 지시사항**: 각 작업에 현실적인 시작일과 마감일을 포함해주세요. 오늘(${today})부터 시작하여 논리적 순서를 고려하여 일정을 배분해주세요. 모든 날짜는 ${currentYear}년 이후로 설정해주세요.`;
             }
 
             // AI WBS 생성 및 저장 API 호출
