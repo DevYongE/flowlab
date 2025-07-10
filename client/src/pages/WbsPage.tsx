@@ -11,7 +11,7 @@ const WbsPage: React.FC = () => {
     const navigate = useNavigate();
     const [projectName, setProjectName] = useState('');
     const [showProjectSelectionModal, setShowProjectSelectionModal] = useState(false);
-    const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+    
 
     useEffect(() => {
         if (projectId) {
