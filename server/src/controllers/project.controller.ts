@@ -412,7 +412,7 @@ export const updateDevNote = async (req: Request, res: Response): Promise<void> 
   const { noteId } = req.params;
   // 한글→영문 변환 적용
   const status = toStatusCode(req.body.status);
-  const { content, deadline, progress } = req.body; // completedAt은 여기서 제거하고 아래에서 동적으로 설정
+  const { content, deadline, progress } = req.body;
   const currentUserId = req.user?.id;
   const currentUserRole = req.user?.role;
 
@@ -438,11 +438,54 @@ export const updateDevNote = async (req: Request, res: Response): Promise<void> 
       res.status(403).json({ message: '노트를 수정할 권한이 없습니다.' });
       return;
     }
-    const rows = await sequelize.query(
-      'UPDATE dev_notes SET content=:content, deadline=:deadline, status=:status, progress=:progress, completed_at=:completedAt WHERE id=:noteId RETURNING *',
-      { replacements: { content, deadline, status, progress, completedAt, noteId }, type: QueryTypes.SELECT }
-    );
-    res.json((rows as any[])[0]);
+
+    // 동적으로 UPDATE 쿼리 생성 (전달된 필드만 업데이트)
+    const updateFields = [];
+    const replacements: any = { noteId };
+
+    if (content !== undefined) {
+      updateFields.push('content = :content');
+      replacements.content = content;
+    }
+    if (deadline !== undefined) {
+      updateFields.push('deadline = :deadline');
+      replacements.deadline = deadline;
+    }
+    if (status !== undefined) {
+      updateFields.push('status = :status');
+      replacements.status = status;
+    }
+    if (progress !== undefined) {
+      updateFields.push('progress = :progress');
+      replacements.progress = progress;
+    }
+    if (completedAt !== undefined) {
+      updateFields.push('completed_at = :completedAt');
+      replacements.completedAt = completedAt;
+    }
+
+    if (updateFields.length === 0) {
+      res.status(400).json({ message: '업데이트할 필드가 없습니다.' });
+      return;
+    }
+
+    const updateQuery = `UPDATE dev_notes SET ${updateFields.join(', ')} WHERE id = :noteId RETURNING *`;
+    const rows = await sequelize.query(updateQuery, { replacements, type: QueryTypes.SELECT });
+    
+    // 업데이트된 노트에 authorName과 registeredAt 추가
+    const updatedNote = (rows as any[])[0];
+    if (updatedNote) {
+      const noteWithDetails = await sequelize.query(
+        `SELECT dn.*, u.name as "authorName", TO_CHAR(dn.registered_at, 'YYYY-MM-DD') as "registeredAt", TO_CHAR(dn.completed_at, 'YYYY-MM-DD') as "completedAt"
+         FROM dev_notes dn
+         LEFT JOIN users u ON dn.author_id = u.id
+         WHERE dn.id = :noteId`,
+        { replacements: { noteId }, type: QueryTypes.SELECT }
+      );
+      res.json((noteWithDetails as any[])[0]);
+    } else {
+      res.status(404).json({ message: '업데이트된 노트를 찾을 수 없습니다.' });
+    }
   } catch (error) {
     console.error('개발 노트 수정 실패:', error);
     res.status(500).json({ message: '개발 노트 수정 실패', error });
