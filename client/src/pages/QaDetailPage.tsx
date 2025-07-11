@@ -87,7 +87,11 @@ const QaDetailPage: React.FC = () => {
 
   const handleVote = async (type: 'question' | 'answer', targetId: number, voteType: 'UP' | 'DOWN') => {
     try {
-      await axios.post(`/qa/vote/${type}/${targetId}`, { voteType });
+      const endpoint = type === 'question' 
+        ? `/qa/questions/${targetId}/vote`
+        : `/qa/answers/${targetId}/vote`;
+      
+      await axios.post(endpoint, { voteType });
       fetchQuestionDetail(); // 투표 후 데이터 새로고침
     } catch (error) {
       console.error('투표 처리 실패:', error);
@@ -97,12 +101,38 @@ const QaDetailPage: React.FC = () => {
 
   const handleAcceptAnswer = async (answerId: number) => {
     try {
-      await axios.put(`/qa/questions/${id}/answers/${answerId}/accept`);
+      await axios.put(`/qa/answers/${answerId}/adopt`);
       alert('답변이 채택되었습니다.');
       fetchQuestionDetail();
     } catch (error) {
       console.error('답변 채택 실패:', error);
       alert('답변 채택에 실패했습니다.');
+    }
+  };
+
+  const handleDeleteQuestion = async () => {
+    if (!confirm('정말로 이 질문을 삭제하시겠습니까?')) return;
+
+    try {
+      await axios.delete(`/qa/questions/${id}`);
+      alert('질문이 삭제되었습니다.');
+      navigate('/qa');
+    } catch (error) {
+      console.error('질문 삭제 실패:', error);
+      alert('질문 삭제에 실패했습니다.');
+    }
+  };
+
+  const handleDeleteAnswer = async (answerId: number) => {
+    if (!confirm('정말로 이 답변을 삭제하시겠습니까?')) return;
+
+    try {
+      await axios.delete(`/qa/answers/${answerId}`);
+      alert('답변이 삭제되었습니다.');
+      fetchQuestionDetail();
+    } catch (error) {
+      console.error('답변 삭제 실패:', error);
+      alert('답변 삭제에 실패했습니다.');
     }
   };
 
@@ -221,11 +251,19 @@ const QaDetailPage: React.FC = () => {
           </button>
           {canEditQuestion() && (
             <div className="flex gap-2">
-              <Button variant="outline" size="sm">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => navigate(`/qa/questions/${id}/edit`)}
+              >
                 <Edit3 className="w-4 h-4 mr-1" />
                 수정
               </Button>
-              <Button variant="destructive" size="sm">
+              <Button 
+                variant="destructive" 
+                size="sm"
+                onClick={handleDeleteQuestion}
+              >
                 <Trash2 className="w-4 h-4 mr-1" />
                 삭제
               </Button>
@@ -395,6 +433,31 @@ const QaDetailPage: React.FC = () => {
                             <CheckCircle className="w-4 h-4 mr-1" />
                             채택하기
                           </Button>
+                        )}
+                        
+                        {/* 답변 수정/삭제 버튼 (작성자 또는 관리자) */}
+                        {(isAdmin() || currentUser?.id === answer.authorId) && (
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                // 답변 수정 기능 (향후 구현)
+                                alert('답변 수정 기능은 추후 구현 예정입니다.');
+                              }}
+                              className="text-blue-600 hover:text-blue-700"
+                            >
+                              <Edit3 className="w-3 h-3" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDeleteAnswer(answer.id)}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
                         )}
                       </div>
                       
