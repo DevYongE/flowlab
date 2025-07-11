@@ -13,6 +13,7 @@ import roleRouter from './routes/role.route';
 import companyRoutes from './routes/company.route';
 import solutionRouter from './routes/solution.route';
 import departmentRouter from './routes/department.route';
+import qaRoutes from './routes/qa.route';
 
 import sequelize from './config/db';
 
@@ -46,6 +47,7 @@ app.use('/api/roles', roleRouter);
 app.use('/api/companies', companyRoutes);
 app.use('/api/solutions', solutionRouter);
 app.use('/api/departments', departmentRouter);
+app.use('/api/qa', qaRoutes);
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {

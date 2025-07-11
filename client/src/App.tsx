@@ -11,6 +11,8 @@ import ProjectDetailPage from './pages/ProjectDetailPage';
 import RegisterPage from './pages/RegisterPage';
 import WbsMainPage from './pages/WbsMainPage';
 import WbsPage from './pages/WbsPage';
+import QaPage from './pages/QaPage';
+import QaDetailPage from './pages/QaDetailPage';
 
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
@@ -41,6 +43,8 @@ export default function App() {
           <Route path="/projects/:id" element={<ProjectDetailPage />} />
           <Route path="/wbs" element={<WbsMainPage />} />
           <Route path="/projects/:id/wbs" element={<WbsPage />} />
+          <Route path="/qa" element={<QaPage />} />
+          <Route path="/qa/questions/:id" element={<QaDetailPage />} />
           <Route path="/admin/users" element={<AdminUserPage />} />
         </>
       ) : (
