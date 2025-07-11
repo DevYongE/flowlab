@@ -63,7 +63,12 @@ export const createNotice = async (req: Request, res: Response) => {
   try {
     const { title, content, author_id, is_pinned, notice_type, attachments } = req.body;
     console.log('[공지 생성] 요청 데이터:', req.body);
-    const safeAttachments = attachments === undefined || attachments === null ? '' : attachments;
+    const safeAttachments =
+      attachments === undefined || attachments === null || attachments === ''
+        ? '[]'
+        : typeof attachments === 'string'
+          ? attachments
+          : JSON.stringify(attachments);
     console.log('[공지 생성] 쿼리 실행 전');
     const [rows] = await sequelize.query(
       `INSERT INTO notices (title, content, author_id, is_pinned, notice_type, attachments) VALUES (:title, :content, :author_id, :is_pinned, :notice_type, :attachments) RETURNING *`,
