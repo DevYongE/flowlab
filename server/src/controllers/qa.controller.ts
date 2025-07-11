@@ -84,8 +84,8 @@ export const getQuestions = async (req: Request, res: Response): Promise<void> =
         q.tags,
         q.view_count,
         q.vote_count,
-        q.created_at,
-        q.updated_at,
+        TO_CHAR(q.created_at, 'YYYY-MM-DD') as "createdAt",
+        TO_CHAR(q.updated_at, 'YYYY-MM-DD') as "updatedAt",
         u.name as "authorName",
         p.name as "projectName",
         COALESCE(a.answer_count, 0) as "answerCount"
@@ -139,8 +139,8 @@ export const getQuestionById = async (req: Request, res: Response): Promise<void
         q.view_count,
         q.vote_count,
         q.accepted_answer_id,
-        q.created_at,
-        q.updated_at,
+        TO_CHAR(q.created_at, 'YYYY-MM-DD') as "createdAt",
+        TO_CHAR(q.updated_at, 'YYYY-MM-DD') as "updatedAt",
         q.author_id,
         u.name as "authorName",
         p.name as "projectName",
@@ -170,8 +170,8 @@ export const getQuestionById = async (req: Request, res: Response): Promise<void
         a.content,
         a.is_accepted,
         a.vote_count,
-        a.created_at,
-        a.updated_at,
+        TO_CHAR(a.created_at, 'YYYY-MM-DD') as "createdAt",
+        TO_CHAR(a.updated_at, 'YYYY-MM-DD') as "updatedAt",
         a.author_id,
         u.name as "authorName"
       FROM qa_answers a
@@ -418,6 +418,17 @@ export const createAnswer = async (req: Request, res: Response): Promise<void> =
 
     const answerId = (result[0] as any).id;
 
+    // 첫 번째 답변이 등록되면 질문 상태를 IN_PROGRESS로 변경
+    await sequelize.query(
+      `UPDATE qa_questions 
+       SET status = 'IN_PROGRESS', updated_at = NOW() 
+       WHERE id = :questionId AND status = 'OPEN'`,
+      {
+        replacements: { questionId },
+        type: QueryTypes.UPDATE
+      }
+    );
+
     res.status(201).json({ 
       message: '답변이 등록되었습니다.',
       answerId 
@@ -593,5 +604,54 @@ export const getStats = async (req: Request, res: Response): Promise<void> => {
   } catch (error) {
     console.error('통계 조회 오류:', error);
     res.status(500).json({ message: '통계 조회에 실패했습니다.' });
+  }
+}; 
+
+// QA 질문 상태 변경
+export const updateQuestionStatus = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    const currentUserId = req.user?.id;
+    const currentUserRole = req.user?.role;
+
+    // 상태 유효성 검사
+    const validStatuses = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'];
+    if (!validStatuses.includes(status)) {
+      res.status(400).json({ message: '올바른 상태를 선택해주세요.' });
+      return;
+    }
+
+    // 질문 존재 확인 및 권한 체크
+    const questionCheck = await sequelize.query(
+      'SELECT author_id FROM qa_questions WHERE id = :id',
+      { replacements: { id }, type: QueryTypes.SELECT }
+    );
+
+    if (!questionCheck.length) {
+      res.status(404).json({ message: '질문을 찾을 수 없습니다.' });
+      return;
+    }
+
+    const question = questionCheck[0] as any;
+
+    // 권한 확인 (작성자 또는 관리자만 상태 변경 가능)
+    if (currentUserRole !== 'ADMIN' && currentUserId !== question.author_id) {
+      res.status(403).json({ message: '상태를 변경할 권한이 없습니다.' });
+      return;
+    }
+
+    await sequelize.query(
+      'UPDATE qa_questions SET status = :status, updated_at = NOW() WHERE id = :id',
+      {
+        replacements: { id, status },
+        type: QueryTypes.UPDATE
+      }
+    );
+
+    res.json({ message: '질문 상태가 변경되었습니다.' });
+  } catch (error) {
+    console.error('질문 상태 변경 오류:', error);
+    res.status(500).json({ message: '질문 상태 변경에 실패했습니다.' });
   }
 }; 

@@ -126,6 +126,17 @@ const QaDetailPage: React.FC = () => {
     }
   };
 
+  const handleStatusChange = async (newStatus: string) => {
+    try {
+      await axios.put(`/qa/questions/${id}/status`, { status: newStatus });
+      alert('상태가 변경되었습니다.');
+      fetchQuestionDetail();
+    } catch (error) {
+      console.error('상태 변경 실패:', error);
+      alert('상태 변경에 실패했습니다.');
+    }
+  };
+
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'HIGH': return 'bg-red-100 text-red-800 border-red-200';
@@ -226,10 +237,24 @@ const QaDetailPage: React.FC = () => {
         <Card className="mb-6">
           <CardHeader>
             <div className="flex items-center gap-2 mb-2">
-              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(question.status)}`}>
-                {getStatusIcon(question.status)}
-                <span className="ml-1">{question.status}</span>
-              </span>
+              <div className="flex items-center gap-2">
+                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(question.status)}`}>
+                  {getStatusIcon(question.status)}
+                  <span className="ml-1">{question.status}</span>
+                </span>
+                {canEditQuestion() && (
+                  <select
+                    value={question.status}
+                    onChange={(e) => handleStatusChange(e.target.value)}
+                    className="text-xs border rounded px-2 py-1 bg-white hover:bg-gray-50"
+                  >
+                    <option value="OPEN">OPEN</option>
+                    <option value="IN_PROGRESS">IN_PROGRESS</option>
+                    <option value="RESOLVED">RESOLVED</option>
+                    <option value="CLOSED">CLOSED</option>
+                  </select>
+                )}
+              </div>
               <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getPriorityColor(question.priority)}`}>
                 {question.priority}
               </span>
