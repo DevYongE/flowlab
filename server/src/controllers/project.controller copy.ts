@@ -62,20 +62,25 @@ export const getProjects = async (req: Request, res: Response): Promise<void> =>
 
   try {
     let query = `
-      SELECT id, category, type, name, company_code, TO_CHAR(start_date, 'YYYY-MM-DD') as "startDate", TO_CHAR(end_date, 'YYYY-MM-DD') as "endDate", progress
-      FROM projects
+      SELECT DISTINCT p.id, p.category, p.type, p.name, p.company_code, 
+             TO_CHAR(p.start_date, 'YYYY-MM-DD') as "startDate", 
+             TO_CHAR(p.end_date, 'YYYY-MM-DD') as "endDate", p.progress
+      FROM projects p
+      LEFT JOIN project_assignees pa ON p.id = pa.project_id
     `;
     const params: any = {};
 
     if (currentUserRole === 'MANAGER') {
-      query += ' WHERE company_code = :company_code';
+      query += ' WHERE p.company_code = :company_code';
       params.company_code = currentUserCompany;
     } else if (currentUserRole !== 'ADMIN') {
-      query += ' WHERE author_id = :author_id';
+      // 일반 사용자: 본인이 작성한 프로젝트 OR 할당된 프로젝트
+      query += ' WHERE (p.author_id = :author_id OR pa.user_id = :user_id)';
       params.author_id = currentUserId;
+      params.user_id = currentUserId;
     }
 
-    query += ' ORDER BY start_date DESC';
+    query += ' ORDER BY p.start_date DESC';
     const projects = await sequelize.query(query, { replacements: params, type: QueryTypes.SELECT });
     res.json(Array.isArray(projects) ? projects : []);
   } catch (error) {
@@ -99,13 +104,27 @@ export const getProjectById = async (req: Request, res: Response): Promise<void>
     }
     const project = rows[0] as any;
 
+    // 권한 체크
     if (currentUserRole === 'MANAGER' && currentUserCompany !== project.company_code) {
       res.status(403).json({ message: '타 기업 프로젝트 접근 불가' });
       return;
     }
-    if (currentUserRole !== 'ADMIN' && currentUserRole !== 'MANAGER' && currentUserId !== project.author_id) {
-      res.status(403).json({ message: '프로젝트에 접근할 권한이 없습니다.' });
-      return;
+    
+    // 일반 사용자 권한 체크: 프로젝트 작성자 OR 할당된 회원
+    if (currentUserRole !== 'ADMIN' && currentUserRole !== 'MANAGER') {
+      const isAuthor = currentUserId === project.author_id;
+      
+      // 할당된 회원인지 확인
+      const assigneeCheck = await sequelize.query(
+        'SELECT 1 FROM project_assignees WHERE project_id = :project_id AND user_id = :user_id',
+        { replacements: { project_id: id, user_id: currentUserId }, type: QueryTypes.SELECT }
+      );
+      const isAssigned = Array.isArray(assigneeCheck) && assigneeCheck.length > 0;
+      
+      if (!isAuthor && !isAssigned) {
+        res.status(403).json({ message: '프로젝트에 접근할 권한이 없습니다.' });
+        return;
+      }
     }
 
     const detailsRes = await sequelize.query('SELECT * FROM project_details WHERE project_id = :project_id', { replacements: { project_id: id }, type: QueryTypes.SELECT });
