@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { QueryTypes } from 'sequelize';
-import { sequelize } from '../config/db';
+import sequelize from '../config/db';
 
 // QA 질문 목록 조회
 export const getQuestions = async (req: Request, res: Response): Promise<void> => {
