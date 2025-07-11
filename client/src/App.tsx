@@ -40,7 +40,7 @@ export default function App() {
           <Route path="/projects/edit/:id" element={<ProjectFormPage />} />
           <Route path="/projects/:id" element={<ProjectDetailPage />} />
           <Route path="/wbs" element={<WbsMainPage />} />
-          <Route path="/wbs/:projectId" element={<WbsPage />} />
+          <Route path="/projects/:id/wbs" element={<WbsPage />} />
           <Route path="/admin/users" element={<AdminUserPage />} />
         </>
       ) : (
