@@ -89,10 +89,16 @@ export const updateNotice = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { title, content, is_pinned, notice_type, attachments } = req.body;
+    const safeAttachments =
+      attachments === undefined || attachments === null || attachments === ''
+        ? '[]'
+        : typeof attachments === 'string'
+          ? attachments
+          : JSON.stringify(attachments);
     const result = await sequelize.query(
       `UPDATE notices SET title=:title, content=:content, is_pinned=:is_pinned, notice_type=:notice_type, attachments=:attachments WHERE notice_id=:id RETURNING *`,
       {
-        replacements: { title, content, is_pinned, notice_type, attachments, id },
+        replacements: { title, content, is_pinned, notice_type, attachments: safeAttachments, id },
         type: QueryTypes.UPDATE,
       }
     ) as any;
