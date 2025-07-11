@@ -8,6 +8,7 @@ const menu = [
   { icon: '📊', label: '대시보드', to: '/dashboard' },
   { icon: '📢', label: '공지사항', to: '/notices' },
   { icon: '🧱', label: '프로젝트', to: '/projects' },
+  { icon: '🗂️', label: 'WBS보드', to: '/wbs' },
 ];
 
 const adminMenu = [
