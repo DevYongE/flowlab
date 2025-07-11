@@ -1,117 +1,172 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import MainLayout from '../components/layout/MainLayout';
+import WbsBoard from '../components/wbs/WbsBoard';
 import axios from '../lib/axios';
+import { Sparkles } from 'lucide-react'; // Sparkles 아이콘 추가
 
 interface Project {
-  id: number;
-  name: string;
-  category: string;
-  type: string;
-  startDate: string;
-  endDate: string;
-  author_id: string;
-  company_code: string;
+    id: string;
+    name: string;
+}
+
+interface WbsItem {
+    content: string;
+    deadline?: string;
+    parent_id?: number | string | null;
+    order?: number;
 }
 
 const WbsMainPage: React.FC = () => {
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
+    const [showAIModal, setShowAIModal] = useState(false); // AI 모달 상태
+    const [aiInputText, setAIInputText] = useState(''); // AI 입력 텍스트
+    const [isAnalyzing, setIsAnalyzing] = useState(false); // AI 분석 중 상태
 
-  useEffect(() => {
-    fetchProjects();
-  }, []);
+    useEffect(() => {
+        axios.get('/projects')
+            .then(res => {
+                const fetchedProjects = res.data;
+                setProjects(fetchedProjects);
+                // 첫 번째 프로젝트를 기본으로 활성화
+                if (fetchedProjects.length > 0) {
+                    setActiveProjectId(fetchedProjects[0].id);
+                }
+            })
+            .catch(err => {
+                console.error("프로젝트 목록 로딩 실패:", err);
+                alert("프로젝트 목록을 불러오는데 실패했습니다.");
+            });
+    }, []);
 
-  const fetchProjects = async () => {
-    try {
-      const response = await axios.get('/projects');
-      setProjects(response.data);
-    } catch (error) {
-      console.error('프로젝트 목록을 가져오는데 실패했습니다:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const handleAIAssist = () => {
+        setShowAIModal(true);
+    };
 
-  const handleProjectSelect = (projectId: number) => {
-    navigate(`/wbs/${projectId}`);
-  };
+    const handleAiAnalysis = async () => {
+        if (!activeProjectId) {
+            alert("프로젝트를 선택해주세요.");
+            return;
+        }
+        setIsAnalyzing(true);
+        try {
+            // 1. AI 분석 API 호출
+            const aiResponse = await axios.post('/ai/generate-wbs', { projectDescription: aiInputText });
+            const aiWbsData: WbsItem[] = aiResponse.data.wbs; // AI가 반환한 WBS 데이터
 
-  if (loading) {
+            if (!aiWbsData || aiWbsData.length === 0) {
+                alert("AI가 WBS를 생성하지 못했습니다. 내용을 다시 확인해주세요.");
+                return;
+            }
+
+            // 2. AI가 생성한 WBS를 일괄 저장 API 호출
+            await axios.post(`/projects/${activeProjectId}/notes/bulk`, { notes: aiWbsData });
+
+            alert("AI 분석 및 WBS 생성이 완료되었습니다.");
+            setShowAIModal(false);
+            setAIInputText('');
+            // WBSBoard를 새로고침하기 위해 activeProjectId를 잠시 null로 설정 후 다시 설정
+            const currentActiveProjectId = activeProjectId;
+            setActiveProjectId(null);
+            setTimeout(() => setActiveProjectId(currentActiveProjectId), 0);
+
+        } catch (error) {
+            console.error("AI 분석 또는 WBS 생성 실패:", error);
+            alert("AI 분석 또는 WBS 생성에 실패했습니다.");
+        } finally {
+            setIsAnalyzing(false);
+        }
+    };
+
     return (
-      <MainLayout>
-        <div className="flex justify-center items-center h-64">
-          <div className="text-lg">로딩 중...</div>
-        </div>
-      </MainLayout>
-    );
-  }
-
-  return (
-    <MainLayout>
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">🗂️ WBS 보드</h1>
-          <p className="text-gray-600">프로젝트를 선택하여 WBS 보드를 확인하세요.</p>
-        </div>
-
-        {projects.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="text-gray-500 text-lg mb-4">등록된 프로젝트가 없습니다.</div>
-            <button
-              onClick={() => navigate('/projects/new')}
-              className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600"
-            >
-              프로젝트 생성하기
-            </button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {projects.map((project) => (
-              <div
-                key={project.id}
-                className="bg-white rounded-lg shadow-md border border-gray-200 hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() => handleProjectSelect(project.id)}
-              >
-                <div className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-xl font-semibold text-gray-900 truncate">
-                      {project.name}
-                    </h3>
-                    <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                      {project.category}
-                    </span>
-                  </div>
-                  
-                  <div className="space-y-2 text-sm text-gray-600">
-                    <div className="flex justify-between">
-                      <span>유형:</span>
-                      <span className="font-medium">{project.type}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>시작일:</span>
-                      <span>{project.startDate}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>종료일:</span>
-                      <span>{project.endDate}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-4 pt-4 border-t border-gray-200">
-                    <button className="w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors">
-                      WBS 보드 열기
-                    </button>
-                  </div>
+        <MainLayout>
+            <div className="container mx-auto p-4">
+                <div className="flex justify-between items-center mb-6">
+                    <h1 className="text-3xl font-bold">🗂️ WBS 보드</h1>
+                    {activeProjectId && ( // 프로젝트가 선택되었을 때만 AI 버튼 표시
+                        <button
+                            onClick={handleAIAssist}
+                            className="bg-purple-600 text-white p-2 rounded-full hover:bg-purple-700 flex items-center justify-center transition-transform transform hover:scale-110"
+                            title="AI로 WBS 생성"
+                        >
+                            <Sparkles className="h-5 w-5" />
+                        </button>
+                    )}
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </MainLayout>
-  );
+
+                <div className="flex border-b mb-6">
+                    {projects.map(project => (
+                        <button
+                            key={project.id}
+                            onClick={() => setActiveProjectId(project.id)}
+                            className={`py-2 px-4 text-sm font-medium ${
+                                activeProjectId === project.id
+                                    ? 'border-b-2 border-blue-500 text-blue-600'
+                                    : 'text-gray-500 hover:text-gray-700'
+                            }`}
+                        >
+                            {project.name}
+                        </button>
+                    ))}
+                </div>
+
+                <div>
+                    {activeProjectId ? (
+                        <WbsBoard projectId={activeProjectId} />
+                    ) : (
+                        <div className="text-center text-gray-500 py-20">
+                            <p>프로젝트를 선택해주세요.</p>
+                            {projects.length === 0 && <p className="mt-2">표시할 프로젝트가 없습니다.</p>}
+                        </div>
+                    )}
+                </div>
+
+                {/* AI 요구사항 분석 모달 */}
+                {showAIModal && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl">
+                            <h3 className="text-lg font-semibold mb-4 flex items-center">
+                                <Sparkles className="h-5 w-5 mr-2 text-purple-600" />
+                                AI로 WBS 생성하기
+                            </h3>
+                            <p className="text-sm text-gray-600 mb-4">
+                                프로젝트에 대한 내용을 자유롭게 작성하거나 문서를 붙여넣으세요. AI가 핵심 내용을 분석하여 WBS를 생성합니다.
+                            </p>
+                            <textarea
+                                value={aiInputText}
+                                onChange={(e) => setAIInputText(e.target.value)}
+                                placeholder="예: 새로운 웹사이트를 개발해야 합니다. 사용자 인증, 상품 목록, 장바구니, 결제 기능을 포함해야 합니다."
+                                className="w-full h-40 border border-gray-300 rounded-md shadow-sm p-3 mb-4"
+                            />
+                            <div className="flex justify-end gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowAIModal(false)}
+                                    className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+                                    disabled={isAnalyzing}
+                                >
+                                    취소
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleAiAnalysis}
+                                    className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 disabled:bg-purple-400 flex items-center"
+                                    disabled={isAnalyzing || !aiInputText.trim()}
+                                >
+                                    {isAnalyzing ? (
+                                        <>
+                                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                            분석 중...
+                                        </>
+                                    ) : 'WBS 생성'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </MainLayout>
+    );
 };
 
 export default WbsMainPage; 
