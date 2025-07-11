@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, Filter, SortDesc, HelpCircle } from 'lucide-react';
+import { Search, Plus, Filter, HelpCircle } from 'lucide-react';
 import MainLayout from '../components/layout/MainLayout';
 import QaCard from '../components/qa/QaCard';
 import QaQuestionModal from '../components/qa/QaQuestionModal';
@@ -8,7 +8,6 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import axios from '../lib/axios';
-import { getCurrentUser } from '../lib/auth';
 
 interface Question {
   id: number;
@@ -34,7 +33,6 @@ interface Project {
 
 const QaPage: React.FC = () => {
   const navigate = useNavigate();
-  const currentUser = getCurrentUser();
   
   const [questions, setQuestions] = useState<Question[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -129,10 +127,7 @@ const QaPage: React.FC = () => {
     navigate(`/qa/questions/${question.id}`);
   };
 
-  const handleEditQuestion = (question: Question) => {
-    setEditingQuestion(question);
-    setShowQuestionModal(true);
-  };
+
 
   const filteredQuestions = questions.filter(question => {
     const matchesSearch = question.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
