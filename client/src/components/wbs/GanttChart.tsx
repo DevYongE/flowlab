@@ -136,15 +136,15 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
     }
   }, [projectId, refreshTrigger]);
 
-  // 간트 바 스타일 계산 - 완전히 새로 작성
-  function getBarStyle(startStr: string, endStr: string, completed: boolean, deadline?: string | null, rowIndex: number = 0) {
+  // 간트 바 스타일 계산 - 마감일까지 표시하고 완료 부분은 색상으로 구분
+  function getBarStyle(startStr: string, deadlineStr: string, completed: boolean, completedStr?: string | null, rowIndex: number = 0) {
     try {
       const startDate = parseISO(startStr);
-      const endDate = parseISO(endStr);
+      const deadlineDate = parseISO(deadlineStr);
       
       // 현재 월 범위 내에서의 시작/끝 날짜 계산
       const barStart = isBefore(startDate, monthStart) ? monthStart : startDate;
-      const barEnd = isAfter(endDate, monthEnd) ? monthEnd : endDate;
+      const barEnd = isAfter(deadlineDate, monthEnd) ? monthEnd : deadlineDate;
       
       // 그리드 컬럼 위치 계산 (1-based, 첫 번째 컬럼은 작업명)
       const startColumn = differenceInCalendarDays(barStart, monthStart) + 2;
@@ -153,25 +153,23 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
       // 최소 1일 폭 보장
       const finalEndColumn = Math.max(endColumn, startColumn + 1);
       
-      // 색상 결정
+      // 기본 색상 결정 (마감일 기준)
       let backgroundColor = '#3b82f6'; // 기본 파란색
-      if (completed) {
+      let borderColor = '#3b82f6';
+      
+      if (isBefore(deadlineDate, new Date()) && !completed) {
+        backgroundColor = '#ef4444'; // 마감일 지난 작업은 빨간색
+        borderColor = '#dc2626';
+      } else if (completed) {
         backgroundColor = '#22c55e'; // 완료된 작업은 초록색
-      } else if (deadline) {
-        try {
-          const deadlineDate = parseISO(deadline);
-          if (isBefore(deadlineDate, new Date())) {
-            backgroundColor = '#ef4444'; // 마감일 지난 작업은 빨간색
-          }
-        } catch (e) {
-          // deadline 파싱 실패 시 기본 색상 유지
-        }
+        borderColor = '#16a34a';
       }
       
       console.log(`바 스타일 계산:`, {
-        작업: startStr + ' ~ ' + endStr,
+        작업: startStr + ' ~ ' + deadlineStr,
         컬럼범위: `${startColumn} ~ ${finalEndColumn}`,
-        색상: backgroundColor
+        색상: backgroundColor,
+        완료: completed
       });
       
       return {
@@ -180,23 +178,71 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
         gridRow: rowIndex + 2, // 헤더 다음부터 시작
         backgroundColor,
         color: 'white',
-        borderRadius: '4px',
-        padding: '2px 6px',
-        fontSize: '10px',
+        borderRadius: '6px',
+        padding: '4px 8px',
+        fontSize: '11px',
         fontWeight: '500',
         textAlign: 'center' as const,
         zIndex: 1,
-        minHeight: '24px',
+        minHeight: '28px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        border: `2px solid ${borderColor}`,
+        margin: '2px 0',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap' as const
       };
     } catch (error) {
       console.error('바 스타일 계산 오류:', error);
+      return {};
+    }
+  }
+
+  // 완료 진행도 바 스타일 계산 (완료된 부분만 표시)
+  function getCompletedBarStyle(startStr: string, deadlineStr: string, completedStr: string, rowIndex: number = 0) {
+    try {
+      const startDate = parseISO(startStr);
+      const completedDate = parseISO(completedStr);
+      
+      // 현재 월 범위 내에서의 시작/완료 날짜 계산
+      const barStart = isBefore(startDate, monthStart) ? monthStart : startDate;
+      const barEnd = isAfter(completedDate, monthEnd) ? monthEnd : completedDate;
+      
+      // 그리드 컬럼 위치 계산
+      const startColumn = differenceInCalendarDays(barStart, monthStart) + 2;
+      const endColumn = differenceInCalendarDays(barEnd, monthStart) + 3;
+      
+      // 최소 1일 폭 보장
+      const finalEndColumn = Math.max(endColumn, startColumn + 1);
+      
+      return {
+        gridColumnStart: startColumn,
+        gridColumnEnd: finalEndColumn,
+        gridRow: rowIndex + 2,
+        backgroundColor: '#22c55e', // 완료된 부분은 초록색
+        color: 'white',
+        borderRadius: '6px',
+        padding: '4px 8px',
+        fontSize: '11px',
+        fontWeight: '600',
+        textAlign: 'center' as const,
+        zIndex: 2, // 기본 바보다 위에 표시
+        minHeight: '28px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+        border: '2px solid #16a34a',
+        margin: '2px 0',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap' as const
+      };
+    } catch (error) {
+      console.error('완료 바 스타일 계산 오류:', error);
       return {};
     }
   }
@@ -232,10 +278,10 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
       </div>
 
       <div
-        className="grid gap-0 border border-gray-200"
+        className="grid gap-0 border-2 border-gray-300 rounded-lg overflow-hidden"
         style={{
-          gridTemplateColumns: `280px repeat(${days.length}, 1fr)`,
-          gridAutoRows: '32px',
+          gridTemplateColumns: `300px repeat(${days.length}, 1fr)`,
+          gridAutoRows: '40px',
           minHeight: '400px'
         }}
       >
@@ -294,22 +340,21 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
         {wbs.map((task, index) => {
           // 날짜 추출
           const startDate = getDateField(task, ['startDate', 'registered_at']);
-          const endDate = task.completedAt ? 
-            getDateField(task, ['completedAt']) : 
-            getDateField(task, ['endDate', 'deadline']);
+          const deadline = getDateField(task, ['deadline', 'endDate']);
+          const completedAt = task.completedAt ? getDateField(task, ['completedAt']) : null;
           
           const displayName = task.name || task.content || '무제';
-          const isCompleted = !!task.completedAt;
+          const isCompleted = !!completedAt;
           
           // 현재 월 범위에 있는지 확인
           let showBar = false;
           let actualStartDate = startDate;
-          let actualEndDate = endDate;
+          let actualDeadline = deadline;
           
-          if (startDate && endDate) {
+          if (startDate && deadline) {
             try {
               const start = parseISO(startDate);
-              const end = parseISO(endDate);
+              const end = parseISO(deadline);
               // 작업 기간이 현재 월과 겹치는지 확인
               if (!(isBefore(end, monthStart) || isAfter(start, monthEnd))) {
                 showBar = true;
@@ -317,55 +362,62 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
             } catch (e) {
               console.warn('날짜 파싱 오류:', e);
             }
-          } else if (startDate && !endDate) {
-            // 시작일만 있는 경우 3일 기간으로 가정
+          } else if (startDate && !deadline) {
+            // 시작일만 있는 경우 7일 기간으로 가정
             try {
               const start = parseISO(startDate);
-              const estimatedEnd = addDays(start, 3);
-              actualEndDate = format(estimatedEnd, 'yyyy-MM-dd');
+              const estimatedEnd = addDays(start, 7);
+              actualDeadline = format(estimatedEnd, 'yyyy-MM-dd');
               if (!(isBefore(estimatedEnd, monthStart) || isAfter(start, monthEnd))) {
                 showBar = true;
               }
             } catch (e) {
               console.warn('시작일 파싱 오류:', e);
             }
-          } else if (!startDate && endDate) {
-            // 종료일만 있는 경우 3일 기간으로 가정
+          } else if (!startDate && deadline) {
+            // 마감일만 있는 경우 7일 기간으로 가정
             try {
-              const end = parseISO(endDate);
-              const estimatedStart = addDays(end, -3);
+              const end = parseISO(deadline);
+              const estimatedStart = addDays(end, -7);
               actualStartDate = format(estimatedStart, 'yyyy-MM-dd');
               if (!(isBefore(end, monthStart) || isAfter(estimatedStart, monthEnd))) {
                 showBar = true;
               }
             } catch (e) {
-              console.warn('종료일 파싱 오류:', e);
+              console.warn('마감일 파싱 오류:', e);
             }
           }
           
-          const barStyle = showBar && actualStartDate && actualEndDate ? 
-            getBarStyle(actualStartDate, actualEndDate, isCompleted, task.deadline, index) : 
+          // 바 스타일 계산 (마감일까지 표시)
+          const barStyle = showBar && actualStartDate && actualDeadline ? 
+            getBarStyle(actualStartDate, actualDeadline, isCompleted, completedAt, index) : 
+            {};
+          
+          // 완료 바 스타일 계산 (완료된 부분만 표시)
+          const completedBarStyle = showBar && actualStartDate && actualDeadline && completedAt ? 
+            getCompletedBarStyle(actualStartDate, actualDeadline, completedAt, index) : 
             {};
           
           console.log(`작업 ${index}:`, {
             이름: displayName,
             시작일: actualStartDate,
-            종료일: actualEndDate,
+            마감일: actualDeadline,
+            완료일: completedAt,
             바표시: showBar,
-            스타일: barStyle
+            완료여부: isCompleted
           });
           
           return (
             <React.Fragment key={`task-${task.id}`}>
               {/* 작업명 셀 */}
               <div
-                className="px-2 py-1 text-xs border-r border-b border-gray-200 bg-white flex items-center"
+                className="px-3 py-2 text-sm border-r border-b border-gray-200 bg-white flex items-center"
                 style={{
                   gridRow: index + 2,
                   gridColumn: 1,
-                  paddingLeft: `${(task.depth || 0) * 16 + 8}px`
+                  paddingLeft: `${(task.depth || 0) * 16 + 12}px`
                 }}
-                title={`${displayName} (${actualStartDate || '시작일 없음'} ~ ${actualEndDate || '종료일 없음'})`}
+                title={`${displayName} (${actualStartDate || '시작일 없음'} ~ ${actualDeadline || '마감일 없음'}${completedAt ? ` | 완료: ${completedAt}` : ''})`}
               >
                 {/* 계층 구조 표시 */}
                 <div className="flex items-center flex-1">
@@ -379,7 +431,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
                   )}
                   
                   <div 
-                    className={`w-2 h-2 rounded-full mr-2 flex-shrink-0 ${
+                    className={`w-3 h-3 rounded-full mr-2 flex-shrink-0 ${
                       (task.depth || 0) === 0 ? 'bg-blue-500' :
                       (task.depth || 0) === 1 ? 'bg-green-500' :
                       (task.depth || 0) === 2 ? 'bg-orange-500' : 'bg-gray-400'
@@ -389,24 +441,35 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
                   <span 
                     className={`flex-1 ${isCompleted ? 'line-through text-gray-500' : ''}`}
                     style={{
-                      fontSize: `${Math.max(10, 12 - (task.depth || 0))}px`,
+                      fontSize: `${Math.max(11, 13 - (task.depth || 0))}px`,
                       fontWeight: (task.depth || 0) === 0 ? '600' : '400'
                     }}
                   >
-                    {displayName.length > 20 ? displayName.slice(0, 20) + '...' : displayName}
+                    {displayName.length > 22 ? displayName.slice(0, 22) + '...' : displayName}
                     {!showBar && <span className="text-gray-400 text-xs ml-1">(기간없음)</span>}
                     {(task.depth || 0) === 0 && <span className="text-blue-600 ml-1">📁</span>}
+                    {isCompleted && <span className="text-green-600 ml-1">✅</span>}
                   </span>
                 </div>
               </div>
               
-              {/* 간트 바 */}
-              {showBar && actualStartDate && actualEndDate && (
+              {/* 간트 바 (마감일까지 표시) */}
+              {showBar && actualStartDate && actualDeadline && (
                 <div
                   style={barStyle}
-                  title={`${displayName}: ${actualStartDate} ~ ${actualEndDate}${isCompleted ? ' (완료)' : ''}`}
+                  title={`${displayName}: ${actualStartDate} ~ ${actualDeadline}${isCompleted ? ` | 완료: ${completedAt}` : ''}`}
                 >
-                  {displayName.length > 10 ? displayName.slice(0, 10) + '...' : displayName}
+                  {displayName.length > 12 ? displayName.slice(0, 12) + '...' : displayName}
+                </div>
+              )}
+              
+              {/* 완료 바 (완료된 부분만 표시) */}
+              {showBar && actualStartDate && actualDeadline && completedAt && (
+                <div
+                  style={completedBarStyle}
+                  title={`${displayName}: 완료 (${completedAt})`}
+                >
+                  ✅ 완료
                 </div>
               )}
             </React.Fragment>
