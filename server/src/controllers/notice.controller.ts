@@ -62,16 +62,21 @@ export const getLatestNotices = async (req: Request, res: Response) => {
 export const createNotice = async (req: Request, res: Response) => {
   try {
     const { title, content, author_id, is_pinned, notice_type, attachments } = req.body;
+    console.log('[공지 생성] 요청 데이터:', req.body);
+    const safeAttachments = attachments === undefined || attachments === null ? '' : attachments;
+    console.log('[공지 생성] 쿼리 실행 전');
     const [rows] = await sequelize.query(
       `INSERT INTO notices (title, content, author_id, is_pinned, notice_type, attachments) VALUES (:title, :content, :author_id, :is_pinned, :notice_type, :attachments) RETURNING *`,
       {
-        replacements: { title, content, author_id, is_pinned: is_pinned ?? false, notice_type: notice_type ?? 'general', attachments },
+        replacements: { title, content, author_id, is_pinned: is_pinned ?? false, notice_type: notice_type ?? 'general', attachments: safeAttachments },
         type: QueryTypes.INSERT,
       }
     );
+    console.log('[공지 생성] 쿼리 성공:', rows);
     res.status(201).json(Array.isArray(rows) ? rows[0] : undefined);
-  } catch (err) {
-    res.status(500).json({ message: '공지사항 생성 실패', error: err });
+  } catch (err: any) {
+    console.error('[공지 생성] 에러:', err);
+    res.status(500).json({ message: '공지사항 생성 실패', error: err?.message, stack: err?.stack });
   }
 };
 
