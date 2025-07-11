@@ -264,7 +264,7 @@ export const createQuestion = async (req: Request, res: Response): Promise<void>
           priority,
           projectId,
           authorId,
-          tags: JSON.stringify(tags)
+          tags: tags.length > 0 ? `{${tags.map((tag: string) => `"${tag.replace(/"/g, '\\"')}"`).join(',')}}` : '{}'
         },
         type: QueryTypes.INSERT
       }
@@ -328,7 +328,7 @@ export const updateQuestion = async (req: Request, res: Response): Promise<void>
           content,
           category,
           priority,
-          tags: JSON.stringify(tags)
+          tags: tags.length > 0 ? `{${tags.map((tag: string) => `"${tag.replace(/"/g, '\\"')}"`).join(',')}}` : '{}'
         },
         type: QueryTypes.UPDATE
       }
