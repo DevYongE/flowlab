@@ -298,8 +298,8 @@ const ProjectDetailPage = () => {
     
     let filteredNotes = project.devNotes.filter(note => {
       // 검색어 필터링
-      const matchesSearch = note.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           note.authorName.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = (note.content ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           (note.authorName ?? '').toLowerCase().includes(searchTerm.toLowerCase());
       
       // 상태 필터링
       const matchesStatus = statusFilter === 'ALL' || note.status === statusFilter;
