@@ -4,6 +4,7 @@ import { QueryTypes } from 'sequelize';
 
 export const getNotices = async (req: Request, res: Response) => {
   try {
+    console.log('[공지 목록] 요청');
     const rows = await sequelize.query(
       `SELECT n.*, u.name as author_name 
        FROM notices n 
@@ -11,15 +12,18 @@ export const getNotices = async (req: Request, res: Response) => {
        ORDER BY n.is_pinned DESC, n.created_at DESC`,
       { type: QueryTypes.SELECT }
     ) as any[];
+    console.log('[공지 목록] 결과:', rows.length);
     res.json(rows);
-  } catch (err) {
-    res.status(500).json({ message: '공지사항 조회 실패', error: err });
+  } catch (err: any) {
+    console.error('[공지 목록] 에러:', err);
+    res.status(500).json({ message: '공지사항 조회 실패', error: err?.message, stack: err?.stack });
   }
 };
 
 export const getNotice = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    console.log('[공지 상세] 요청 id:', id);
     // 조회수 증가
     await sequelize.query('UPDATE notices SET views = views + 1 WHERE notice_id = :id', {
       replacements: { id },
@@ -33,19 +37,22 @@ export const getNotice = async (req: Request, res: Response) => {
        WHERE n.notice_id = :id`,
       { replacements: { id }, type: QueryTypes.SELECT }
     );
+    console.log('[공지 상세] 결과:', rows);
     if (!Array.isArray(rows) || rows.length === 0) {
       res.status(404).json({ message: '공지사항 없음' });
       return;
     }
     const notice = Array.isArray(rows) ? rows[0] : undefined;
     res.json(notice);
-  } catch (err) {
-    res.status(500).json({ message: '공지사항 조회 실패', error: err });
+  } catch (err: any) {
+    console.error('[공지 상세] 에러:', err);
+    res.status(500).json({ message: '공지사항 조회 실패', error: err?.message, stack: err?.stack });
   }
 };
 
 export const getLatestNotices = async (req: Request, res: Response) => {
   try {
+    console.log('[최신 공지 목록] 요청');
     const rows = await sequelize.query(
       `SELECT notice_id, title, TO_CHAR(created_at, 'YYYY-MM-DD') as "createdAt" 
        FROM notices 
@@ -53,9 +60,11 @@ export const getLatestNotices = async (req: Request, res: Response) => {
        LIMIT 5`,
       { type: QueryTypes.SELECT }
     ) as any[];
+    console.log('[최신 공지 목록] 결과:', rows.length);
     res.json(rows);
-  } catch (err) {
-    res.status(500).json({ message: '최신 공지사항 조회 실패', error: err });
+  } catch (err: any) {
+    console.error('[최신 공지 목록] 에러:', err);
+    res.status(500).json({ message: '최신 공지사항 조회 실패', error: err?.message, stack: err?.stack });
   }
 };
 
@@ -89,6 +98,7 @@ export const updateNotice = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { title, content, is_pinned, notice_type, attachments } = req.body;
+    console.log('[공지 수정] 요청 id:', id, 'body:', req.body);
     const safeAttachments =
       attachments === undefined || attachments === null || attachments === ''
         ? '[]'
@@ -103,30 +113,35 @@ export const updateNotice = async (req: Request, res: Response) => {
       }
     ) as any;
     const rows = Array.isArray(result[0]) ? result[0] : [];
+    console.log('[공지 수정] 결과:', rows);
     if (rows.length === 0) {
       res.status(404).json({ message: '공지사항 없음' });
       return;
     }
     res.json(rows[0]);
-  } catch (err) {
-    res.status(500).json({ message: '공지사항 수정 실패', error: err });
+  } catch (err: any) {
+    console.error('[공지 수정] 에러:', err);
+    res.status(500).json({ message: '공지사항 수정 실패', error: err?.message, stack: err?.stack });
   }
 };
 
 export const deleteNotice = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    console.log('[공지 삭제] 요청 id:', id);
     const result = await sequelize.query('DELETE FROM notices WHERE notice_id = :id RETURNING *', {
       replacements: { id },
       type: QueryTypes.DELETE,
     }) as any;
     const rows = Array.isArray(result[0]) ? result[0] : [];
+    console.log('[공지 삭제] 결과:', rows);
     if (rows.length === 0) {
       res.status(404).json({ message: '공지사항 없음' });
       return;
     }
     res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ message: '공지사항 삭제 실패', error: err });
+  } catch (err: any) {
+    console.error('[공지 삭제] 에러:', err);
+    res.status(500).json({ message: '공지사항 삭제 실패', error: err?.message, stack: err?.stack });
   }
 }; 
