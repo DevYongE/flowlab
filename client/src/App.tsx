@@ -9,6 +9,8 @@ import ProjectListPage from './pages/ProjectListPage';
 import ProjectFormPage from './pages/ProjectFormPage';
 import ProjectDetailPage from './pages/ProjectDetailPage';
 import RegisterPage from './pages/RegisterPage';
+import WbsMainPage from './pages/WbsMainPage';
+import WbsPage from './pages/WbsPage';
 
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
@@ -37,6 +39,8 @@ export default function App() {
           <Route path="/projects/new" element={<ProjectFormPage />} />
           <Route path="/projects/edit/:id" element={<ProjectFormPage />} />
           <Route path="/projects/:id" element={<ProjectDetailPage />} />
+          <Route path="/wbs" element={<WbsMainPage />} />
+          <Route path="/wbs/:projectId" element={<WbsPage />} />
           <Route path="/admin/users" element={<AdminUserPage />} />
         </>
       ) : (
