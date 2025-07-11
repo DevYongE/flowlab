@@ -77,7 +77,6 @@ const ProjectDetailPage = () => {
   const [showAssigneeModal, setShowAssigneeModal] = useState(false);
   const [selectedNoteForAssign, setSelectedNoteForAssign] = useState<DevNote | null>(null);
   const [activeTab, setActiveTab] = useState<'requirements' | 'wbs' | 'gantt'>('requirements');
-  const [refreshWbsTrigger, setRefreshWbsTrigger] = useState(0);
 
   const fetchProject = async () => {
     try {
@@ -602,9 +601,9 @@ const ProjectDetailPage = () => {
       case 'requirements':
         return renderRequirementsTab();
       case 'wbs':
-        return <WbsBoard projectId={project.id.toString()} refreshTrigger={refreshWbsTrigger} />;
+        return <WbsBoard projectId={project.id.toString()} />;
       case 'gantt':
-        return <GanttChart projectId={project.id.toString()} refreshTrigger={refreshWbsTrigger} />;
+        return <GanttChart projectId={project.id.toString()} />;
       default:
         return renderRequirementsTab();
     }
