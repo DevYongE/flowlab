@@ -3,6 +3,8 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Sparkles, MessageSquare } from 'lucide-react';
 import MainLayout from '../components/layout/MainLayout';
+import WbsBoard from '../components/wbs/WbsBoard';
+import GanttChart from '../components/wbs/GanttChart';
 import axios from '../lib/axios';
 import { getCurrentUser, isAdmin } from '../lib/auth';
 
@@ -74,6 +76,8 @@ const ProjectDetailPage = () => {
   const [noteAssignees, setNoteAssignees] = useState<{[key: number]: any[]}>({});
   const [showAssigneeModal, setShowAssigneeModal] = useState(false);
   const [selectedNoteForAssign, setSelectedNoteForAssign] = useState<DevNote | null>(null);
+  const [activeTab, setActiveTab] = useState<'requirements' | 'wbs' | 'gantt'>('requirements');
+  const [refreshWbsTrigger, setRefreshWbsTrigger] = useState(0);
 
   const fetchProject = async () => {
     try {
@@ -555,6 +559,365 @@ const ProjectDetailPage = () => {
   
   const canEditProject = isAdmin() || currentUser?.id === project.author_id;
   const filteredNotes = getFilteredAndSortedNotes();
+
+  // 탭 렌더링 함수
+  const renderTabButtons = () => (
+    <div className="flex border-b border-gray-200 mb-6">
+      <button
+        className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors ${
+          activeTab === 'requirements'
+            ? 'border-blue-500 text-blue-600 bg-blue-50'
+            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+        }`}
+        onClick={() => setActiveTab('requirements')}
+      >
+        📋 요구사항
+      </button>
+      <button
+        className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors ${
+          activeTab === 'wbs'
+            ? 'border-blue-500 text-blue-600 bg-blue-50'
+            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+        }`}
+        onClick={() => setActiveTab('wbs')}
+      >
+        🌳 WBS
+      </button>
+      <button
+        className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors ${
+          activeTab === 'gantt'
+            ? 'border-blue-500 text-blue-600 bg-blue-50'
+            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+        }`}
+        onClick={() => setActiveTab('gantt')}
+      >
+        📊 간트차트
+      </button>
+    </div>
+  );
+
+  // 탭 컨텐츠 렌더링 함수
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'requirements':
+        return renderRequirementsTab();
+      case 'wbs':
+        return <WbsBoard projectId={project.id.toString()} refreshTrigger={refreshWbsTrigger} />;
+      case 'gantt':
+        return <GanttChart projectId={project.id.toString()} refreshTrigger={refreshWbsTrigger} />;
+      default:
+        return renderRequirementsTab();
+    }
+  };
+
+  // 요구사항 탭 컨텐츠
+  const renderRequirementsTab = () => (
+    <>
+      {/* 프로젝트 할당 섹션 */}
+      <div id="assign-section" className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+        <h3 className="text-lg font-semibold mb-3 text-blue-800">👥 프로젝트 할당</h3>
+        <div className="flex gap-2 items-center mb-3">
+          <select
+            className="border rounded p-2 flex-1"
+            value={selectedUserId}
+            onChange={e => setSelectedUserId(e.target.value)}
+          >
+            <option value="">회원 선택</option>
+            {companyUsers.map(u => (
+              <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
+            ))}
+          </select>
+          <div className="flex gap-1">
+            <button 
+              className="bg-red-500 text-white px-3 py-2 rounded hover:bg-red-600 disabled:bg-gray-400 text-sm font-semibold" 
+              onClick={() => handleAssignUser('PL')}
+              disabled={!selectedUserId}
+              title="프로젝트 리더"
+            >
+              PL
+            </button>
+            <button 
+              className="bg-green-500 text-white px-3 py-2 rounded hover:bg-green-600 disabled:bg-gray-400 text-sm" 
+              onClick={() => handleAssignUser('PLANNER')}
+              disabled={!selectedUserId}
+              title="기획자"
+            >
+              기획
+            </button>
+            <button 
+              className="bg-purple-500 text-white px-3 py-2 rounded hover:bg-purple-600 disabled:bg-gray-400 text-sm" 
+              onClick={() => handleAssignUser('DESIGNER')}
+              disabled={!selectedUserId}
+              title="디자이너"
+            >
+              디자인
+            </button>
+            <button 
+              className="bg-orange-500 text-white px-3 py-2 rounded hover:bg-orange-600 disabled:bg-gray-400 text-sm" 
+              onClick={() => handleAssignUser('DEVELOPER')}
+              disabled={!selectedUserId}
+              title="개발자"
+            >
+              개발
+            </button>
+            <button 
+              className="bg-gray-500 text-white px-3 py-2 rounded hover:bg-gray-600 disabled:bg-gray-400 text-sm" 
+              onClick={() => handleAssignUser('MEMBER')}
+              disabled={!selectedUserId}
+              title="일반 멤버"
+            >
+              멤버
+            </button>
+          </div>
+        </div>
+        {/* 할당된 회원 목록 */}
+        <div>
+          <span className="font-semibold text-blue-800">할당된 회원:</span>
+          {assignedUsers.length === 0 ? (
+            <span className="ml-2 text-gray-400">없음</span>
+          ) : (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {assignedUsers.map((u: any) => (
+                <div key={u.id} className="inline-flex items-center bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
+                  <span className={`inline-block w-2 h-2 rounded-full mr-2 ${
+                    u.role === 'PL' ? 'bg-red-500' :
+                    u.role === 'PLANNER' ? 'bg-green-500' :
+                    u.role === 'DESIGNER' ? 'bg-purple-500' :
+                    u.role === 'DEVELOPER' ? 'bg-orange-500' :
+                    'bg-gray-500'
+                  }`}></span>
+                  <span className="font-semibold mr-1">
+                    {u.role === 'PL' ? 'PL' :
+                     u.role === 'PLANNER' ? '기획' :
+                     u.role === 'DESIGNER' ? '디자인' :
+                     u.role === 'DEVELOPER' ? '개발' :
+                     '멤버'}
+                  </span>
+                  {u.name} ({u.email})
+                  <button 
+                    className="ml-2 text-red-500 hover:text-red-700 text-xs"
+                    onClick={() => handleRemoveUser(u.id)}
+                    title="할당 해제"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 요구사항 관리 섹션 */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+        <div className="p-4 border-b border-gray-200">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold text-gray-800">📋 요구사항 관리</h3>
+            <div className="flex gap-2">
+              <button 
+                onClick={handleAIAssist}
+                className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 flex items-center gap-2"
+                title="AI로 요구사항 분석"
+              >
+                <Sparkles className="h-4 w-4" />
+                AI 분석
+              </button>
+              <button 
+                onClick={openAddModal}
+                className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
+              >
+                + 요구사항 추가
+              </button>
+            </div>
+          </div>
+          
+          {/* 검색 및 필터 */}
+          <div className="flex gap-4 mb-4">
+            <input
+              type="text"
+              placeholder="요구사항 검색..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="flex-1 border border-gray-300 rounded-md px-3 py-2"
+            />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="border border-gray-300 rounded-md px-3 py-2"
+            >
+              <option value="ALL">전체 상태</option>
+              <option value="TODO">미결</option>
+              <option value="IN_PROGRESS">진행중</option>
+              <option value="DONE">완료</option>
+            </select>
+          </div>
+        </div>
+
+        {/* 요구사항 테이블 */}
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr>
+                <th className="py-2 px-4 border-b">내용</th>
+                <th className="py-2 px-4 border-b">등록일</th>
+                <th className="py-2 px-4 border-b">마감일</th>
+                <th className="py-2 px-4 border-b">완료일</th>
+                <th className="py-2 px-4 border-b">작성자</th>
+                <th className="py-2 px-4 border-b">상태</th>
+                <th className="py-2 px-4 border-b">진행률</th>
+                <th className="py-2 px-4 border-b">담당자</th>
+                <th className="py-2 px-4 border-b">관리</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredNotes.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-8 text-center text-gray-500">
+                    {searchTerm || statusFilter !== 'ALL' ? '검색 결과가 없습니다.' : '요구사항이 없습니다.'}
+                  </td>
+                </tr>
+              ) : (
+                filteredNotes.map((note) => {
+                  const canEditNote = isAdmin() || currentUser?.id === note.author_id;
+                  return (
+                    <tr key={note.id} className={`hover:bg-gray-50 transition-colors ${
+                      recentlyUpdatedNoteId === Number(note.id) ? 'bg-green-100 border-green-300' : 
+                      note.status === 'DONE' ? 'bg-green-50' : ''
+                    }`}>
+                      <td className="py-3 px-4 border-b">
+                        <div className="max-w-xs truncate" title={note.content}>
+                          {note.content}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 border-b text-center text-sm">{note.registeredAt}</td>
+                      <td className="py-3 px-4 border-b text-center text-sm">
+                        {note.deadline ? note.deadline.split('T')[0] : '-'}
+                      </td>
+                      <td className="py-3 px-4 border-b text-center text-sm">
+                        {note.completedAt ? note.completedAt.split('T')[0] : '-'}
+                      </td>
+                      <td className="py-3 px-4 border-b text-center text-sm">{note.authorName}</td>
+                      <td className="py-3 px-4 border-b text-center">
+                        <span 
+                          className={`inline-block px-2 py-1 text-xs font-semibold text-white rounded cursor-pointer ${getStatusColor(note.status)}`}
+                          onClick={() => handleStatusClick(note)}
+                        >
+                          {getStatusText(note.status)}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 border-b">
+                        <div className="flex items-center">
+                          <div 
+                            className="w-24 bg-gray-200 rounded-full h-4 mr-2 cursor-pointer relative"
+                            onClick={(e) => handleProgressBarClick(e, note)}
+                          >
+                            <div 
+                              className="bg-blue-600 h-4 rounded-full transition-all duration-100" 
+                              style={{ width: `${note.progress}%` }}
+                            ></div>
+                          </div>
+                          {editingProgressNoteId === note.id ? (
+                            <input
+                              type="number"
+                              value={inlineProgressValue}
+                              onChange={handleInlineProgressChange}
+                              onBlur={handleInlineProgressUpdate}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleInlineProgressUpdate();
+                                if (e.key === 'Escape') setEditingProgressNoteId(null);
+                              }}
+                              className="w-14 text-center border border-gray-300 rounded"
+                              autoFocus
+                            />
+                          ) : (
+                            <span 
+                              className="text-sm text-gray-600 w-14 text-center cursor-pointer"
+                              onClick={() => handleProgressTextClick(note)}
+                            >
+                              {note.progress}%
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 border-b text-center">
+                        <div className="flex flex-col gap-1">
+                          {noteAssignees[note.id] && noteAssignees[note.id].length > 0 ? (
+                            noteAssignees[note.id].map((assignee: any) => (
+                              <div key={`${assignee.id}-${assignee.role}`} className="flex items-center justify-center gap-1">
+                                <span className={`inline-block w-2 h-2 rounded-full ${
+                                  assignee.role === 'PL' ? 'bg-red-500' :
+                                  assignee.role === 'PLANNER' ? 'bg-green-500' :
+                                  assignee.role === 'DESIGNER' ? 'bg-purple-500' :
+                                  assignee.role === 'DEVELOPER' ? 'bg-orange-500' :
+                                  'bg-gray-500'
+                                }`}></span>
+                                <span className="text-xs font-semibold">
+                                  {assignee.role === 'PL' ? 'PL' :
+                                   assignee.role === 'PLANNER' ? '기획' :
+                                   assignee.role === 'DESIGNER' ? '디자인' :
+                                   assignee.role === 'DEVELOPER' ? '개발' :
+                                   '멤버'}
+                                </span>
+                                <span className="text-xs">{assignee.name}</span>
+                                {canEditNote && (
+                                  <button 
+                                    className="text-red-500 hover:text-red-700 text-xs"
+                                    onClick={() => handleRemoveUserFromNote(note.id, assignee.id, assignee.role)}
+                                    title="담당자 해제"
+                                  >
+                                    ✕
+                                  </button>
+                                )}
+                              </div>
+                            ))
+                          ) : (
+                            <span className="text-xs text-gray-400">미할당</span>
+                          )}
+                          {canEditNote && (
+                            <button 
+                              onClick={() => openAssigneeModal(note)}
+                              className="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 mt-1"
+                            >
+                              담당자 지정
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 border-b text-center">
+                        {canEditNote && (
+                          <div className="flex gap-1 justify-center">
+                            <button
+                              onClick={() => openCommentModal(note)}
+                              className="text-sm bg-gray-500 text-white p-1 rounded hover:bg-gray-600"
+                              title="코멘트 보기/작성"
+                            >
+                              <MessageSquare className="h-4 w-4" />
+                            </button>
+                            <button 
+                              onClick={() => openEditModal(note)} 
+                              className="text-sm bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600"
+                            >
+                              수정
+                            </button>
+                            <button 
+                              onClick={() => handleDeleteNote(note.id)} 
+                              className="text-sm bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
+                            >
+                              삭제
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </>
+  );
 
   return (
     <MainLayout>
@@ -1234,6 +1597,12 @@ const ProjectDetailPage = () => {
             </div>
           </div>
         )}
+
+        {/* 탭 버튼 */}
+        {renderTabButtons()}
+
+        {/* 탭 컨텐츠 */}
+        {renderTabContent()}
       </div>
     </MainLayout>
   );
