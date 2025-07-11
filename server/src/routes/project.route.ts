@@ -18,6 +18,8 @@ import {
   assignUserToProject,
   getDevNoteAssignees,
   assignUserToDevNote,
+  removeUserFromProject,
+  removeUserFromDevNote,
   bulkCreateDevNotes,
   clearProjectWbs // WBS 전체 삭제 함수 추가
 } from '../controllers/project.controller';
@@ -29,6 +31,7 @@ const router = express.Router();
 // Assignees routes
 router.get('/:id/assignees', authenticate, getProjectAssignees);
 router.post('/:id/assign-user', authenticate, assignUserToProject);
+router.delete('/:id/remove-user', authenticate, removeUserFromProject);
 
 // Project routes
 router.get('/', authenticate, getProjects);
@@ -57,5 +60,6 @@ router.patch('/notes/structure/:projectId', authenticate, updateDevNotesStructur
 // DevNote Assignees routes
 router.get('/notes/:noteId/assignees', authenticate, getDevNoteAssignees);
 router.post('/notes/:noteId/assign-user', authenticate, assignUserToDevNote);
+router.delete('/notes/:noteId/remove-user', authenticate, removeUserFromDevNote);
 
 export default router; 

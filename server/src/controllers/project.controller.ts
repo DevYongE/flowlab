@@ -655,10 +655,19 @@ export const getProjectAssignees = async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
     const rows = await sequelize.query(
-      `SELECT u.id, u.name, u.email, d.department_name FROM project_assignees pa
+      `SELECT u.id, u.name, u.email, d.department_name, pa.role, pa.assigned_at 
+       FROM project_assignees pa
        JOIN users u ON pa.user_id = u.id
        LEFT JOIN departments d ON u.department = d.id
-       WHERE pa.project_id = :project_id`,
+       WHERE pa.project_id = :project_id
+       ORDER BY 
+         CASE pa.role 
+           WHEN 'PL' THEN 1
+           WHEN 'PLANNER' THEN 2
+           WHEN 'DESIGNER' THEN 3
+           WHEN 'DEVELOPER' THEN 4
+           ELSE 5
+         END, pa.assigned_at`,
       { replacements: { project_id: id }, type: QueryTypes.SELECT }
     );
     res.json(Array.isArray(rows) ? rows : []);
@@ -670,18 +679,37 @@ export const getProjectAssignees = async (req: Request, res: Response) => {
 // 프로젝트에 회원 할당
 export const assignUserToProject = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { userId } = req.body;
+  const { userId, role = 'MEMBER' } = req.body;
   if (!userId) {
     res.status(400).json({ message: 'userId가 필요합니다.' });
     return;
   }
+  
+  const validRoles = ['PL', 'PLANNER', 'DESIGNER', 'DEVELOPER', 'MEMBER'];
+  if (!validRoles.includes(role)) {
+    res.status(400).json({ message: '유효하지 않은 역할입니다.' });
+    return;
+  }
+  
   try {
+    // PL 역할인 경우 기존 PL이 있는지 확인
+    if (role === 'PL') {
+      const existingPL = await sequelize.query(
+        `SELECT user_id FROM project_assignees WHERE project_id = :project_id AND role = 'PL'`,
+        { replacements: { project_id: id }, type: QueryTypes.SELECT }
+      );
+      if (Array.isArray(existingPL) && existingPL.length > 0) {
+        res.status(400).json({ message: '이미 PL이 할당되어 있습니다.' });
+        return;
+      }
+    }
+    
     await sequelize.query(
-      `INSERT INTO project_assignees (project_id, user_id) VALUES (:project_id, :user_id)
-       ON CONFLICT (project_id, user_id) DO NOTHING`,
-      { replacements: { project_id: id, user_id: userId }, type: QueryTypes.INSERT }
+      `INSERT INTO project_assignees (project_id, user_id, role) VALUES (:project_id, :user_id, :role)
+       ON CONFLICT (project_id, user_id) DO UPDATE SET role = :role`,
+      { replacements: { project_id: id, user_id: userId, role }, type: QueryTypes.INSERT }
     );
-    res.json({ message: '회원이 프로젝트에 할당되었습니다.' });
+    res.json({ message: `회원이 프로젝트에 ${role} 역할로 할당되었습니다.` });
   } catch (error) {
     res.status(500).json({ message: '회원 할당 실패', error });
   }
@@ -692,10 +720,19 @@ export const getDevNoteAssignees = async (req: Request, res: Response) => {
   const { noteId } = req.params;
   try {
     const rows = await sequelize.query(
-      `SELECT u.id, d.department_name FROM devnote_assignees da
+      `SELECT u.id, u.name, u.email, d.department_name, da.role, da.assigned_at 
+       FROM devnote_assignees da
        JOIN users u ON da.user_id = u.id
        LEFT JOIN departments d ON u.department = d.id
-       WHERE da.devnote_id = :devnote_id`,
+       WHERE da.devnote_id = :devnote_id
+       ORDER BY 
+         CASE da.role 
+           WHEN 'PL' THEN 1
+           WHEN 'PLANNER' THEN 2
+           WHEN 'DESIGNER' THEN 3
+           WHEN 'DEVELOPER' THEN 4
+           ELSE 5
+         END, da.assigned_at`,
       { replacements: { devnote_id: noteId }, type: QueryTypes.SELECT }
     );
     res.json(Array.isArray(rows) ? rows : []);
@@ -707,6 +744,49 @@ export const getDevNoteAssignees = async (req: Request, res: Response) => {
 // 요구사항(DevNote)에 회원 할당
 export const assignUserToDevNote = async (req: Request, res: Response) => {
   const { noteId } = req.params;
+  const { userId, role = 'DEVELOPER' } = req.body;
+  if (!userId) {
+    res.status(400).json({ message: 'userId가 필요합니다.' });
+    return;
+  }
+  
+  const validRoles = ['PL', 'PLANNER', 'DESIGNER', 'DEVELOPER'];
+  if (!validRoles.includes(role)) {
+    res.status(400).json({ message: '유효하지 않은 역할입니다.' });
+    return;
+  }
+  
+  try {
+    // 해당 역할이 이미 할당되어 있는지 확인
+    const existingAssignee = await sequelize.query(
+      `SELECT user_id FROM devnote_assignees WHERE devnote_id = :devnote_id AND role = :role`,
+      { replacements: { devnote_id: noteId, role }, type: QueryTypes.SELECT }
+    );
+    
+    if (Array.isArray(existingAssignee) && existingAssignee.length > 0) {
+      // 기존 할당자를 새로운 할당자로 교체
+      await sequelize.query(
+        `UPDATE devnote_assignees SET user_id = :user_id, assigned_at = NOW() 
+         WHERE devnote_id = :devnote_id AND role = :role`,
+        { replacements: { devnote_id: noteId, user_id: userId, role }, type: QueryTypes.UPDATE }
+      );
+    } else {
+      // 새로운 할당 추가
+      await sequelize.query(
+        `INSERT INTO devnote_assignees (devnote_id, user_id, role) VALUES (:devnote_id, :user_id, :role)`,
+        { replacements: { devnote_id: noteId, user_id: userId, role }, type: QueryTypes.INSERT }
+      );
+    }
+    
+    res.json({ message: `회원이 요구사항에 ${role} 역할로 할당되었습니다.` });
+  } catch (error) {
+    res.status(500).json({ message: '요구사항 담당자 할당 실패', error });
+  }
+};
+
+// 프로젝트 할당 해제
+export const removeUserFromProject = async (req: Request, res: Response) => {
+  const { id } = req.params;
   const { userId } = req.body;
   if (!userId) {
     res.status(400).json({ message: 'userId가 필요합니다.' });
@@ -714,13 +794,36 @@ export const assignUserToDevNote = async (req: Request, res: Response) => {
   }
   try {
     await sequelize.query(
-      `INSERT INTO devnote_assignees (devnote_id, user_id) VALUES (:devnote_id, :user_id)
-       ON CONFLICT (devnote_id, user_id) DO NOTHING`,
-      { replacements: { devnote_id: noteId, user_id: userId }, type: QueryTypes.INSERT }
+      `DELETE FROM project_assignees WHERE project_id = :project_id AND user_id = :user_id`,
+      { replacements: { project_id: id, user_id: userId }, type: QueryTypes.DELETE }
     );
-    res.json({ message: '회원이 요구사항에 할당되었습니다.' });
+    res.json({ message: '프로젝트 할당이 해제되었습니다.' });
   } catch (error) {
-    res.status(500).json({ message: '요구사항 담당자 할당 실패', error });
+    res.status(500).json({ message: '프로젝트 할당 해제 실패', error });
+  }
+};
+
+// 요구사항 할당 해제
+export const removeUserFromDevNote = async (req: Request, res: Response) => {
+  const { noteId } = req.params;
+  const { userId, role } = req.body;
+  if (!userId) {
+    res.status(400).json({ message: 'userId가 필요합니다.' });
+    return;
+  }
+  try {
+    let query = `DELETE FROM devnote_assignees WHERE devnote_id = :devnote_id AND user_id = :user_id`;
+    let replacements: any = { devnote_id: noteId, user_id: userId };
+    
+    if (role) {
+      query += ` AND role = :role`;
+      replacements.role = role;
+    }
+    
+    await sequelize.query(query, { replacements, type: QueryTypes.DELETE });
+    res.json({ message: '요구사항 할당이 해제되었습니다.' });
+  } catch (error) {
+    res.status(500).json({ message: '요구사항 할당 해제 실패', error });
   }
 };
 

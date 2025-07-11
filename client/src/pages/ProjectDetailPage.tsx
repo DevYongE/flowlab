@@ -71,11 +71,30 @@ const ProjectDetailPage = () => {
   const [selectedUserId, setSelectedUserId] = useState('');
   const [assignedUsers, setAssignedUsers] = useState<any[]>([]);
   const [recentlyUpdatedNoteId, setRecentlyUpdatedNoteId] = useState<number | null>(null);
+  const [noteAssignees, setNoteAssignees] = useState<{[key: number]: any[]}>({});
+  const [showAssigneeModal, setShowAssigneeModal] = useState(false);
+  const [selectedNoteForAssign, setSelectedNoteForAssign] = useState<DevNote | null>(null);
 
   const fetchProject = async () => {
     try {
       const res = await axios.get<Project>(`/projects/${id}`);
       setProject(res.data);
+      
+      // 각 요구사항의 담당자 정보도 함께 로드
+      if (res.data.devNotes) {
+        const assigneesData: {[key: number]: any[]} = {};
+        await Promise.all(
+          res.data.devNotes.map(async (note) => {
+            try {
+              const assigneesRes = await axios.get(`/projects/notes/${note.id}/assignees`);
+              assigneesData[note.id] = assigneesRes.data;
+            } catch (error) {
+              assigneesData[note.id] = [];
+            }
+          })
+        );
+        setNoteAssignees(assigneesData);
+      }
     } catch (error) {
       console.error('프로젝트 정보를 가져오는데 실패했습니다.', error);
     }
@@ -471,15 +490,64 @@ const ProjectDetailPage = () => {
     }
   };
 
-  const handleAssignUser = async () => {
+  const handleAssignUser = async (role: string = 'MEMBER') => {
     if (!selectedUserId) return;
     try {
-      await axios.post(`/projects/${project?.id}/assign-user`, { userId: selectedUserId });
+      await axios.post(`/projects/${project?.id}/assign-user`, { userId: selectedUserId, role });
       axios.get(`/projects/${project?.id}/assignees`).then(res => setAssignedUsers(res.data));
       setSelectedUserId('');
-      alert('회원이 할당되었습니다.');
+      alert(`회원이 ${role} 역할로 할당되었습니다.`);
+    } catch (err: any) {
+      alert(err.response?.data?.message || '회원 할당 실패');
+    }
+  };
+
+  const handleRemoveUser = async (userId: string) => {
+    if (!confirm('할당을 해제하시겠습니까?')) return;
+    try {
+      await axios.delete(`/projects/${project?.id}/remove-user`, { data: { userId } });
+      axios.get(`/projects/${project?.id}/assignees`).then(res => setAssignedUsers(res.data));
+      alert('할당이 해제되었습니다.');
     } catch (err) {
-      alert('회원 할당 실패');
+      alert('할당 해제 실패');
+    }
+  };
+
+  const openAssigneeModal = (note: DevNote) => {
+    setSelectedNoteForAssign(note);
+    setShowAssigneeModal(true);
+  };
+
+  const closeAssigneeModal = () => {
+    setShowAssigneeModal(false);
+    setSelectedNoteForAssign(null);
+  };
+
+  const handleAssignUserToNote = async (role: string) => {
+    if (!selectedUserId || !selectedNoteForAssign) return;
+    try {
+      await axios.post(`/projects/notes/${selectedNoteForAssign.id}/assign-user`, { 
+        userId: selectedUserId, 
+        role 
+      });
+      setSelectedUserId('');
+      fetchProject(); // 담당자 정보 새로고침
+      alert(`${role} 담당자가 할당되었습니다.`);
+    } catch (err: any) {
+      alert(err.response?.data?.message || '담당자 할당 실패');
+    }
+  };
+
+  const handleRemoveUserFromNote = async (noteId: number, userId: string, role: string) => {
+    if (!confirm('담당자 할당을 해제하시겠습니까?')) return;
+    try {
+      await axios.delete(`/projects/notes/${noteId}/remove-user`, { 
+        data: { userId, role } 
+      });
+      fetchProject(); // 담당자 정보 새로고침
+      alert('담당자 할당이 해제되었습니다.');
+    } catch (err) {
+      alert('담당자 할당 해제 실패');
     }
   };
 
@@ -520,13 +588,48 @@ const ProjectDetailPage = () => {
                   <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
                 ))}
               </select>
-              <button 
-                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:bg-gray-400" 
-                onClick={handleAssignUser}
-                disabled={!selectedUserId}
-              >
-                할당
-              </button>
+              <div className="flex gap-1">
+                <button 
+                  className="bg-red-500 text-white px-3 py-2 rounded hover:bg-red-600 disabled:bg-gray-400 text-sm font-semibold" 
+                  onClick={() => handleAssignUser('PL')}
+                  disabled={!selectedUserId}
+                  title="프로젝트 리더"
+                >
+                  PL
+                </button>
+                <button 
+                  className="bg-green-500 text-white px-3 py-2 rounded hover:bg-green-600 disabled:bg-gray-400 text-sm" 
+                  onClick={() => handleAssignUser('PLANNER')}
+                  disabled={!selectedUserId}
+                  title="기획자"
+                >
+                  기획
+                </button>
+                <button 
+                  className="bg-purple-500 text-white px-3 py-2 rounded hover:bg-purple-600 disabled:bg-gray-400 text-sm" 
+                  onClick={() => handleAssignUser('DESIGNER')}
+                  disabled={!selectedUserId}
+                  title="디자이너"
+                >
+                  디자인
+                </button>
+                <button 
+                  className="bg-orange-500 text-white px-3 py-2 rounded hover:bg-orange-600 disabled:bg-gray-400 text-sm" 
+                  onClick={() => handleAssignUser('DEVELOPER')}
+                  disabled={!selectedUserId}
+                  title="개발자"
+                >
+                  개발
+                </button>
+                <button 
+                  className="bg-gray-500 text-white px-3 py-2 rounded hover:bg-gray-600 disabled:bg-gray-400 text-sm" 
+                  onClick={() => handleAssignUser('MEMBER')}
+                  disabled={!selectedUserId}
+                  title="일반 멤버"
+                >
+                  멤버
+                </button>
+              </div>
             </div>
             {/* 할당된 회원 목록 */}
             <div>
@@ -535,10 +638,31 @@ const ProjectDetailPage = () => {
                 <span className="ml-2 text-gray-400">없음</span>
               ) : (
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {assignedUsers.map(u => (
-                    <span key={u.id} className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
+                  {assignedUsers.map((u: any) => (
+                    <div key={u.id} className="inline-flex items-center bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
+                      <span className={`inline-block w-2 h-2 rounded-full mr-2 ${
+                        u.role === 'PL' ? 'bg-red-500' :
+                        u.role === 'PLANNER' ? 'bg-green-500' :
+                        u.role === 'DESIGNER' ? 'bg-purple-500' :
+                        u.role === 'DEVELOPER' ? 'bg-orange-500' :
+                        'bg-gray-500'
+                      }`}></span>
+                      <span className="font-semibold mr-1">
+                        {u.role === 'PL' ? 'PL' :
+                         u.role === 'PLANNER' ? '기획' :
+                         u.role === 'DESIGNER' ? '디자인' :
+                         u.role === 'DEVELOPER' ? '개발' :
+                         '멤버'}
+                      </span>
                       {u.name} ({u.email})
-                    </span>
+                      <button 
+                        className="ml-2 text-red-500 hover:text-red-700 text-xs"
+                        onClick={() => handleRemoveUser(u.id)}
+                        title="할당 해제"
+                      >
+                        ✕
+                      </button>
+                    </div>
                   ))}
                 </div>
               )}
@@ -666,13 +790,14 @@ const ProjectDetailPage = () => {
                   <th className="py-2 px-4 border-b">작성자</th>
                   <th className="py-2 px-4 border-b">상태</th>
                   <th className="py-2 px-4 border-b">진행률</th>
+                  <th className="py-2 px-4 border-b">담당자</th>
                   <th className="py-2 px-4 border-b">관리</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredNotes.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-8 text-center text-gray-500">
+                    <td colSpan={8} className="py-8 text-center text-gray-500">
                       {searchTerm || statusFilter !== 'ALL' ? '검색 결과가 없습니다.' : '요구사항이 없습니다.'}
                     </td>
                   </tr>
@@ -736,6 +861,50 @@ const ProjectDetailPage = () => {
                               >
                                 {note.progress}%
                               </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 border-b text-center">
+                          <div className="flex flex-col gap-1">
+                            {noteAssignees[note.id] && noteAssignees[note.id].length > 0 ? (
+                              noteAssignees[note.id].map((assignee: any) => (
+                                <div key={`${assignee.id}-${assignee.role}`} className="flex items-center justify-center gap-1">
+                                  <span className={`inline-block w-2 h-2 rounded-full ${
+                                    assignee.role === 'PL' ? 'bg-red-500' :
+                                    assignee.role === 'PLANNER' ? 'bg-green-500' :
+                                    assignee.role === 'DESIGNER' ? 'bg-purple-500' :
+                                    assignee.role === 'DEVELOPER' ? 'bg-orange-500' :
+                                    'bg-gray-500'
+                                  }`}></span>
+                                  <span className="text-xs font-semibold">
+                                    {assignee.role === 'PL' ? 'PL' :
+                                     assignee.role === 'PLANNER' ? '기획' :
+                                     assignee.role === 'DESIGNER' ? '디자인' :
+                                     assignee.role === 'DEVELOPER' ? '개발' :
+                                     '멤버'}
+                                  </span>
+                                  <span className="text-xs">{assignee.name}</span>
+                                  {canEditNote && (
+                                    <button 
+                                      className="text-red-500 hover:text-red-700 text-xs"
+                                      onClick={() => handleRemoveUserFromNote(note.id, assignee.id, assignee.role)}
+                                      title="담당자 해제"
+                                    >
+                                      ✕
+                                    </button>
+                                  )}
+                                </div>
+                              ))
+                            ) : (
+                              <span className="text-xs text-gray-400">미할당</span>
+                            )}
+                            {canEditNote && (
+                              <button 
+                                onClick={() => openAssigneeModal(note)}
+                                className="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 mt-1"
+                              >
+                                담당자 지정
+                              </button>
                             )}
                           </div>
                         </td>
@@ -951,6 +1120,115 @@ const ProjectDetailPage = () => {
                       분석 중...
                     </>
                   ) : '분석하기'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 담당자 지정 모달 */}
+        {showAssigneeModal && selectedNoteForAssign && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+              <h3 className="text-lg font-semibold mb-4">
+                담당자 지정: <span className="font-normal text-gray-700">{selectedNoteForAssign.content}</span>
+              </h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">담당자 선택</label>
+                  <select
+                    className="w-full border border-gray-300 rounded-md shadow-sm p-2"
+                    value={selectedUserId}
+                    onChange={e => setSelectedUserId(e.target.value)}
+                  >
+                    <option value="">담당자 선택</option>
+                    {assignedUsers.map(u => (
+                      <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">역할 선택</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button 
+                      className="bg-red-500 text-white px-3 py-2 rounded hover:bg-red-600 disabled:bg-gray-400 text-sm font-semibold" 
+                      onClick={() => handleAssignUserToNote('PL')}
+                      disabled={!selectedUserId}
+                      title="프로젝트 리더"
+                    >
+                      PL
+                    </button>
+                    <button 
+                      className="bg-green-500 text-white px-3 py-2 rounded hover:bg-green-600 disabled:bg-gray-400 text-sm" 
+                      onClick={() => handleAssignUserToNote('PLANNER')}
+                      disabled={!selectedUserId}
+                      title="기획자"
+                    >
+                      기획
+                    </button>
+                    <button 
+                      className="bg-purple-500 text-white px-3 py-2 rounded hover:bg-purple-600 disabled:bg-gray-400 text-sm" 
+                      onClick={() => handleAssignUserToNote('DESIGNER')}
+                      disabled={!selectedUserId}
+                      title="디자이너"
+                    >
+                      디자인
+                    </button>
+                    <button 
+                      className="bg-orange-500 text-white px-3 py-2 rounded hover:bg-orange-600 disabled:bg-gray-400 text-sm" 
+                      onClick={() => handleAssignUserToNote('DEVELOPER')}
+                      disabled={!selectedUserId}
+                      title="개발자"
+                    >
+                      개발
+                    </button>
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <span className="text-sm font-medium text-gray-700">현재 담당자:</span>
+                  <div className="mt-2 space-y-1">
+                    {noteAssignees[selectedNoteForAssign.id] && noteAssignees[selectedNoteForAssign.id].length > 0 ? (
+                      noteAssignees[selectedNoteForAssign.id].map((assignee: any) => (
+                        <div key={`${assignee.id}-${assignee.role}`} className="flex items-center justify-between bg-gray-100 p-2 rounded">
+                          <div className="flex items-center gap-2">
+                            <span className={`inline-block w-2 h-2 rounded-full ${
+                              assignee.role === 'PL' ? 'bg-red-500' :
+                              assignee.role === 'PLANNER' ? 'bg-green-500' :
+                              assignee.role === 'DESIGNER' ? 'bg-purple-500' :
+                              assignee.role === 'DEVELOPER' ? 'bg-orange-500' :
+                              'bg-gray-500'
+                            }`}></span>
+                            <span className="text-sm font-semibold">
+                              {assignee.role === 'PL' ? 'PL' :
+                               assignee.role === 'PLANNER' ? '기획' :
+                               assignee.role === 'DESIGNER' ? '디자인' :
+                               assignee.role === 'DEVELOPER' ? '개발' :
+                               '멤버'}
+                            </span>
+                            <span className="text-sm">{assignee.name}</span>
+                          </div>
+                          <button 
+                            className="text-red-500 hover:text-red-700 text-sm"
+                            onClick={() => handleRemoveUserFromNote(selectedNoteForAssign.id, assignee.id, assignee.role)}
+                            title="담당자 해제"
+                          >
+                            해제
+                          </button>
+                        </div>
+                      ))
+                    ) : (
+                      <span className="text-sm text-gray-400">할당된 담당자가 없습니다.</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-2 mt-6">
+                <button 
+                  type="button" 
+                  onClick={closeAssigneeModal} 
+                  className="flex-1 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+                >
+                  닫기
                 </button>
               </div>
             </div>
