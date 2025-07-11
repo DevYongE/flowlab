@@ -154,14 +154,15 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
       const finalEndColumn = Math.max(endColumn, startColumn + 1);
       
       // 기본 색상 결정 (마감일 기준)
-      let backgroundColor = '#3b82f6'; // 기본 파란색
-      let borderColor = '#3b82f6';
+      let backgroundColor = 'linear-gradient(135deg, #3b82f6, #1d4ed8)'; // 기본 파란색 그라데이션
+      let borderColor = '#1d4ed8';
+      let textShadow = '0 1px 2px rgba(0,0,0,0.3)';
       
       if (isBefore(deadlineDate, new Date()) && !completed) {
-        backgroundColor = '#ef4444'; // 마감일 지난 작업은 빨간색
+        backgroundColor = 'linear-gradient(135deg, #ef4444, #dc2626)'; // 마감일 지난 작업은 빨간색 그라데이션
         borderColor = '#dc2626';
       } else if (completed) {
-        backgroundColor = '#22c55e'; // 완료된 작업은 초록색
+        backgroundColor = 'linear-gradient(135deg, #22c55e, #16a34a)'; // 완료된 작업은 초록색 그라데이션
         borderColor = '#16a34a';
       }
       
@@ -176,24 +177,26 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
         gridColumnStart: startColumn,
         gridColumnEnd: finalEndColumn,
         gridRow: rowIndex + 2, // 헤더 다음부터 시작
-        backgroundColor,
+        background: backgroundColor,
         color: 'white',
-        borderRadius: '6px',
-        padding: '4px 8px',
-        fontSize: '11px',
-        fontWeight: '500',
+        borderRadius: '8px',
+        padding: '6px 12px',
+        fontSize: '12px',
+        fontWeight: '600',
         textAlign: 'center' as const,
         zIndex: 1,
-        minHeight: '28px',
+        minHeight: '36px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-        border: `2px solid ${borderColor}`,
-        margin: '2px 0',
+        boxShadow: '0 4px 8px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.1)',
+        border: `3px solid ${borderColor}`,
+        margin: '4px 2px',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap' as const
+        whiteSpace: 'nowrap' as const,
+        textShadow,
+        position: 'relative' as const
       };
     } catch (error) {
       console.error('바 스타일 계산 오류:', error);
@@ -222,24 +225,27 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
         gridColumnStart: startColumn,
         gridColumnEnd: finalEndColumn,
         gridRow: rowIndex + 2,
-        backgroundColor: '#22c55e', // 완료된 부분은 초록색
+        background: 'linear-gradient(135deg, #10b981, #059669)', // 완료된 부분은 에메랄드 그라데이션
         color: 'white',
-        borderRadius: '6px',
-        padding: '4px 8px',
-        fontSize: '11px',
-        fontWeight: '600',
+        borderRadius: '8px',
+        padding: '6px 12px',
+        fontSize: '12px',
+        fontWeight: '700',
         textAlign: 'center' as const,
         zIndex: 2, // 기본 바보다 위에 표시
-        minHeight: '28px',
+        minHeight: '36px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-        border: '2px solid #16a34a',
-        margin: '2px 0',
+        boxShadow: '0 6px 12px rgba(0,0,0,0.2), 0 4px 8px rgba(16,185,129,0.3)',
+        border: '3px solid #059669',
+        margin: '4px 2px',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap' as const
+        whiteSpace: 'nowrap' as const,
+        textShadow: '0 1px 2px rgba(0,0,0,0.4)',
+        position: 'relative' as const,
+        animation: 'pulse 2s infinite'
       };
     } catch (error) {
       console.error('완료 바 스타일 계산 오류:', error);
@@ -248,50 +254,70 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
   }
 
   return (
-    <div className="bg-white rounded shadow p-4 overflow-x-auto">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold flex items-center">
-          <span className="text-blue-600 mr-2">📊</span>
-          간트 차트 (계층구조)
+    <div className="bg-white rounded-xl shadow-lg p-6 overflow-x-auto">
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.8; }
+        }
+        @keyframes slideIn {
+          from { transform: translateX(-10px); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+        .gantt-task-row {
+          animation: slideIn 0.3s ease-out;
+        }
+        .gantt-header {
+          background: linear-gradient(135deg, #1e40af, #3b82f6);
+          box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3);
+        }
+      `}</style>
+      
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold flex items-center text-gray-800">
+          <span className="text-blue-600 mr-3 text-3xl">📊</span>
+          <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            간트 차트 (계층구조)
+          </span>
         </h2>
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-3 items-center">
           <button 
             onClick={() => setCurrentMonth(addDays(startOfMonth(currentMonth), -1))} 
-            className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 transition-colors"
+            className="px-4 py-2 rounded-lg bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 transition-all duration-200 shadow-md hover:shadow-lg font-medium"
           >
             ◀ 이전월
           </button>
-          <span className="font-semibold text-lg px-4">
+          <span className="font-bold text-xl px-6 py-2 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg text-gray-800 shadow-sm">
             {format(currentMonth, 'yyyy년 MM월', { locale: ko })}
           </span>
           <button 
             onClick={() => setCurrentMonth(addDays(endOfMonth(currentMonth), 1))} 
-            className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 transition-colors"
+            className="px-4 py-2 rounded-lg bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 transition-all duration-200 shadow-md hover:shadow-lg font-medium"
           >
             다음월 ▶
           </button>
         </div>
       </div>
       
-      <div className="text-xs text-gray-500 mb-4 text-center">
-        💡 날짜 헤더를 좌우로 드래그하여 월을 이동할 수 있습니다
+      <div className="text-sm text-gray-600 mb-6 text-center bg-blue-50 p-3 rounded-lg border border-blue-200">
+        💡 <strong>팁:</strong> 날짜 헤더를 좌우로 드래그하여 월을 이동할 수 있습니다
       </div>
 
       <div
         className="grid gap-0 border-2 border-gray-300 rounded-lg overflow-hidden"
         style={{
-          gridTemplateColumns: `300px repeat(${days.length}, 1fr)`,
-          gridAutoRows: '40px',
+          gridTemplateColumns: `350px repeat(${days.length}, 1fr)`,
+          gridAutoRows: '50px',
           minHeight: '400px'
         }}
       >
         {/* 헤더 - 작업명 컬럼 */}
         <div
-          className="font-bold text-center py-2 bg-gray-100 border-r border-gray-200 flex items-center justify-center"
+          className="font-bold text-center py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white border-r-2 border-blue-800 flex items-center justify-center shadow-lg"
           style={{ gridRow: 1, gridColumn: 1 }}
         >
-          <span className="text-blue-600 mr-2">🌲</span>
-          <span>작업 구조</span>
+          <span className="text-blue-200 mr-2 text-lg">🌲</span>
+          <span className="text-lg">작업 구조</span>
         </div>
         
         {/* 헤더 - 날짜 컬럼들 */}
@@ -299,27 +325,32 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
           const dayNum = getDay(day);
           const dateStr = format(day, 'yyyy-MM-dd');
           
-          let bgColor = 'bg-gray-50';
+          let bgColor = 'bg-gray-100';
           let textColor = 'text-gray-700';
+          let borderColor = 'border-gray-300';
           
           if (HOLIDAYS.includes(dateStr)) {
+            bgColor = 'bg-red-200';
+            textColor = 'text-red-700';
+            borderColor = 'border-red-300';
+          } else if (dayNum === 0) { // 일요일
             bgColor = 'bg-red-100';
             textColor = 'text-red-600';
-          } else if (dayNum === 0) { // 일요일
-            bgColor = 'bg-red-50';
-            textColor = 'text-red-500';
+            borderColor = 'border-red-200';
           } else if (dayNum === 6) { // 토요일
-            bgColor = 'bg-blue-50';
-            textColor = 'text-blue-500';
+            bgColor = 'bg-blue-100';
+            textColor = 'text-blue-600';
+            borderColor = 'border-blue-200';
           } else if (isToday(day)) {
-            bgColor = 'bg-orange-100';
-            textColor = 'text-orange-600';
+            bgColor = 'bg-orange-200';
+            textColor = 'text-orange-700';
+            borderColor = 'border-orange-300';
           }
           
           return (
             <div
               key={day.toISOString()}
-              className={`text-xs text-center py-2 border-r border-gray-200 cursor-grab hover:bg-gray-200 transition-colors ${bgColor} ${textColor}`}
+              className={`text-sm text-center py-3 border-r-2 ${borderColor} cursor-grab hover:bg-opacity-80 transition-all duration-200 ${bgColor} ${textColor} shadow-sm`}
               style={{
                 gridRow: 1,
                 gridColumn: index + 2
@@ -330,8 +361,8 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
               onMouseLeave={handleHeaderMouseUp}
               title={`${format(day, 'yyyy-MM-dd')} (${format(day, 'E', { locale: ko })})`}
             >
-              <div className="font-semibold">{format(day, 'd')}</div>
-              <div className="text-xs opacity-75">{format(day, 'E', { locale: ko })}</div>
+              <div className="font-bold text-lg">{format(day, 'd')}</div>
+              <div className="text-xs opacity-80 font-medium">{format(day, 'E', { locale: ko })}</div>
             </div>
           );
         })}
@@ -411,44 +442,47 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
             <React.Fragment key={`task-${task.id}`}>
               {/* 작업명 셀 */}
               <div
-                className="px-3 py-2 text-sm border-r border-b border-gray-200 bg-white flex items-center"
+                className={`gantt-task-row px-4 py-3 text-sm border-r-2 border-b border-gray-200 flex items-center transition-all duration-200 ${
+                  index % 2 === 0 ? 'bg-gray-50' : 'bg-white'
+                } hover:bg-blue-50 hover:shadow-md`}
                 style={{
                   gridRow: index + 2,
                   gridColumn: 1,
-                  paddingLeft: `${(task.depth || 0) * 16 + 12}px`
+                  paddingLeft: `${(task.depth || 0) * 20 + 16}px`,
+                  animationDelay: `${index * 0.05}s`
                 }}
                 title={`${displayName} (${actualStartDate || '시작일 없음'} ~ ${actualDeadline || '마감일 없음'}${completedAt ? ` | 완료: ${completedAt}` : ''})`}
               >
                 {/* 계층 구조 표시 */}
                 <div className="flex items-center flex-1">
                   {(task.depth || 0) > 0 && (
-                    <div className="flex items-center mr-2">
+                    <div className="flex items-center mr-3">
                       {Array.from({ length: (task.depth || 0) - 1 }, (_, i) => (
-                        <span key={i} className="text-gray-300 mr-1">│</span>
+                        <span key={i} className="text-gray-400 mr-1 text-lg">│</span>
                       ))}
-                      <span className="text-gray-300 mr-1">├</span>
+                      <span className="text-gray-400 mr-1 text-lg">├</span>
                     </div>
                   )}
                   
                   <div 
-                    className={`w-3 h-3 rounded-full mr-2 flex-shrink-0 ${
-                      (task.depth || 0) === 0 ? 'bg-blue-500' :
-                      (task.depth || 0) === 1 ? 'bg-green-500' :
-                      (task.depth || 0) === 2 ? 'bg-orange-500' : 'bg-gray-400'
+                    className={`w-4 h-4 rounded-full mr-3 flex-shrink-0 shadow-sm ${
+                      (task.depth || 0) === 0 ? 'bg-gradient-to-r from-blue-500 to-blue-600' :
+                      (task.depth || 0) === 1 ? 'bg-gradient-to-r from-green-500 to-green-600' :
+                      (task.depth || 0) === 2 ? 'bg-gradient-to-r from-orange-500 to-orange-600' : 'bg-gradient-to-r from-gray-400 to-gray-500'
                     }`}
                   />
                   
                   <span 
-                    className={`flex-1 ${isCompleted ? 'line-through text-gray-500' : ''}`}
+                    className={`flex-1 ${isCompleted ? 'line-through text-gray-500' : 'text-gray-800'}`}
                     style={{
-                      fontSize: `${Math.max(11, 13 - (task.depth || 0))}px`,
-                      fontWeight: (task.depth || 0) === 0 ? '600' : '400'
+                      fontSize: `${Math.max(12, 14 - (task.depth || 0))}px`,
+                      fontWeight: (task.depth || 0) === 0 ? '600' : '500'
                     }}
                   >
-                    {displayName.length > 22 ? displayName.slice(0, 22) + '...' : displayName}
-                    {!showBar && <span className="text-gray-400 text-xs ml-1">(기간없음)</span>}
-                    {(task.depth || 0) === 0 && <span className="text-blue-600 ml-1">📁</span>}
-                    {isCompleted && <span className="text-green-600 ml-1">✅</span>}
+                    {displayName.length > 28 ? displayName.slice(0, 28) + '...' : displayName}
+                    {!showBar && <span className="text-gray-400 text-xs ml-2">(기간없음)</span>}
+                    {(task.depth || 0) === 0 && <span className="text-blue-600 ml-2 text-lg">📁</span>}
+                    {isCompleted && <span className="text-green-600 ml-2 text-lg">✅</span>}
                   </span>
                 </div>
               </div>
@@ -459,7 +493,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
                   style={barStyle}
                   title={`${displayName}: ${actualStartDate} ~ ${actualDeadline}${isCompleted ? ` | 완료: ${completedAt}` : ''}`}
                 >
-                  {displayName.length > 12 ? displayName.slice(0, 12) + '...' : displayName}
+                  {displayName.length > 15 ? displayName.slice(0, 15) + '...' : displayName}
                 </div>
               )}
               
@@ -479,10 +513,12 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
         {/* 빈 상태 메시지 */}
         {wbs.length === 0 && (
           <div 
-            className="col-span-full text-center text-gray-500 py-8"
+            className="col-span-full text-center text-gray-500 py-12 bg-gray-50 rounded-lg"
             style={{ gridColumn: `1 / -1` }}
           >
-            WBS 데이터가 없습니다.
+            <div className="text-6xl mb-4">📊</div>
+            <div className="text-lg font-medium">WBS 데이터가 없습니다.</div>
+            <div className="text-sm text-gray-400 mt-2">프로젝트에 작업을 추가해보세요.</div>
           </div>
         )}
       </div>
