@@ -421,26 +421,13 @@ const ProjectDetailPage = () => {
       const response = await axios.put(`/projects/notes/${note.id}`, note);
       console.log('서버 응답:', response.data);
       
-      // 서버에서 받은 완전한 데이터를 사용 (authorName, registeredAt 포함)
-      const updatedNote = {
-        ...response.data,
-        // 서버에서 날짜 형식이 다를 수 있으므로 클라이언트에서 설정한 completedAt 우선 사용
-        completedAt: note.completedAt || response.data.completedAt
-      };
-      
-      console.log('최종 업데이트된 노트:', updatedNote);
-      console.log('현재 프로젝트 상태:', project);
-      
-      setProject(prev => {
-        if (!prev) return null;
-        const updatedNotes = prev.devNotes.map(n => n.id === note.id ? updatedNote : n);
-        console.log('업데이트된 노트 목록:', updatedNotes);
-        return { ...prev, devNotes: updatedNotes };
-      });
-
       // 업데이트된 노트를 잠시 하이라이트
-      setRecentlyUpdatedNoteId(note.id);
+      setRecentlyUpdatedNoteId(Number(note.id));
       setTimeout(() => setRecentlyUpdatedNoteId(null), 2000);
+
+      // 서버에서 최신 데이터를 다시 가져와서 동기화 문제 해결
+      await fetchProject();
+      
     } catch (error) {
       console.error('노트 업데이트 실패:', error);
       alert('노트 업데이트에 실패했습니다.');
@@ -694,7 +681,7 @@ const ProjectDetailPage = () => {
                     const canEditNote = isAdmin() || currentUser?.id === note.author_id;
                     return (
                       <tr key={note.id} className={`hover:bg-gray-50 transition-colors ${
-                        recentlyUpdatedNoteId === note.id ? 'bg-green-100 border-green-300' : 
+                        recentlyUpdatedNoteId === Number(note.id) ? 'bg-green-100 border-green-300' : 
                         note.status === 'DONE' ? 'bg-green-50' : ''
                       }`}>
                         <td className="py-3 px-4 border-b">
