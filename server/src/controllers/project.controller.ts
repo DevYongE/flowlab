@@ -362,17 +362,15 @@ export const createDevNote = async (req: Request, res: Response): Promise<void> 
       console.log('[createDevNote] req.body:', req.body);
       console.log('[createDevNote] params:', req.params);
 
-      const [projectRows] = await sequelize.query('SELECT author_id FROM projects WHERE id = :project_id', { replacements: { project_id: projectId }, type: QueryTypes.SELECT });
+      const projectRows = await sequelize.query('SELECT author_id FROM projects WHERE id = :project_id', { replacements: { project_id: projectId }, type: QueryTypes.SELECT });
       console.log('[createDevNote] projectRows:', projectRows);
 
       // projectRows가 배열이 아니어도 author_id가 있으면 통과
       let projectAuthorId = null;
       if (Array.isArray(projectRows) && projectRows.length > 0) {
-        projectAuthorId = projectRows[0].author_id;
-      } else if (projectRows && typeof projectRows === 'object' && 'author_id' in projectRows) {
-        projectAuthorId = projectRows.author_id;
+        projectAuthorId = (projectRows[0] as any).author_id;
       } else {
-        res.status(404).json({ message: '프로젝트를 찾을 수 없습니다.', projectRows });
+        res.status(404).json({ message: '프로젝트를 찾을 수 없습니다.' });
         return;
       }
 
@@ -382,7 +380,7 @@ export const createDevNote = async (req: Request, res: Response): Promise<void> 
       }
       console.log('[createDevNote] Inserting dev_note:', { projectId, content, deadline, status, progress, authorId, parent_id, order });
 
-      const [rows] = await sequelize.query(
+      const rows = await sequelize.query(
         'INSERT INTO dev_notes (project_id, content, deadline, status, progress, author_id, parent_id, "order", completed_at) VALUES (:projectId, :content, :deadline, :status, :progress, :authorId, :parent_id, :order, :completedAt) RETURNING *',
         { replacements: { projectId, content, deadline, status, progress, authorId, parent_id: parent_id ?? null, order: order ?? null, completedAt: completedAt ?? null }, type: QueryTypes.SELECT }
       );
@@ -428,26 +426,25 @@ export const updateDevNote = async (req: Request, res: Response): Promise<void> 
   }
 
   try {
-    const [noteRows] = await sequelize.query('SELECT author_id FROM dev_notes WHERE id = :note_id', { replacements: { note_id: noteId }, type: QueryTypes.SELECT });
+    const noteRows = await sequelize.query('SELECT author_id FROM dev_notes WHERE id = :note_id', { replacements: { note_id: noteId }, type: QueryTypes.SELECT });
     let noteAuthorId = null;
     if (Array.isArray(noteRows) && noteRows.length > 0) {
-      noteAuthorId = noteRows[0].author_id;
-    } else if (noteRows && typeof noteRows === 'object' && 'author_id' in noteRows) {
-      noteAuthorId = noteRows.author_id;
+      noteAuthorId = (noteRows[0] as any).author_id;
     } else {
-      res.status(404).json({ message: '노트를 찾을 수 없습니다.', noteRows });
+      res.status(404).json({ message: '노트를 찾을 수 없습니다.' });
       return;
     }
     if (currentUserRole !== 'ADMIN' && currentUserId !== noteAuthorId) {
       res.status(403).json({ message: '노트를 수정할 권한이 없습니다.' });
       return;
     }
-    const [rows] = await sequelize.query(
+    const rows = await sequelize.query(
       'UPDATE dev_notes SET content=:content, deadline=:deadline, status=:status, progress=:progress, completed_at=:completedAt WHERE id=:noteId RETURNING *',
       { replacements: { content, deadline, status, progress, completedAt, noteId }, type: QueryTypes.SELECT }
     );
     res.json((rows as any[])[0]);
   } catch (error) {
+    console.error('개발 노트 수정 실패:', error);
     res.status(500).json({ message: '개발 노트 수정 실패', error });
   }
 };
@@ -458,14 +455,12 @@ export const deleteDevNote = async (req: Request, res: Response): Promise<void> 
   const currentUserId = req.user?.id;
   const currentUserRole = req.user?.role;
   try {
-    const [noteRows] = await sequelize.query('SELECT author_id FROM dev_notes WHERE id = :note_id', { replacements: { note_id: noteId }, type: QueryTypes.SELECT });
+    const noteRows = await sequelize.query('SELECT author_id FROM dev_notes WHERE id = :note_id', { replacements: { note_id: noteId }, type: QueryTypes.SELECT });
     let noteAuthorId = null;
     if (Array.isArray(noteRows) && noteRows.length > 0) {
-      noteAuthorId = noteRows[0].author_id;
-    } else if (noteRows && typeof noteRows === 'object' && 'author_id' in noteRows) {
-      noteAuthorId = noteRows.author_id;
+      noteAuthorId = (noteRows[0] as any).author_id;
     } else {
-      res.status(404).json({ message: '노트를 찾을 수 없습니다.', noteRows });
+      res.status(404).json({ message: '노트를 찾을 수 없습니다.' });
       return;
     }
     if (currentUserRole !== 'ADMIN' && currentUserId !== noteAuthorId) {
@@ -475,6 +470,7 @@ export const deleteDevNote = async (req: Request, res: Response): Promise<void> 
     await sequelize.query('DELETE FROM dev_notes WHERE id = :note_id', { replacements: { note_id: noteId }, type: QueryTypes.DELETE });
     res.json({ message: '개발 노트가 성공적으로 삭제되었습니다.' });
   } catch (error) {
+    console.error('개발 노트 삭제 실패:', error);
     res.status(500).json({ message: '개발 노트 삭제 실패', error });
   }
 };
@@ -519,14 +515,12 @@ export const bulkCreateDevNotes = async (req: Request, res: Response): Promise<v
 
   try {
     // 프로젝트 소유권 확인 (기존 createDevNote 로직 참고)
-    const [projectRows] = await sequelize.query('SELECT author_id FROM projects WHERE id = :project_id', { replacements: { project_id: projectId }, type: QueryTypes.SELECT });
+    const projectRows = await sequelize.query('SELECT author_id FROM projects WHERE id = :project_id', { replacements: { project_id: projectId }, type: QueryTypes.SELECT });
     let projectAuthorId = null;
     if (Array.isArray(projectRows) && projectRows.length > 0) {
-      projectAuthorId = projectRows[0].author_id;
-    } else if (projectRows && typeof projectRows === 'object' && 'author_id' in projectRows) {
-      projectAuthorId = projectRows.author_id;
+      projectAuthorId = (projectRows[0] as any).author_id;
     } else {
-      res.status(404).json({ message: '프로젝트를 찾을 수 없습니다.', projectRows });
+      res.status(404).json({ message: '프로젝트를 찾을 수 없습니다.' });
       return;
     }
 
