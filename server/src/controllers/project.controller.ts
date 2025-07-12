@@ -109,16 +109,18 @@ export const getProjects = async (req: Request, res: Response): Promise<void> =>
     `;
     const params: any = {};
 
-    // 임시로 권한 체크 비활성화
-    // if (currentUserRole === 'MANAGER') {
-    //   query += ' WHERE p.company_code = :company_code';
-    //   params.company_code = currentUserCompany;
-    // } else if (currentUserRole !== 'ADMIN') {
-    //   // 일반 사용자: 본인이 작성한 프로젝트 OR 할당된 프로젝트
-    //   query += ' WHERE (p.author_id = :author_id OR pa.user_id = :user_id)';
-    //   params.author_id = currentUserId;
-    //   params.user_id = currentUserId;
-    // }
+    // 권한에 따른 프로젝트 필터링
+    if (currentUserRole === 'MANAGER') {
+      // 매니저: 자신의 회사 프로젝트만
+      query += ' WHERE p.company_code = :company_code';
+      params.company_code = currentUserCompany;
+    } else if (currentUserRole !== 'ADMIN') {
+      // 일반 사용자: 본인이 작성한 프로젝트 OR 할당된 프로젝트
+      query += ' WHERE (p.author_id = :author_id OR pa.user_id = :user_id)';
+      params.author_id = currentUserId;
+      params.user_id = currentUserId;
+    }
+    // ADMIN은 모든 프로젝트 조회 가능
 
     query += ' GROUP BY p.id, p.category, p.type, p.name, p.company_code, p.start_date, p.end_date, p.progress ORDER BY p.start_date DESC';
     
@@ -237,11 +239,29 @@ export const getProjectStatusSummary = async (req: Request, res: Response): Prom
     `;
     const params: any = {};
 
-    // 임시로 모든 사용자가 모든 프로젝트를 볼 수 있도록 변경
-    // if (currentUserRole !== 'ADMIN') {
-    //   query += ' WHERE author_id = :author_id';
-    //   params.author_id = currentUserId;
-    // }
+    // 권한에 따른 프로젝트 필터링
+    if (currentUserRole === 'MANAGER') {
+      // 매니저: 자신의 회사 프로젝트만
+      query += ' WHERE company_code = :company_code';
+      params.company_code = req.user?.company_code;
+    } else if (currentUserRole !== 'ADMIN') {
+      // 일반 사용자: 본인이 작성한 프로젝트 OR 할당된 프로젝트만
+      query = `
+        SELECT
+          CASE
+            WHEN progress = 0 THEN '미완료'
+            WHEN progress >= 100 THEN '완료'
+            ELSE '진행중'
+          END as status,
+          COUNT(DISTINCT p.id)::int as count
+        FROM projects p
+        LEFT JOIN project_assignees pa ON p.id = pa.project_id
+        WHERE (p.author_id = :author_id OR pa.user_id = :user_id)
+      `;
+      params.author_id = currentUserId;
+      params.user_id = currentUserId;
+    }
+    // ADMIN은 모든 프로젝트 조회 가능
 
     query += ' GROUP BY status';
 
