@@ -25,6 +25,7 @@ const app = express();
 const allowedOrigins = [
   'http://localhost:5173', // 로컬 개발용
   'https://flowlab.vercel.app', // Vercel 고정 도메인
+  'https://flowlab-vercel.app', // 현재 사용 중인 도메인
   'https://flowlab-g0rikkpld-yonges-projects.vercel.app', // 이전 Vercel 배포 주소
   'https://flowlab-rtia1bcb6-yonges-projects.vercel.app',  // 이전 Vercel 배포 주소
   'https://flowlab-acanbs8tk-yonges-projects.vercel.app'  // 최신 Vercel 배포 주소
@@ -35,7 +36,7 @@ console.log('🚀 Server starting with allowedOrigins:', allowedOrigins);
 app.use(cors({
   origin: allowedOrigins,
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'], // PATCH 메서드 추가
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 

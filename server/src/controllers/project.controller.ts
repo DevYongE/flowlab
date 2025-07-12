@@ -1044,10 +1044,13 @@ export const generateProjectFile = async (req: Request, res: Response): Promise<
       생성일시: new Date().toISOString(),
     };
 
-    // JSON 형태로 반환
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', `attachment; filename="${projectData.name}_결과물.json"`);
-    res.json(projectSummary);
+    // JSON 파일로 다운로드 가능하도록 설정
+    const jsonString = JSON.stringify(projectSummary, null, 2);
+    const filename = `${projectData.name}_결과물.json`;
+    
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(jsonString);
 
   } catch (error) {
     console.error('프로젝트 파일 생성 실패:', error);

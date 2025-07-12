@@ -577,14 +577,16 @@ const ProjectDetailPage = () => {
       const response = await axios.post(`/projects/${project.id}/generate-file`, {
         projectData: project,
         requirements: filteredNotes
+      }, {
+        responseType: 'blob' // 파일 다운로드를 위한 설정
       });
       
       // 파일 다운로드 처리
-      const blob = new Blob([response.data], { type: 'application/octet-stream' });
+      const blob = new Blob([response.data], { type: 'application/json' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${project.name}_결과물.zip`;
+      a.download = `${project.name}_결과물.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
