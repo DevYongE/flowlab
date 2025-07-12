@@ -30,19 +30,19 @@ export const getNotice = async (req: Request, res: Response) => {
       type: QueryTypes.UPDATE,
     });
     // 공지사항 조회 (작성자 이름도 함께 가져오기)
-    const [rows] = await sequelize.query(
+    const rows = await sequelize.query(
       `SELECT n.*, u.name as author_name 
        FROM notices n 
        LEFT JOIN users u ON n.author_id = u.id 
        WHERE n.notice_id = :id`,
       { replacements: { id }, type: QueryTypes.SELECT }
-    );
+    ) as any[];
     console.log('[공지 상세] 결과:', rows);
     if (!Array.isArray(rows) || rows.length === 0) {
       res.status(404).json({ message: '공지사항 없음' });
       return;
     }
-    const notice = Array.isArray(rows) ? rows[0] : undefined;
+    const notice = rows[0];
     res.json(notice);
   } catch (err: any) {
     console.error('[공지 상세] 에러:', err);
