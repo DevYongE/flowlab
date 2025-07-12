@@ -2,6 +2,8 @@ import React, { memo, useMemo, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/auth';
 import { X } from 'lucide-react';
+import flowLabLogo from '../../assets/flowLabLogo.png';
+
 
 interface SidebarProps {
   isMini: boolean;
@@ -59,8 +61,8 @@ const Sidebar: React.FC<SidebarProps> = memo(({ isMini, isMobile = false, onClos
       {isMobile && (
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-tr from-indigo-500 via-blue-500 to-cyan-400 text-white font-extrabold text-lg flex items-center justify-center shadow-inner shadow-blue-800/40">
-              FL
+            <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center shadow-inner shadow-blue-800/40">
+              <img src={flowLabLogo} alt="FlowLab Logo" className="w-8 h-8 object-contain" />
             </div>
             <span className="text-xl font-black tracking-tight text-white drop-shadow-sm">FlowLab</span>
           </div>
@@ -78,8 +80,8 @@ const Sidebar: React.FC<SidebarProps> = memo(({ isMini, isMobile = false, onClos
       {!isMobile && (
         <div>
           <div className={`flex items-center gap-3 mb-8 ${isMini ? 'justify-center' : ''}`}>
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-tr from-indigo-500 via-blue-500 to-cyan-400 text-white font-extrabold text-lg flex items-center justify-center shadow-inner shadow-blue-800/40">
-              FL
+            <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center shadow-inner shadow-blue-800/40">
+              <img src={flowLabLogo} alt="FlowLab Logo" className="w-8 h-8 object-contain" />
             </div>
             {!isMini && <span className="text-2xl font-black tracking-tight text-white drop-shadow-sm">FlowLab</span>}
           </div>
