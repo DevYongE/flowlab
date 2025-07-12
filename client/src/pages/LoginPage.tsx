@@ -1,76 +1,117 @@
 // client/src/pages/LoginPage.tsx
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
-import { useNavigate } from 'react-router-dom';
-import axios from '../lib/axios'; 
+import axios from '../lib/axios';
+import { handleApiError, showSuccessToast } from '../lib/error';
+import { useAuthStore } from '../store/auth';
+import type { User } from '../types';
 
-
-interface Props {
-  onLogin: () => void;
-}
-
-const LoginPage: React.FC<Props> = ({ onLogin }) => {
+const LoginPage: React.FC = () => {
   const navigate = useNavigate();
+  const { login } = useAuthStore();
   const [form, setForm] = useState({ id: '', password: '' });
-  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
   const handleLogin = async () => {
+    if (!form.id || !form.password) {
+      handleApiError('아이디와 비밀번호를 모두 입력해주세요.');
+      return;
+    }
+
     try {
+      setLoading(true);
+      
       const res = await axios.post('/auth/login', form);
-      const { token, user } = res.data;
-      sessionStorage.setItem('token', token); // ✅ 로그인 유지: 브라우저 살아있을 동안만
-      if (user) {
-        sessionStorage.setItem('user', JSON.stringify(user)); // ✅ 유저 정보 저장
+      
+      if (res.data.success) {
+        const user: User = res.data.user;
+        
+        // 사용자 정보를 sessionStorage에 저장 (하위 호환성)
+        sessionStorage.setItem('user', JSON.stringify(user));
+        
+        // Zustand 스토어에 로그인 상태 저장
+        login(user);
+        
+        showSuccessToast('로그인되었습니다.');
+        navigate('/dashboard');
+      } else {
+        handleApiError(res.data.message || '로그인에 실패했습니다.');
       }
-      onLogin();
-      navigate('/dashboard'); // ✅ 로그인 후 이동 추가
-    } catch (err: any) {
-      setError(err.response?.data?.message || '로그인 실패');
+    } catch (error) {
+      handleApiError(error, '로그인에 실패했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleLogin();
     }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <Card className="w-[420px] shadow-2xl rounded-2xl">
-        <CardContent className="p-8 space-y-5">
-          <h1 className="text-2xl font-bold text-center">🔐 로그인</h1>
-          <Input
-            name="id"
-            placeholder="이메일 또는 아이디"
-            className="rounded-xl"
-            value={form.id}
-            onChange={handleChange}
-          />
-          <Input
-            name="password"
-            placeholder="비밀번호"
-            type="password"
-            className="rounded-xl"
-            value={form.password}
-            onChange={handleChange}
-          />
-          {error && <div className="text-sm text-red-500">{error}</div>}
-          <div 
-            className="text-sm text-right text-blue-500 hover:underline cursor-pointer"
-            onClick={() => navigate('/forgot-password')}
-          >
-            비밀번호/아이디 찾기
+      <Card className="w-96 shadow-2xl rounded-2xl">
+        <CardContent className="p-8 space-y-6">
+          <div className="text-center">
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">🚀 FlowLab</h1>
+            <p className="text-gray-600">프로젝트 관리 시스템</p>
           </div>
-          <Button className="w-full rounded-xl text-lg" onClick={handleLogin}>로그인</Button>
-          <div className="text-center text-sm text-gray-500">
-            회원이 아니신가요?{' '}
-            <span
-              className="text-blue-500 hover:underline cursor-pointer"
-              onClick={() => navigate('/register')}
-            >
-              회원가입
-            </span>
+          
+          <div className="space-y-4">
+            <Input
+              name="id"
+              placeholder="아이디"
+              value={form.id}
+              onChange={handleChange}
+              onKeyPress={handleKeyPress}
+              disabled={loading}
+            />
+            <Input
+              name="password"
+              type="password"
+              placeholder="비밀번호"
+              value={form.password}
+              onChange={handleChange}
+              onKeyPress={handleKeyPress}
+              disabled={loading}
+            />
+          </div>
+          
+          <Button
+            onClick={handleLogin}
+            disabled={loading}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition-colors disabled:opacity-50"
+          >
+            {loading ? '로그인 중...' : '로그인'}
+          </Button>
+          
+          <div className="text-center space-y-2">
+            <p className="text-sm text-gray-600">
+              계정이 없으신가요?{' '}
+              <button
+                onClick={() => navigate('/register')}
+                className="text-blue-600 hover:text-blue-800 font-medium"
+              >
+                회원가입
+              </button>
+            </p>
+            <p className="text-sm">
+              <button
+                onClick={() => navigate('/forgot-password')}
+                className="text-blue-600 hover:text-blue-800 font-medium"
+              >
+                비밀번호 찾기
+              </button>
+            </p>
           </div>
         </CardContent>
       </Card>

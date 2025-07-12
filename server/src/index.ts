@@ -3,6 +3,7 @@ dotenv.config();
 
 import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import authRoutes from './routes/auth.route';
 import userRoutes from './routes/user.route';
 import positionRouter from './routes/position.route';
@@ -19,7 +20,17 @@ import boardRoutes from './routes/board.route';
 import sequelize from './config/db';
 
 const app = express();
+
+// CORS 설정 강화
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'https://flowlab.vercel.app',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+
 app.use(express.json());
+app.use(cookieParser());
 
 const allowedOrigins = [
   'http://localhost:5173', // 로컬 개발용

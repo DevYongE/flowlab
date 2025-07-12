@@ -1,4 +1,7 @@
+import React, { memo, useMemo, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { logout } from '../../lib/auth';
+import { useAuthStore } from '../../store/auth';
 
 interface SidebarProps {
   isMini: boolean;
@@ -17,16 +20,31 @@ const adminMenu = [
   { icon: '👤', label: '회원관리', to: '/admin/users' },
 ];
 
-const Sidebar: React.FC<SidebarProps> = ({ isMini }) => {
+const Sidebar: React.FC<SidebarProps> = memo(({ isMini }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const user = JSON.parse(sessionStorage.getItem('user') || '{}'); // 로그인한 유저 정보
-  const isAdmin = user?.role_code === 'ADMIN'; // Admin 권한 체크
+  const { user, logout: logoutStore } = useAuthStore();
   
-  const handleLogout = () => {
-    sessionStorage.clear();
-    navigate('/login');
-  };
+  const isAdmin = useMemo(() => user?.role_code === 'ADMIN', [user?.role_code]);
+  
+  const handleLogout = useCallback(async () => {
+    try {
+      await logout();
+      logoutStore();
+    } catch (error) {
+      console.error('로그아웃 중 오류 발생:', error);
+      // 오류가 발생해도 로그아웃 처리
+      sessionStorage.clear();
+      logoutStore();
+      navigate('/login');
+    }
+  }, [logoutStore, navigate]);
+
+  const handleMenuClick = useCallback((to: string) => {
+    navigate(to);
+  }, [navigate]);
+
+  const userInitial = useMemo(() => user?.name?.[0] || 'U', [user?.name]);
 
   return (
     <div className={`h-screen bg-gray-900 text-white flex flex-col transition-all duration-300 ${isMini ? 'w-20 p-2' : 'w-64 p-6'}`}>
@@ -55,7 +73,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isMini }) => {
           <div
             key={item.to}
             className={`flex items-center gap-3 py-2 px-2 rounded cursor-pointer hover:bg-blue-800/40 transition-colors ${location.pathname.startsWith(item.to) ? 'bg-blue-800/60' : ''}`}
-            onClick={() => navigate(item.to)}
+            onClick={() => handleMenuClick(item.to)}
           >
             <span className="text-lg">{item.icon}</span>
             {!isMini && <span>{item.label}</span>}
@@ -69,7 +87,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isMini }) => {
               <div
                 key={item.to}
                 className={`flex items-center gap-3 py-2 px-2 rounded cursor-pointer hover:bg-red-800/30 transition-colors ${location.pathname.startsWith(item.to) ? 'bg-red-800/60' : ''}`}
-                onClick={() => navigate(item.to)}
+                onClick={() => handleMenuClick(item.to)}
               >
                 <span className="text-lg">{item.icon}</span>
                 <span>{item.label}</span>
@@ -80,7 +98,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isMini }) => {
       </div>
       <div className="flex flex-col items-center mb-2">
         <div className="w-12 h-12 rounded-full bg-blue-400 flex items-center justify-center text-xl font-bold mb-2">
-          {user?.name?.[0] || 'U'}
+          {userInitial}
         </div>
         {!isMini && (
           <>
@@ -98,6 +116,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isMini }) => {
       </div>
     </div>
   );
-};
+});
+
+Sidebar.displayName = 'Sidebar';
 
 export default Sidebar;

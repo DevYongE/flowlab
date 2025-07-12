@@ -7,6 +7,40 @@ import { QueryTypes } from 'sequelize';
 import nodemailer from 'nodemailer';
 import { v4 as uuidv4 } from 'uuid';
 
+// 토큰 생성 함수
+const generateTokens = (payload: any) => {
+  const accessToken = jwt.sign(
+    payload,
+    process.env.JWT_SECRET || 'dev-secret',
+    { expiresIn: '30m' } // 30분으로 단축
+  );
+  
+  const refreshToken = jwt.sign(
+    payload,
+    process.env.JWT_REFRESH_SECRET || 'dev-refresh-secret',
+    { expiresIn: '7d' } // 7일
+  );
+  
+  return { accessToken, refreshToken };
+};
+
+// 쿠키 설정 함수
+const setCookies = (res: Response, accessToken: string, refreshToken: string) => {
+  res.cookie('accessToken', accessToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    maxAge: 30 * 60 * 1000, // 30분
+  });
+  
+  res.cookie('refreshToken', refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7일
+  });
+};
+
 export const loginUser = async (req: Request, res: Response) => {
   const { id, password } = req.body;
   console.log('🧪 Supabase 연결 정보 확인:', {
@@ -33,20 +67,22 @@ export const loginUser = async (req: Request, res: Response) => {
       res.status(401).json({ success: false, message: '비밀번호가 일치하지 않습니다.' });
       return;
     }
-    const token = jwt.sign(
-      {
-        id: user.id,
-        name: user.name,
-        role: user.role_code,
-        userCode: user.user_code,
-        company_code: user.company_code,
-      },
-      process.env.JWT_SECRET || 'dev-secret',
-      { expiresIn: '2h' }
-    );
+    
+    // 토큰 생성
+    const tokenPayload = {
+      id: user.id,
+      name: user.name,
+      role: user.role_code,
+      userCode: user.user_code,
+      company_code: user.company_code,
+    };
+    
+    const { accessToken, refreshToken } = generateTokens(tokenPayload);
+    setCookies(res, accessToken, refreshToken);
+    
     res.status(200).json({
       success: true,
-      token,
+      message: '로그인 성공',
       user: {
         id: user.id,
         name: user.name,
@@ -54,9 +90,45 @@ export const loginUser = async (req: Request, res: Response) => {
         role_code: user.role_code,
       }
     });
-  } catch (err) {
-    res.status(500).json({ success: false, message: '로그인 실패', error: err });
+  } catch (error) {
+    console.error('로그인 에러:', error);
+    res.status(500).json({ success: false, message: '로그인 중 오류가 발생했습니다.' });
   }
+};
+
+// 토큰 갱신 엔드포인트
+export const refreshToken = async (req: Request, res: Response) => {
+  try {
+    const { refreshToken: token } = req.cookies;
+    
+    if (!token) {
+      res.status(401).json({ message: '리프레시 토큰이 없습니다.' });
+      return;
+    }
+    
+    const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET || 'dev-refresh-secret') as any;
+    
+    const { accessToken, refreshToken: newRefreshToken } = generateTokens({
+      id: decoded.id,
+      name: decoded.name,
+      role: decoded.role,
+      userCode: decoded.userCode,
+      company_code: decoded.company_code,
+    });
+    
+    setCookies(res, accessToken, newRefreshToken);
+    
+    res.json({ message: '토큰이 갱신되었습니다.' });
+  } catch (error) {
+    res.status(401).json({ message: '유효하지 않은 리프레시 토큰입니다.' });
+  }
+};
+
+// 로그아웃 엔드포인트
+export const logoutUser = async (req: Request, res: Response) => {
+  res.clearCookie('accessToken');
+  res.clearCookie('refreshToken');
+  res.json({ message: '로그아웃되었습니다.' });
 };
 
 // 비밀번호 재설정 요청 (이메일 발송)
