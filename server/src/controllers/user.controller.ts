@@ -9,11 +9,18 @@ export const getUsers = async (req: Request, res: Response) => {
   try {
     const { company_code } = req.query;
     let query = `
-      SELECT u.id, u.name, u.email, d.department_name, p.name AS position_name, r.name AS role_name, u.position_code, u.role_code, u.company_code
+      SELECT u.id, u.name, u.email, d.department_name, p.name AS position_name, 
+             COALESCE(u.role_code, u.role, 'MEMBER') as role_code, 
+             u.position_code, u.company_code,
+             CASE 
+               WHEN COALESCE(u.role_code, u.role) = 'ADMIN' THEN '관리자'
+               WHEN COALESCE(u.role_code, u.role) = 'MANAGER' THEN '매니저'
+               WHEN COALESCE(u.role_code, u.role) = 'DEVELOPER' THEN '개발자'
+               ELSE '일반 사용자'
+             END as role_name
       FROM users u
       LEFT JOIN departments d ON u.department = d.id
       LEFT JOIN positions p ON u.position_code = p.position_code
-      LEFT JOIN roles r ON u.role_code = r.role_code
     `;
     const params: any = {};
     if (company_code) {
@@ -56,12 +63,12 @@ export const registerUser = async (req: Request, res: Response) => {
 
     const user_code = `${prefix}${String(Number(countRes.count) + 1).padStart(2, '0')}`;
     const hashed = await bcrypt.hash(password, 10);
-    const role_code = 'BASIC';
+    const role_code = 'MEMBER'; // 기본 역할을 MEMBER로 설정
 
     await sequelize.query(
       `INSERT INTO users (
-        id, password, email, birth, name, position_code, department, join_date, user_code, role_code, company_code
-      ) VALUES (:id,:password,:email,:birth,:name,:position_code,:department,:join_date,:user_code,:role_code,:company_code)`,
+        id, password, email, birth, name, position_code, department, join_date, user_code, role, company_code
+      ) VALUES (:id,:password,:email,:birth,:name,:position_code,:department,:join_date,:user_code,:role,:company_code)`,
       {
         replacements: {
           id,
@@ -73,7 +80,7 @@ export const registerUser = async (req: Request, res: Response) => {
           department,
           join_date,
           user_code,
-          role_code,
+          role: role_code, // role 컬럼에 저장
           company_code,
         },
         type: QueryTypes.INSERT,
@@ -222,7 +229,7 @@ export const updateUserRole = async (req: Request, res: Response) => {
 
     // 대상 사용자 존재 확인
     const [targetUser]: any = await sequelize.query(
-      'SELECT id, role_code FROM users WHERE id = :id',
+      'SELECT id, role FROM users WHERE id = :id',
       { replacements: { id }, type: QueryTypes.SELECT }
     );
 
@@ -245,9 +252,9 @@ export const updateUserRole = async (req: Request, res: Response) => {
       return;
     }
 
-    // 권한 변경 실행
+    // 권한 변경 실행 (role 컬럼만 업데이트하여 외래키 제약 조건 회피)
     const result = await sequelize.query(
-      `UPDATE users SET role_code=:role_code WHERE id=:id`,
+      `UPDATE users SET role=:role_code WHERE id=:id`,
       {
         replacements: { role_code, id },
         type: QueryTypes.UPDATE,
@@ -256,7 +263,7 @@ export const updateUserRole = async (req: Request, res: Response) => {
 
     console.log('✅ [updateUserRole] 권한 변경 완료:', { 
       targetUserId: id, 
-      oldRole: targetUser.role_code, 
+      oldRole: targetUser.role, 
       newRole: role_code 
     });
 
