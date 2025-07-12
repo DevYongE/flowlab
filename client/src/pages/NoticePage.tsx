@@ -5,6 +5,7 @@ import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import axios from '../lib/axios';
 import { isAdmin } from '../lib/auth';
+import { handleApiError, showSuccessToast } from '../lib/error';
 
 interface Notice {
   notice_id: number;
@@ -46,18 +47,36 @@ const NoticePage: React.FC = () => {
   useEffect(() => {
     axios
       .get(`/notices?limit=${pageSize}`)
-      .then((res) => setNotices(res.data))
-      .catch(() => alert('공지사항을 불러오지 못했습니다.'));
+      .then((res) => {
+        console.log('📢 공지사항 목록 로딩 성공:', res.data);
+        setNotices(res.data);
+      })
+      .catch((error) => {
+        console.error('📢 공지사항 목록 로딩 실패:', error);
+        handleApiError(error, '공지사항을 불러오지 못했습니다.');
+      });
   }, [pageSize]);
 
-  // 예시: 삭제
+  // 공지사항 삭제
   const handleDelete = async (id: number) => {
     if (!window.confirm('정말 삭제하시겠습니까?')) return;
+    
     try {
-      await axios.delete(`/notices/${id}`);
-      setNotices(notices.filter(n => n.notice_id !== id));
-    } catch {
-      alert('삭제 실패');
+      console.log('🗑️ 공지사항 삭제 요청:', id);
+      
+      const response = await axios.delete(`/notices/${id}`);
+      console.log('🗑️ 삭제 응답:', response.data);
+      
+      if (response.data.success) {
+        // 성공적으로 삭제된 경우 목록에서 제거
+        setNotices(notices.filter(n => n.notice_id !== id));
+        showSuccessToast('공지사항이 성공적으로 삭제되었습니다.');
+      } else {
+        handleApiError('삭제에 실패했습니다.');
+      }
+    } catch (error: any) {
+      console.error('🗑️ 삭제 실패:', error);
+      handleApiError(error, '공지사항 삭제에 실패했습니다.');
     }
   };
 

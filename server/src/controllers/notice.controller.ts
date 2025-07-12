@@ -134,20 +134,47 @@ export const updateNotice = async (req: Request, res: Response) => {
 export const deleteNotice = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    console.log('[공지 삭제] 요청 id:', id);
-    const result = await sequelize.query('DELETE FROM notices WHERE notice_id = :id RETURNING *', {
-      replacements: { id },
-      type: QueryTypes.DELETE,
-    }) as any;
-    const rows = Array.isArray(result[0]) ? result[0] : [];
-    console.log('[공지 삭제] 결과:', rows);
-    if (rows.length === 0) {
-      res.status(404).json({ message: '공지사항 없음' });
+    const currentUser = req.user;
+    
+    console.log('[공지 삭제] 요청 id:', id, '사용자:', currentUser?.id, '역할:', currentUser?.role);
+    
+    // 먼저 해당 공지사항이 존재하는지 확인
+    const existingNotice = await sequelize.query(
+      'SELECT notice_id FROM notices WHERE notice_id = :id',
+      {
+        replacements: { id },
+        type: QueryTypes.SELECT,
+      }
+    ) as any[];
+    
+    if (!existingNotice || existingNotice.length === 0) {
+      console.log('[공지 삭제] 공지사항을 찾을 수 없음:', id);
+      res.status(404).json({ message: '삭제할 공지사항을 찾을 수 없습니다.' });
       return;
     }
-    res.json({ success: true });
+    
+    // 삭제 실행
+    const deleteResult = await sequelize.query(
+      'DELETE FROM notices WHERE notice_id = :id',
+      {
+        replacements: { id },
+        type: QueryTypes.DELETE,
+      }
+    );
+    
+    console.log('[공지 삭제] 삭제 완료 - id:', id);
+    res.json({ 
+      success: true, 
+      message: '공지사항이 성공적으로 삭제되었습니다.',
+      deletedId: id 
+    });
+    
   } catch (err: any) {
     console.error('[공지 삭제] 에러:', err);
-    res.status(500).json({ message: '공지사항 삭제 실패', error: err?.message, stack: err?.stack });
+    res.status(500).json({ 
+      message: '공지사항 삭제 실패', 
+      error: err?.message, 
+      stack: process.env.NODE_ENV === 'development' ? err?.stack : undefined 
+    });
   }
 }; 
