@@ -62,7 +62,7 @@ export const getProjects = async (req: Request, res: Response): Promise<void> =>
 
   try {
     let query = `
-      SELECT DISTINCT p.id, p.category, p.type, p.name, p.company_code, 
+      SELECT p.id, p.category, p.type, p.name, p.company_code, 
              TO_CHAR(p.start_date, 'YYYY-MM-DD') as "startDate", 
              TO_CHAR(p.end_date, 'YYYY-MM-DD') as "endDate", p.progress
       FROM projects p
@@ -80,7 +80,7 @@ export const getProjects = async (req: Request, res: Response): Promise<void> =>
       params.user_id = currentUserId;
     }
 
-    query += ' ORDER BY p.start_date DESC';
+    query += ' GROUP BY p.id, p.category, p.type, p.name, p.company_code, p.start_date, p.end_date, p.progress ORDER BY p.start_date DESC';
     const projects = await sequelize.query(query, { replacements: params, type: QueryTypes.SELECT });
     res.json(Array.isArray(projects) ? projects : []);
   } catch (error) {
@@ -338,7 +338,7 @@ export const getOngoingProjects = async (req: Request, res: Response): Promise<v
 
     try {
         let query = `
-            SELECT DISTINCT
+            SELECT 
                 p.id, 
                 p.name, 
                 COALESCE(ROUND(AVG(dn.progress)), 0) as progress
@@ -346,19 +346,19 @@ export const getOngoingProjects = async (req: Request, res: Response): Promise<v
             LEFT JOIN dev_notes dn ON p.id = dn.project_id
             LEFT JOIN project_assignees pa ON p.id = pa.project_id
         `;
-        const params: (string | number | undefined)[] = [];
+        const params: any = {};
 
         if (currentUserRole !== 'ADMIN') {
             // 일반 사용자: 본인이 작성한 프로젝트 OR 할당된 프로젝트
-            query += ' WHERE (p.author_id = $1 OR pa.user_id = $1)';
-            params.push(currentUserId);
+            query += ' WHERE (p.author_id = :currentUserId OR pa.user_id = :currentUserId)';
+            params.currentUserId = currentUserId;
         } else {
             query += ' WHERE 1=1'; // Always true, to allow appending "AND"
         }
 
         query += `
             AND (p.type = '추가' OR p.type = '신규')
-            GROUP BY p.id
+            GROUP BY p.id, p.name, p.start_date
             ORDER BY p.start_date DESC
             LIMIT 3
         `;

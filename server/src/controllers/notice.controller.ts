@@ -54,7 +54,7 @@ export const getLatestNotices = async (req: Request, res: Response) => {
   try {
     console.log('[최신 공지 목록] 요청');
     const rows = await sequelize.query(
-      `SELECT notice_id, title, TO_CHAR(created_at, 'YYYY-MM-DD') as "createdAt" 
+      `SELECT notice_id, title, TO_CHAR(created_at, 'YYYY-MM-DD') as "createdAt", created_at, is_pinned 
        FROM notices 
        ORDER BY is_pinned DESC, created_at DESC 
        LIMIT 5`,
