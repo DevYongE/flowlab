@@ -60,11 +60,8 @@ const Sidebar: React.FC<SidebarProps> = memo(({ isMini, isMobile = false, onClos
       {/* 모바일 전용 헤더 */}
       {isMobile && (
         <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center shadow-inner shadow-blue-800/40">
-              <img src={flowLabLogo} alt="FlowLab Logo" className="w-8 h-8 object-contain" />
-            </div>
-            <span className="text-xl font-black tracking-tight text-white drop-shadow-sm">FlowLab</span>
+          <div className="flex items-center justify-center">
+            <img src={flowLabLogo} alt="FlowLab Logo" className="h-12 object-contain" />
           </div>
           <button
             onClick={onClose}
@@ -79,11 +76,8 @@ const Sidebar: React.FC<SidebarProps> = memo(({ isMini, isMobile = false, onClos
       {/* 데스크톱 전용 헤더 */}
       {!isMobile && (
         <div>
-          <div className={`flex items-center gap-3 mb-8 ${isMini ? 'justify-center' : ''}`}>
-            <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center shadow-inner shadow-blue-800/40">
-              <img src={flowLabLogo} alt="FlowLab Logo" className="w-8 h-8 object-contain" />
-            </div>
-            {!isMini && <span className="text-2xl font-black tracking-tight text-white drop-shadow-sm">FlowLab</span>}
+          <div className={`flex items-center justify-center mb-8`}>
+            <img src={flowLabLogo} alt="FlowLab Logo" className={`object-contain ${isMini ? 'h-8' : 'h-12'}`} />
           </div>
           {!isMini && (
             <div className="text-xs text-gray-400 mb-2">
