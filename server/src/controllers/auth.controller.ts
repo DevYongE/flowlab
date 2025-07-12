@@ -29,9 +29,9 @@ const setCookies = (res: Response, accessToken: string, refreshToken: string) =>
   const isProduction = process.env.NODE_ENV === 'production';
   
   const cookieOptions = {
-    httpOnly: false, // 임시로 false로 설정하여 JavaScript에서 읽을 수 있게 함
-    secure: false, // 임시로 false로 설정
-    sameSite: 'lax' as const, // 임시로 lax로 설정
+    httpOnly: false, // JavaScript에서 읽을 수 있게 함
+    secure: isProduction, // 프로덕션에서는 HTTPS 필요
+    sameSite: isProduction ? 'none' as const : 'lax' as const, // Cross-origin 허용
     path: '/',
   };
   
@@ -101,7 +101,10 @@ export const loginUser = async (req: Request, res: Response) => {
         name: user.name,
         position_name: user.position_name,
         role_code: user.role_code,
-      }
+      },
+      // 하위 호환성을 위해 토큰도 응답에 포함
+      accessToken,
+      refreshToken
     });
   } catch (error) {
     console.error('로그인 에러:', error);
@@ -139,7 +142,11 @@ export const refreshToken = async (req: Request, res: Response) => {
     
     console.log('🍪 Refresh - New tokens set for user:', decoded.id);
     
-    res.json({ message: '토큰이 갱신되었습니다.' });
+    res.json({ 
+      message: '토큰이 갱신되었습니다.',
+      accessToken,
+      refreshToken: newRefreshToken
+    });
   } catch (error) {
     console.log('❌ Refresh token verification failed:', error);
     res.status(401).json({ message: '유효하지 않은 리프레시 토큰입니다.' });

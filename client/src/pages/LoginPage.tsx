@@ -33,7 +33,26 @@ const LoginPage: React.FC = () => {
       if (res.data.success) {
         const user: User = res.data.user;
         
-        // 사용자 정보를 sessionStorage에 저장 (하위 호환성)
+        // 토큰을 sessionStorage에 저장 (Response body에서 받는 것이 더 안전)
+        if (res.data.accessToken) {
+          sessionStorage.setItem('token', res.data.accessToken);
+          if (res.data.refreshToken) {
+            sessionStorage.setItem('refreshToken', res.data.refreshToken);
+          }
+          console.log('🔐 Tokens saved to sessionStorage from response body');
+        } else {
+          // 쿠키에서 토큰을 읽어서 sessionStorage에 저장 (Fallback)
+          setTimeout(() => {
+            const accessTokenCookie = document.cookie.split('; ').find(row => row.startsWith('accessToken='));
+            if (accessTokenCookie) {
+              const token = accessTokenCookie.split('=')[1];
+              sessionStorage.setItem('token', token);
+              console.log('🔐 Token extracted from cookie and saved to sessionStorage');
+            }
+          }, 100);
+        }
+        
+        // 사용자 정보를 sessionStorage에 저장
         sessionStorage.setItem('user', JSON.stringify(user));
         
         // Zustand 스토어에 로그인 상태 저장
@@ -41,20 +60,7 @@ const LoginPage: React.FC = () => {
         
         showSuccessToast('로그인되었습니다.');
         
-        // 쿠키 설정을 위해 잠시 대기 후 이동
-        setTimeout(() => {
-          // 쿠키가 설정되었는지 확인
-          const accessToken = document.cookie.split('; ').find(row => row.startsWith('accessToken='));
-          const refreshToken = document.cookie.split('; ').find(row => row.startsWith('refreshToken='));
-          
-          console.log('🍪 Login success - Cookie check:', {
-            accessToken: !!accessToken,
-            refreshToken: !!refreshToken,
-            allCookies: document.cookie
-          });
-          
-          navigate('/dashboard');
-        }, 500);
+        navigate('/dashboard');
       } else {
         handleApiError(res.data.message || '로그인에 실패했습니다.');
       }

@@ -85,7 +85,16 @@ instance.interceptors.response.use(
       try {
         console.log('🔄 Attempting token refresh...');
         // 토큰 갱신 시도
-        await instance.post('/auth/refresh');
+        const refreshResponse = await instance.post('/auth/refresh');
+        
+        // 새로운 토큰을 sessionStorage에 저장
+        if (refreshResponse.data.accessToken) {
+          sessionStorage.setItem('token', refreshResponse.data.accessToken);
+          if (refreshResponse.data.refreshToken) {
+            sessionStorage.setItem('refreshToken', refreshResponse.data.refreshToken);
+          }
+          console.log('🔐 New tokens saved to sessionStorage');
+        }
         
         console.log('✅ Token refreshed, retrying original request...');
         // 원래 요청 재시도

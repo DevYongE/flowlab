@@ -46,10 +46,11 @@ export const authenticate = (req: Request, res: Response, next: NextFunction): v
         );
         
         // 새로운 토큰을 쿠키에 설정
+        const isProduction = process.env.NODE_ENV === 'production';
         res.cookie('accessToken', newAccessToken, {
-          httpOnly: false, // 임시로 false로 설정하여 JavaScript에서 읽을 수 있게 함
-          secure: false, // 임시로 false로 설정
-          sameSite: 'lax' as const, // 임시로 lax로 설정
+          httpOnly: false, // JavaScript에서 읽을 수 있게 함
+          secure: isProduction, // 프로덕션에서는 HTTPS 필요
+          sameSite: isProduction ? 'none' as const : 'lax' as const, // Cross-origin 허용
           path: '/',
           maxAge: 30 * 60 * 1000,
         });
