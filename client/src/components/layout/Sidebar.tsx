@@ -1,6 +1,5 @@
 import React, { memo, useMemo, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { logout } from '../../lib/auth';
 import { useAuthStore } from '../../store/auth';
 
 interface SidebarProps {
@@ -23,22 +22,21 @@ const adminMenu = [
 const Sidebar: React.FC<SidebarProps> = memo(({ isMini }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout: logoutStore } = useAuthStore();
+  const { user, logout } = useAuthStore();
   
   const isAdmin = useMemo(() => user?.role_code === 'ADMIN', [user?.role_code]);
   
   const handleLogout = useCallback(async () => {
     try {
       await logout();
-      logoutStore();
+      // 로그아웃 후 로그인 페이지로 이동
+      navigate('/login');
     } catch (error) {
       console.error('로그아웃 중 오류 발생:', error);
-      // 오류가 발생해도 로그아웃 처리
-      sessionStorage.clear();
-      logoutStore();
+      // 오류가 발생해도 로그인 페이지로 이동
       navigate('/login');
     }
-  }, [logoutStore, navigate]);
+  }, [logout, navigate]);
 
   const handleMenuClick = useCallback((to: string) => {
     navigate(to);

@@ -146,6 +146,44 @@ export const logoutUser = async (req: Request, res: Response) => {
   res.json({ message: '로그아웃되었습니다.' });
 };
 
+// 현재 사용자 정보 확인 엔드포인트
+export const getCurrentUser = async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    
+    if (!user) {
+      res.status(401).json({ message: '인증되지 않은 사용자입니다.' });
+      return;
+    }
+    
+    // 최신 사용자 정보를 데이터베이스에서 가져오기
+    const users = await sequelize.query(
+      `SELECT u.*, p.name AS position_name FROM users u LEFT JOIN positions p ON u.position_code = p.position_code WHERE u.id = :id`,
+      { replacements: { id: user.id }, type: QueryTypes.SELECT }
+    ) as any[];
+    
+    const currentUser = users[0] as any;
+    
+    if (!currentUser) {
+      res.status(404).json({ message: '사용자를 찾을 수 없습니다.' });
+      return;
+    }
+    
+    res.json({
+      success: true,
+      user: {
+        id: currentUser.id,
+        name: currentUser.name,
+        position_name: currentUser.position_name,
+        role_code: currentUser.role_code,
+      }
+    });
+  } catch (error) {
+    console.error('현재 사용자 정보 조회 에러:', error);
+    res.status(500).json({ message: '사용자 정보를 불러오는데 실패했습니다.' });
+  }
+};
+
 // 비밀번호 재설정 요청 (이메일 발송)
 export const forgotPassword = async (req: Request, res: Response) => {
   const { id, email } = req.body;

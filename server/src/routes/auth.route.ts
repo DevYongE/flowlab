@@ -1,6 +1,7 @@
 // server/src/routes/auth.routes.ts
 import express from 'express';
-import { loginUser, forgotPassword, resetPassword, refreshToken, logoutUser } from '../controllers/auth.controller';
+import { loginUser, forgotPassword, resetPassword, refreshToken, logoutUser, getCurrentUser } from '../controllers/auth.controller';
+import { authenticate } from '../middlewares/auth.middleware';
 
 const router = express.Router();
 
@@ -12,6 +13,9 @@ router.post('/refresh', refreshToken);
 
 // 로그아웃 라우트
 router.post('/logout', logoutUser);
+
+// 현재 사용자 정보 조회 라우트
+router.get('/me', authenticate, getCurrentUser);
 
 // 비밀번호 찾기 라우트
 router.post('/forgot-password', forgotPassword);

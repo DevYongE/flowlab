@@ -5,16 +5,24 @@ export const authenticate = (req: Request, res: Response, next: NextFunction): v
   const authHeader = req.headers.authorization;
   const cookieToken = req.cookies?.accessToken;
   
+  console.log('🔐 Auth middleware - Request to:', req.path);
+  console.log('🔐 Auth Header:', authHeader ? 'Present' : 'Missing');
+  console.log('🔐 Cookie Token:', cookieToken ? 'Present' : 'Missing');
+  console.log('🔐 All cookies:', req.cookies);
+  
   // Bearer 토큰 또는 쿠키에서 토큰 가져오기 (하위 호환성)
   let token: string | null = null;
   
   if (authHeader && authHeader.startsWith('Bearer ')) {
     token = authHeader.split(' ')[1];
+    console.log('🔐 Using Bearer token');
   } else if (cookieToken) {
     token = cookieToken;
+    console.log('🔐 Using Cookie token');
   }
   
   if (!token) {
+    console.log('❌ No token found');
     res.status(401).json({ message: 'Unauthorized' });
     return;
   }

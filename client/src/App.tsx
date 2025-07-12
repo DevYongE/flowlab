@@ -41,13 +41,18 @@ const BoardEditPage = lazy(() => import('./pages/BoardEditPage'));
 const AdminUserPage = lazy(() => import('./pages/admin/AdminUserPage'));
 
 export default function App() {
-  const { isAuthenticated, checkAuth } = useAuthStore();
+  const { isAuthenticated, loading, checkAuth } = useAuthStore();
   const { isOnline } = useGlobalStore();
 
   // 앱 시작 시 인증 상태 확인
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
+
+  // 인증 상태 확인 중일 때 로딩 화면 표시
+  if (loading) {
+    return <LoadingSpinner />;
+  }
 
   return (
     <ErrorBoundary>

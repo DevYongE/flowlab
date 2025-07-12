@@ -5,6 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 import axios from '../lib/axios';
 import { useNavigate } from 'react-router-dom';
 import Cookies from 'js-cookie';
+import { handleApiError } from '../lib/error';
 
 interface StatusSummary {
   status: string;
@@ -29,6 +30,9 @@ const DashboardPage: React.FC = () => {
   const [notices, setNotices] = useState<LatestNotice[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(false);
+  const [loadingStatus, setLoadingStatus] = useState(false);
+  const [loadingNotices, setLoadingNotices] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -54,8 +58,10 @@ const DashboardPage: React.FC = () => {
       console.log('✅ Dashboard - Tokens found, loading data...');
       
       // 프로젝트 현황 데이터 가져오기
+      setLoadingStatus(true);
       axios.get<StatusSummary[]>('/projects/status-summary')
         .then(res => {
+          console.log('📊 Status summary response:', res.data);
           const statusOrder = ['미완료', '진행중', '완료'];
           const fetchedData: StatusSummary[] = res.data;
           const dataMap = new Map(fetchedData.map((item) => [item.status, item]));
@@ -64,17 +70,30 @@ const DashboardPage: React.FC = () => {
           );
           setStatusSummary(sortedData);
         })
-        .catch(err => console.error('프로젝트 현황 로딩 실패:', err));
+        .catch(err => {
+          console.error('프로젝트 현황 로딩 실패:', err);
+          handleApiError(err, '프로젝트 현황을 불러오는데 실패했습니다.');
+        })
+        .finally(() => setLoadingStatus(false));
 
       // 최신 공지사항 데이터 가져오기
+      setLoadingNotices(true);
       axios.get('/notices/latest')
-        .then(res => setNotices(res.data))
-        .catch(err => console.error('최신 공지사항 로딩 실패:', err));
+        .then(res => {
+          console.log('📢 Latest notices response:', res.data);
+          setNotices(res.data);
+        })
+        .catch(err => {
+          console.error('최신 공지사항 로딩 실패:', err);
+          handleApiError(err, '최신 공지사항을 불러오는데 실패했습니다.');
+        })
+        .finally(() => setLoadingNotices(false));
 
       // 프로젝트 목록 및 첫 번째 프로젝트의 WBS 불러오기
       setLoadingProjects(true);
       axios.get<Project[]>('/projects')
         .then(res => {
+          console.log('📁 Projects response:', res.data);
           if (Array.isArray(res.data)) {
             setProjects(res.data);
           } else {
@@ -82,7 +101,11 @@ const DashboardPage: React.FC = () => {
             console.error('프로젝트 목록 응답이 배열이 아님:', res.data);
           }
         })
-        .catch(() => setProjects([]))
+        .catch(err => {
+          console.error('프로젝트 목록 로딩 실패:', err);
+          handleApiError(err, '프로젝트 목록을 불러오는데 실패했습니다.');
+          setProjects([]);
+        })
         .finally(() => setLoadingProjects(false));
     };
     
@@ -120,26 +143,40 @@ const DashboardPage: React.FC = () => {
           <Card>
             <CardContent className="p-6">
               <h2 className="text-xl font-semibold mb-4">📈 전체 프로젝트 현황</h2>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart 
-                  data={statusSummary}
-                  margin={{ top: 5, right: 20, left: -10, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="status" />
-                  <YAxis unit="개" allowDecimals={false} />
-                  <Tooltip cursor={{fill: 'rgba(239, 246, 255, 0.5)'}}/>
-                  <Legend />
-                  <Bar dataKey="count" name="프로젝트 수" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              {loadingStatus ? (
+                <div className="flex items-center justify-center h-[300px]">
+                  <div className="text-gray-500">프로젝트 현황 로딩 중...</div>
+                </div>
+              ) : statusSummary.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart 
+                    data={statusSummary}
+                    margin={{ top: 5, right: 20, left: -10, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="status" />
+                    <YAxis unit="개" allowDecimals={false} />
+                    <Tooltip cursor={{fill: 'rgba(239, 246, 255, 0.5)'}}/>
+                    <Legend />
+                    <Bar dataKey="count" name="프로젝트 수" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-[300px]">
+                  <div className="text-gray-500">프로젝트 현황 데이터가 없습니다.</div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
           <Card>
             <CardContent className="p-6">
               <h2 className="text-xl font-semibold mb-4">📢 최신 공지사항</h2>
-              {notices.length > 0 ? (
+              {loadingNotices ? (
+                <div className="flex items-center justify-center h-[300px]">
+                  <div className="text-gray-500">공지사항 로딩 중...</div>
+                </div>
+              ) : notices.length > 0 ? (
                 <ul className="space-y-3">
                   {notices.map((notice) => (
                     <li 
@@ -153,7 +190,7 @@ const DashboardPage: React.FC = () => {
                   ))}
                 </ul>
               ) : (
-                <div className="flex items-center justify-center h-full text-gray-500">
+                <div className="flex items-center justify-center h-[300px] text-gray-500">
                   표시할 공지사항이 없습니다.
                 </div>
               )}
