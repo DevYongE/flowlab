@@ -59,19 +59,31 @@ const DashboardPage: React.FC = () => {
       
       // 프로젝트 현황 데이터 가져오기
       setLoadingStatus(true);
+      console.log('📊 Requesting status summary...');
       axios.get<StatusSummary[]>('/projects/status-summary')
         .then(res => {
           console.log('📊 Status summary response:', res.data);
+          console.log('📊 Status summary response length:', res.data.length);
+          
+          if (!Array.isArray(res.data)) {
+            console.error('📊 Status summary response is not array:', res.data);
+            setStatusSummary([]);
+            return;
+          }
+          
           const statusOrder = ['미완료', '진행중', '완료'];
           const fetchedData: StatusSummary[] = res.data;
           const dataMap = new Map(fetchedData.map((item) => [item.status, item]));
           const sortedData: StatusSummary[] = statusOrder.map(status => 
               dataMap.get(status) || { status, count: 0 }
           );
+          
+          console.log('📊 Processed status data:', sortedData);
           setStatusSummary(sortedData);
         })
         .catch(err => {
           console.error('프로젝트 현황 로딩 실패:', err);
+          console.error('프로젝트 현황 에러 상세:', err.response?.data);
           handleApiError(err, '프로젝트 현황을 불러오는데 실패했습니다.');
         })
         .finally(() => setLoadingStatus(false));

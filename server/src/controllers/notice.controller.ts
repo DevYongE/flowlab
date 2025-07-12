@@ -52,7 +52,10 @@ export const getNotice = async (req: Request, res: Response) => {
 
 export const getLatestNotices = async (req: Request, res: Response) => {
   try {
-    console.log('[최신 공지 목록] 요청');
+    const currentUserId = req.user?.id;
+    const currentUserRole = req.user?.role;
+    console.log('📢 [getLatestNotices] 요청 - 사용자:', currentUserId, '권한:', currentUserRole);
+    
     const rows = await sequelize.query(
       `SELECT notice_id, title, TO_CHAR(created_at, 'YYYY-MM-DD') as "createdAt", created_at, is_pinned 
        FROM notices 
@@ -60,10 +63,13 @@ export const getLatestNotices = async (req: Request, res: Response) => {
        LIMIT 5`,
       { type: QueryTypes.SELECT }
     ) as any[];
-    console.log('[최신 공지 목록] 결과:', rows.length);
+    
+    console.log('📢 [getLatestNotices] 결과 개수:', rows.length);
+    console.log('📢 [getLatestNotices] 결과:', rows);
+    
     res.json(rows);
   } catch (err: any) {
-    console.error('[최신 공지 목록] 에러:', err);
+    console.error('📢 [getLatestNotices] 에러:', err);
     res.status(500).json({ message: '최신 공지사항 조회 실패', error: err?.message, stack: err?.stack });
   }
 };

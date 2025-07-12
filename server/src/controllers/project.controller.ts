@@ -61,6 +61,8 @@ export const getProjects = async (req: Request, res: Response): Promise<void> =>
   const currentUserCompany = req.user?.company_code;
 
   try {
+    console.log('📁 [getProjects] 요청 - 사용자:', currentUserId, '권한:', currentUserRole, '회사:', currentUserCompany);
+    
     let query = `
       SELECT p.id, p.category, p.type, p.name, p.company_code, 
              TO_CHAR(p.start_date, 'YYYY-MM-DD') as "startDate", 
@@ -70,20 +72,30 @@ export const getProjects = async (req: Request, res: Response): Promise<void> =>
     `;
     const params: any = {};
 
-    if (currentUserRole === 'MANAGER') {
-      query += ' WHERE p.company_code = :company_code';
-      params.company_code = currentUserCompany;
-    } else if (currentUserRole !== 'ADMIN') {
-      // 일반 사용자: 본인이 작성한 프로젝트 OR 할당된 프로젝트
-      query += ' WHERE (p.author_id = :author_id OR pa.user_id = :user_id)';
-      params.author_id = currentUserId;
-      params.user_id = currentUserId;
-    }
+    // 임시로 권한 체크 비활성화
+    // if (currentUserRole === 'MANAGER') {
+    //   query += ' WHERE p.company_code = :company_code';
+    //   params.company_code = currentUserCompany;
+    // } else if (currentUserRole !== 'ADMIN') {
+    //   // 일반 사용자: 본인이 작성한 프로젝트 OR 할당된 프로젝트
+    //   query += ' WHERE (p.author_id = :author_id OR pa.user_id = :user_id)';
+    //   params.author_id = currentUserId;
+    //   params.user_id = currentUserId;
+    // }
 
     query += ' GROUP BY p.id, p.category, p.type, p.name, p.company_code, p.start_date, p.end_date, p.progress ORDER BY p.start_date DESC';
+    
+    console.log('📁 [getProjects] 실행 쿼리:', query);
+    console.log('📁 [getProjects] 쿼리 파라미터:', params);
+    
     const projects = await sequelize.query(query, { replacements: params, type: QueryTypes.SELECT });
+    
+    console.log('📁 [getProjects] 결과 개수:', Array.isArray(projects) ? projects.length : 0);
+    console.log('📁 [getProjects] 결과:', projects);
+    
     res.json(Array.isArray(projects) ? projects : []);
   } catch (error) {
+    console.error('📁 [getProjects] 에러:', error);
     res.status(500).json({ message: '프로젝트 목록 조회 실패', error });
   }
 };
@@ -174,6 +186,8 @@ export const getProjectStatusSummary = async (req: Request, res: Response): Prom
   const currentUserRole = req.user?.role;
 
   try {
+    console.log('📊 [getProjectStatusSummary] 요청 - 사용자:', currentUserId, '권한:', currentUserRole);
+    
     let query = `
       SELECT
         CASE
@@ -186,14 +200,21 @@ export const getProjectStatusSummary = async (req: Request, res: Response): Prom
     `;
     const params: any = {};
 
-    if (currentUserRole !== 'ADMIN') {
-      query += ' WHERE author_id = :author_id';
-      params.author_id = currentUserId;
-    }
+    // 임시로 모든 사용자가 모든 프로젝트를 볼 수 있도록 변경
+    // if (currentUserRole !== 'ADMIN') {
+    //   query += ' WHERE author_id = :author_id';
+    //   params.author_id = currentUserId;
+    // }
 
     query += ' GROUP BY status';
 
+    console.log('📊 [getProjectStatusSummary] 실행 쿼리:', query);
+    console.log('📊 [getProjectStatusSummary] 쿼리 파라미터:', params);
+
     const result = await sequelize.query(query, { replacements: params, type: QueryTypes.SELECT });
+    
+    console.log('📊 [getProjectStatusSummary] 결과:', result);
+    
     res.json(result);
   } catch (error) {
     console.error('프로젝트 상태 요약 조회 실패:', error);
