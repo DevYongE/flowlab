@@ -17,6 +17,14 @@ instance.interceptors.request.use(
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
+    
+    console.log('📡 Making request:', {
+      url: config.url,
+      method: config.method,
+      hasAuthHeader: !!config.headers['Authorization'],
+      cookies: document.cookie,
+    });
+    
     return config;
   },
   (error) => {

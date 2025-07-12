@@ -47,9 +47,10 @@ export const authenticate = (req: Request, res: Response, next: NextFunction): v
         
         // 새로운 토큰을 쿠키에 설정
         res.cookie('accessToken', newAccessToken, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: process.env.NODE_ENV === 'production' ? 'none' as const : 'lax' as const,
+          httpOnly: false, // 임시로 false로 설정하여 JavaScript에서 읽을 수 있게 함
+          secure: false, // 임시로 false로 설정
+          sameSite: 'lax' as const, // 임시로 lax로 설정
+          path: '/',
           maxAge: 30 * 60 * 1000,
         });
         

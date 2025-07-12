@@ -26,12 +26,17 @@ const generateTokens = (payload: any) => {
 
 // 쿠키 설정 함수
 const setCookies = (res: Response, accessToken: string, refreshToken: string) => {
+  const isProduction = process.env.NODE_ENV === 'production';
+  
   const cookieOptions = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' as const : 'lax' as const,
-    domain: process.env.NODE_ENV === 'production' ? undefined : undefined,
+    httpOnly: false, // 임시로 false로 설정하여 JavaScript에서 읽을 수 있게 함
+    secure: false, // 임시로 false로 설정
+    sameSite: 'lax' as const, // 임시로 lax로 설정
+    path: '/',
   };
+  
+  console.log('🍪 Setting cookies with options:', cookieOptions);
+  console.log('🍪 Environment:', { NODE_ENV: process.env.NODE_ENV, isProduction });
   
   res.cookie('accessToken', accessToken, {
     ...cookieOptions,
@@ -42,6 +47,8 @@ const setCookies = (res: Response, accessToken: string, refreshToken: string) =>
     ...cookieOptions,
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7일
   });
+  
+  console.log('🍪 Cookies set successfully');
 };
 
 export const loginUser = async (req: Request, res: Response) => {
