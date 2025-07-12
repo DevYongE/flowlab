@@ -178,7 +178,7 @@ export const createPost = async (req: Request, res: Response) => {
        RETURNING id`,
       {
         replacements: { title, content, category, authorId },
-        type: QueryTypes.INSERT
+        type: QueryTypes.SELECT
       }
     );
 

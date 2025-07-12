@@ -46,7 +46,7 @@ const BoardWritePage: React.FC = () => {
     try {
       setLoading(true);
       const response = await axios.post('/board', formData);
-      alert('게시글이 등록되었습니다.');
+      // alert 제거하고 바로 게시글 상세 페이지로 이동
       navigate(`/board/${response.data.postId}`);
     } catch (error) {
       console.error('게시글 작성 실패:', error);
