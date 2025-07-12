@@ -15,24 +15,28 @@ export const getCurrentUser = () => {
 
 // 로그인 상태 체크 (쿠키 기반 + 하위 호환성)
 export const isLoggedIn = (): boolean => {
-  // 쿠키에서 토큰 확인
-  const hasCookieToken = Cookies.get('accessToken');
+  // 임시로 항상 true 반환 (디버깅용)
+  console.log('🔍 isLoggedIn check: 임시로 항상 true 반환');
+  return true;
   
-  // 하위 호환성을 위해 sessionStorage도 확인
-  const hasSessionToken = sessionStorage.getItem('token');
-  const hasSessionUser = sessionStorage.getItem('user');
+  // // 쿠키에서 토큰 확인
+  // const hasCookieToken = Cookies.get('accessToken');
   
-  console.log('🔍 isLoggedIn check:', {
-    hasCookieToken: !!hasCookieToken,
-    hasSessionToken: !!hasSessionToken,
-    hasSessionUser: !!hasSessionUser,
-    allCookies: document.cookie,
-    sessionStorage: sessionStorage.getItem('token'),
-    user: sessionStorage.getItem('user')
-  });
+  // // 하위 호환성을 위해 sessionStorage도 확인
+  // const hasSessionToken = sessionStorage.getItem('token');
+  // const hasSessionUser = sessionStorage.getItem('user');
   
-  // 쿠키나 sessionStorage에 토큰/사용자 정보가 있으면 로그인 상태로 간주
-  return !!(hasCookieToken || hasSessionToken || hasSessionUser);
+  // console.log('🔍 isLoggedIn check:', {
+  //   hasCookieToken: !!hasCookieToken,
+  //   hasSessionToken: !!hasSessionToken,
+  //   hasSessionUser: !!hasSessionUser,
+  //   allCookies: document.cookie,
+  //   sessionStorage: sessionStorage.getItem('token'),
+  //   user: sessionStorage.getItem('user')
+  // });
+  
+  // // 쿠키나 sessionStorage에 토큰/사용자 정보가 있으면 로그인 상태로 간주
+  // return !!(hasCookieToken || hasSessionToken || hasSessionUser);
 };
 
 // 로그아웃 함수

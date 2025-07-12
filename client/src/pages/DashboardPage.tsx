@@ -36,26 +36,11 @@ const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // 쿠키가 설정될 시간을 주기 위해 약간의 지연 후 API 요청
-    const loadDashboardData = async () => {
-      // 쿠키가 설정되었는지 확인
-      const hasAccessToken = Cookies.get('accessToken');
-      const hasSessionToken = sessionStorage.getItem('token');
-      
-      console.log('🍪 Dashboard - Cookie check:', {
-        hasAccessToken: !!hasAccessToken,
-        hasSessionToken: !!hasSessionToken,
-        allCookies: document.cookie
-      });
-      
-      if (!hasAccessToken && !hasSessionToken) {
-        console.log('⏳ Dashboard - No tokens found, waiting...');
-        // 쿠키가 없으면 잠시 대기
-        setTimeout(loadDashboardData, 200);
-        return;
-      }
-      
-      console.log('✅ Dashboard - Tokens found, loading data...');
+    console.log('🏠 Dashboard component mounted, starting data load...');
+    
+    // 토큰 체크 로직 제거하고 바로 API 요청 시작
+    const loadDashboardData = () => {
+      console.log('✅ Dashboard - Loading data without token check...');
       
       // 프로젝트 현황 데이터 가져오기
       setLoadingStatus(true);
@@ -90,6 +75,7 @@ const DashboardPage: React.FC = () => {
 
       // 최신 공지사항 데이터 가져오기
       setLoadingNotices(true);
+      console.log('📢 Requesting latest notices...');
       axios.get('/notices/latest')
         .then(res => {
           console.log('📢 Latest notices response:', res.data);
@@ -103,6 +89,7 @@ const DashboardPage: React.FC = () => {
 
       // 프로젝트 목록 및 첫 번째 프로젝트의 WBS 불러오기
       setLoadingProjects(true);
+      console.log('📁 Requesting projects...');
       axios.get<Project[]>('/projects')
         .then(res => {
           console.log('📁 Projects response:', res.data);
