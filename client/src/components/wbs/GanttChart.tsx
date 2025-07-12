@@ -205,7 +205,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
   }
 
   // 완료 진행도 바 스타일 계산 (완료된 부분만 표시)
-  function getCompletedBarStyle(startStr: string, deadlineStr: string, completedStr: string, rowIndex: number = 0) {
+  function getCompletedBarStyle(startStr: string, completedStr: string, rowIndex: number = 0) {
     try {
       const startDate = parseISO(startStr);
       const completedDate = parseISO(completedStr);
@@ -421,12 +421,12 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
           
           // 바 스타일 계산 (마감일까지 표시)
           const barStyle = showBar && actualStartDate && actualDeadline ? 
-            getBarStyle(actualStartDate, actualDeadline, isCompleted, completedAt, index) : 
+            getBarStyle(actualStartDate, actualDeadline, isCompleted, index) : 
             {};
           
           // 완료 바 스타일 계산 (완료된 부분만 표시)
           const completedBarStyle = showBar && actualStartDate && actualDeadline && completedAt ? 
-            getCompletedBarStyle(actualStartDate, actualDeadline, completedAt, index) : 
+            getCompletedBarStyle(actualStartDate, completedAt, index) : 
             {};
           
           console.log(`작업 ${index}:`, {
