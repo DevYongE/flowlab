@@ -52,59 +52,62 @@ instance.interceptors.response.use(
       return Promise.reject(error);
     }
     
-    // refresh 요청 자체가 실패한 경우 즉시 로그아웃
-    if (originalRequest.url?.includes('/auth/refresh') && error.response.status === 401) {
-      console.log('🔒 Refresh token expired, logging out...');
-      sessionStorage.removeItem('token');
-      sessionStorage.removeItem('user');
-      
-      if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
-        showErrorToast('인증이 만료되었습니다. 다시 로그인해주세요.');
-        setTimeout(() => {
-          window.location.href = '/login';
-        }, 1000);
-      }
-      
-      return Promise.reject(error);
-    }
+    // 임시로 인터셉터 리다이렉트 로직 비활성화 (디버깅용)
+    console.log('🚫 Axios interceptor disabled for debugging');
     
-    // 로그인 요청 실패 시 refresh 로직 건너뛰기
-    if (originalRequest.url?.includes('/auth/login') && error.response.status === 401) {
-      return Promise.reject(error);
-    }
+    // // refresh 요청 자체가 실패한 경우 즉시 로그아웃
+    // if (originalRequest.url?.includes('/auth/refresh') && error.response.status === 401) {
+    //   console.log('🔒 Refresh token expired, logging out...');
+    //   sessionStorage.removeItem('token');
+    //   sessionStorage.removeItem('user');
+      
+    //   if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+    //     showErrorToast('인증이 만료되었습니다. 다시 로그인해주세요.');
+    //     setTimeout(() => {
+    //       window.location.href = '/login';
+    //     }, 1000);
+    //   }
+      
+    //   return Promise.reject(error);
+    // }
     
-    // 401 에러 시 토큰 갱신 시도 (refresh 요청 및 로그인 페이지 제외)
-    if (error.response.status === 401 && !originalRequest._retry && 
-        !originalRequest.url?.includes('/auth/refresh') && 
-        !originalRequest.url?.includes('/auth/login') &&
-        window.location.pathname !== '/login' &&
-        window.location.pathname !== '/register') {
+    // // 로그인 요청 실패 시 refresh 로직 건너뛰기
+    // if (originalRequest.url?.includes('/auth/login') && error.response.status === 401) {
+    //   return Promise.reject(error);
+    // }
+    
+    // // 401 에러 시 토큰 갱신 시도 (refresh 요청 및 로그인 페이지 제외)
+    // if (error.response.status === 401 && !originalRequest._retry && 
+    //     !originalRequest.url?.includes('/auth/refresh') && 
+    //     !originalRequest.url?.includes('/auth/login') &&
+    //     window.location.pathname !== '/login' &&
+    //     window.location.pathname !== '/register') {
       
-      originalRequest._retry = true;
+    //   originalRequest._retry = true;
       
-      try {
-        // 토큰 갱신 시도
-        await instance.post('/auth/refresh');
+    //   try {
+    //     // 토큰 갱신 시도
+    //     await instance.post('/auth/refresh');
         
-        // 원래 요청 재시도
-        return instance(originalRequest);
-      } catch (refreshError) {
-        // 리프레시 토큰도 만료된 경우 로그아웃 처리
-        console.log('🔒 Refresh failed, logging out...');
-        sessionStorage.removeItem('token');
-        sessionStorage.removeItem('user');
+    //     // 원래 요청 재시도
+    //     return instance(originalRequest);
+    //   } catch (refreshError) {
+    //     // 리프레시 토큰도 만료된 경우 로그아웃 처리
+    //     console.log('🔒 Refresh failed, logging out...');
+    //     sessionStorage.removeItem('token');
+    //     sessionStorage.removeItem('user');
         
-        // 로그인 페이지로 리다이렉트
-        if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
-          showErrorToast('인증이 만료되었습니다. 다시 로그인해주세요.');
-          setTimeout(() => {
-            window.location.href = '/login';
-          }, 1000);
-        }
+    //     // 로그인 페이지로 리다이렉트
+    //     if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+    //       showErrorToast('인증이 만료되었습니다. 다시 로그인해주세요.');
+    //       setTimeout(() => {
+    //         window.location.href = '/login';
+    //       }, 1000);
+    //     }
         
-        return Promise.reject(refreshError);
-      }
-    }
+    //     return Promise.reject(refreshError);
+    //   }
+    // }
     
     // 기타 HTTP 에러는 각 컴포넌트에서 처리하도록 전달
     return Promise.reject(error);

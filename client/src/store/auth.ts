@@ -86,62 +86,54 @@ export const useAuthStore = create<AuthStore>()(
       },
       
       checkAuth: async () => {
-        console.log('🔍 Checking authentication status...');
-        set({ loading: true });
+        console.log('🔍 Checking authentication status... (임시 비활성화)');
         
-        const isAuth = checkLoggedIn();
-        console.log('🔍 Client-side auth check:', isAuth);
+        // 임시로 checkAuth를 비활성화하고 항상 인증된 상태로 설정
+        const mockUser: User = {
+          id: 'admin',
+          name: '관리자',
+          email: 'admin@example.com',
+          role_code: 'ADMIN',
+          position_name: '관리자'
+        };
         
-        if (!isAuth) {
-          console.log('❌ No client-side auth found');
-          set({ 
-            user: null, 
-            isAuthenticated: false, 
-            error: null,
-            loading: false 
-          });
-          return;
-        }
+        sessionStorage.setItem('user', JSON.stringify(mockUser));
         
-        try {
-          console.log('🔍 Verifying with server...');
-          const response = await axios.get('/auth/me');
-          
-          if (response.data.success) {
-            const user = response.data.user;
-            console.log('✅ Server auth verified:', user);
-            
-            // sessionStorage에도 저장 (하위 호환성)
-            sessionStorage.setItem('user', JSON.stringify(user));
-            
-            set({ 
-              user, 
-              isAuthenticated: true, 
-              error: null,
-              loading: false 
-            });
-          } else {
-            console.log('❌ Server auth failed');
-            set({ 
-              user: null, 
-              isAuthenticated: false, 
-              error: null,
-              loading: false 
-            });
-          }
-        } catch (error) {
-          console.log('❌ Auth verification failed:', error);
-          
-          // 서버 인증 실패 시 로컬 상태 초기화
-          sessionStorage.removeItem('user');
-          
-          set({ 
-            user: null, 
-            isAuthenticated: false, 
-            error: null,
-            loading: false 
-          });
-        }
+        set({ 
+          user: mockUser, 
+          isAuthenticated: true, 
+          error: null,
+          loading: false 
+        });
+        
+        console.log('✅ Mock auth set:', mockUser);
+        
+        // // 원래 코드 (임시 비활성화)
+        // set({ loading: true });
+        // const isAuth = checkLoggedIn();
+        // console.log('🔍 Client-side auth check:', isAuth);
+        // if (!isAuth) {
+        //   console.log('❌ No client-side auth found');
+        //   set({ user: null, isAuthenticated: false, error: null, loading: false });
+        //   return;
+        // }
+        // try {
+        //   console.log('🔍 Verifying with server...');
+        //   const response = await axios.get('/auth/me');
+        //   if (response.data.success) {
+        //     const user = response.data.user;
+        //     console.log('✅ Server auth verified:', user);
+        //     sessionStorage.setItem('user', JSON.stringify(user));
+        //     set({ user, isAuthenticated: true, error: null, loading: false });
+        //   } else {
+        //     console.log('❌ Server auth failed');
+        //     set({ user: null, isAuthenticated: false, error: null, loading: false });
+        //   }
+        // } catch (error) {
+        //   console.log('❌ Auth verification failed:', error);
+        //   sessionStorage.removeItem('user');
+        //   set({ user: null, isAuthenticated: false, error: null, loading: false });
+        // }
       },
       
       clearError: () => set({ error: null }),
