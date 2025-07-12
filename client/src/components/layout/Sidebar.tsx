@@ -1,9 +1,12 @@
 import React, { memo, useMemo, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/auth';
+import { X } from 'lucide-react';
 
 interface SidebarProps {
   isMini: boolean;
+  isMobile?: boolean;
+  onClose?: () => void;
 }
 
 const menu = [
@@ -19,7 +22,7 @@ const adminMenu = [
   { icon: '👤', label: '회원관리', to: '/admin/users' },
 ];
 
-const Sidebar: React.FC<SidebarProps> = memo(({ isMini }) => {
+const Sidebar: React.FC<SidebarProps> = memo(({ isMini, isMobile = false, onClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuthStore();
@@ -40,72 +43,121 @@ const Sidebar: React.FC<SidebarProps> = memo(({ isMini }) => {
 
   const handleMenuClick = useCallback((to: string) => {
     navigate(to);
-  }, [navigate]);
+    // 모바일에서는 메뉴 클릭 시 사이드바 닫기
+    if (isMobile && onClose) {
+      onClose();
+    }
+  }, [navigate, isMobile, onClose]);
 
   const userInitial = useMemo(() => user?.name?.[0] || 'U', [user?.name]);
 
   return (
-    <div className={`h-screen bg-gray-900 text-white flex flex-col transition-all duration-300 ${isMini ? 'w-20 p-2' : 'w-64 p-6'}`}>
-      <div>
-        <div className={`flex items-center gap-3 mb-8 ${isMini ? 'justify-center' : ''}`}>
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-tr from-indigo-500 via-blue-500 to-cyan-400 text-white font-extrabold text-lg flex items-center justify-center shadow-inner shadow-blue-800/40">
-            FL
+    <div className={`h-screen bg-gray-900 text-white flex flex-col transition-all duration-300 ${
+      isMobile ? 'w-64 p-4' : (isMini ? 'w-20 p-2' : 'w-64 p-6')
+    }`}>
+      {/* 모바일 전용 헤더 */}
+      {isMobile && (
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-tr from-indigo-500 via-blue-500 to-cyan-400 text-white font-extrabold text-lg flex items-center justify-center shadow-inner shadow-blue-800/40">
+              FL
+            </div>
+            <span className="text-xl font-black tracking-tight text-white drop-shadow-sm">FlowLab</span>
           </div>
-          {!isMini && <span className="text-2xl font-black tracking-tight text-white drop-shadow-sm">FlowLab</span>}
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg hover:bg-gray-800 transition-colors touch-manipulation"
+            aria-label="메뉴 닫기"
+          >
+            <X size={20} />
+          </button>
         </div>
-        {!isMini && (
-          <div className="text-xs text-gray-400 mb-2">
-            👤 <span className="font-semibold">{user?.name || user?.id || '알 수 없음'}</span>
-            {user?.position_name && (
-              <span className="ml-2 text-blue-300">({user.position_name})</span>
-            )}
-            {isAdmin && (
-              <span className="ml-2 text-red-400 font-bold">[ADMIN]</span>
-            )}
+      )}
+
+      {/* 데스크톱 전용 헤더 */}
+      {!isMobile && (
+        <div>
+          <div className={`flex items-center gap-3 mb-8 ${isMini ? 'justify-center' : ''}`}>
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-tr from-indigo-500 via-blue-500 to-cyan-400 text-white font-extrabold text-lg flex items-center justify-center shadow-inner shadow-blue-800/40">
+              FL
+            </div>
+            {!isMini && <span className="text-2xl font-black tracking-tight text-white drop-shadow-sm">FlowLab</span>}
           </div>
-        )}
-      </div>
+          {!isMini && (
+            <div className="text-xs text-gray-400 mb-2">
+              👤 <span className="font-semibold">{user?.name || user?.id || '알 수 없음'}</span>
+              {user?.position_name && (
+                <span className="ml-2 text-blue-300">({user.position_name})</span>
+              )}
+              {isAdmin && (
+                <span className="ml-2 text-red-400 font-bold">[ADMIN]</span>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 모바일 전용 사용자 정보 */}
+      {isMobile && (
+        <div className="text-sm text-gray-400 mb-6 p-3 bg-gray-800 rounded-lg">
+          👤 <span className="font-semibold text-white">{user?.name || user?.id || '알 수 없음'}</span>
+          {user?.position_name && (
+            <div className="text-blue-300 text-xs mt-1">({user.position_name})</div>
+          )}
+          {isAdmin && (
+            <div className="text-red-400 font-bold text-xs mt-1">[ADMIN]</div>
+          )}
+        </div>
+      )}
+
       <div className="flex-1 flex flex-col justify-start">
         {/* 일반 메뉴 */}
         {menu.map((item) => (
           <div
             key={item.to}
-            className={`flex items-center gap-3 py-2 px-2 rounded cursor-pointer hover:bg-blue-800/40 transition-colors ${location.pathname.startsWith(item.to) ? 'bg-blue-800/60' : ''}`}
+            className={`flex items-center gap-3 py-3 px-3 rounded-lg cursor-pointer hover:bg-blue-800/40 transition-all duration-200 mb-1 touch-manipulation ${
+              location.pathname.startsWith(item.to) ? 'bg-blue-800/60 shadow-lg' : ''
+            }`}
             onClick={() => handleMenuClick(item.to)}
           >
-            <span className="text-lg">{item.icon}</span>
-            {!isMini && <span>{item.label}</span>}
+            <span className="text-xl">{item.icon}</span>
+            {(!isMini || isMobile) && <span className="font-medium">{item.label}</span>}
           </div>
         ))}
+
         {/* 관리자 메뉴 그룹 */}
-        {isAdmin && !isMini && (
+        {isAdmin && (!isMini || isMobile) && (
           <>
-            <div className="mt-8 mb-2 text-xs text-gray-400 font-bold">관리자</div>
+            <div className="mt-6 mb-3 text-xs text-gray-400 font-bold px-3">관리자</div>
             {adminMenu.map((item) => (
               <div
                 key={item.to}
-                className={`flex items-center gap-3 py-2 px-2 rounded cursor-pointer hover:bg-red-800/30 transition-colors ${location.pathname.startsWith(item.to) ? 'bg-red-800/60' : ''}`}
+                className={`flex items-center gap-3 py-3 px-3 rounded-lg cursor-pointer hover:bg-red-800/30 transition-all duration-200 mb-1 touch-manipulation ${
+                  location.pathname.startsWith(item.to) ? 'bg-red-800/60 shadow-lg' : ''
+                }`}
                 onClick={() => handleMenuClick(item.to)}
               >
-                <span className="text-lg">{item.icon}</span>
-                <span>{item.label}</span>
+                <span className="text-xl">{item.icon}</span>
+                <span className="font-medium">{item.label}</span>
               </div>
             ))}
           </>
         )}
       </div>
-      <div className="flex flex-col items-center mb-2">
-        <div className="w-12 h-12 rounded-full bg-blue-400 flex items-center justify-center text-xl font-bold mb-2">
+
+      {/* 하단 사용자 정보 및 로그아웃 */}
+      <div className="flex flex-col items-center mt-4">
+        <div className="w-12 h-12 rounded-full bg-blue-400 flex items-center justify-center text-xl font-bold mb-3">
           {userInitial}
         </div>
-        {!isMini && (
+        {(!isMini || isMobile) && (
           <>
-            <div className="text-sm font-semibold">{user?.name || user?.id || '알 수 없음'}</div>
-            {user?.position_name && <div className="text-xs text-blue-200">{user.position_name}</div>}
-            {isAdmin && <div className="text-xs text-red-300 font-bold">[ADMIN]</div>}
+            <div className="text-sm font-semibold text-center">{user?.name || user?.id || '알 수 없음'}</div>
+            {user?.position_name && <div className="text-xs text-blue-200 text-center">{user.position_name}</div>}
+            {isAdmin && <div className="text-xs text-red-300 font-bold text-center">[ADMIN]</div>}
             <button
               onClick={handleLogout}
-              className="mt-2 w-full bg-red-500 hover:bg-red-600 text-white rounded-xl py-1 text-xs font-semibold"
+              className="mt-4 w-full bg-red-500 hover:bg-red-600 text-white rounded-xl py-2 px-4 text-sm font-semibold transition-colors touch-manipulation"
             >
               로그아웃
             </button>

@@ -1,5 +1,5 @@
 // client/src/components/common/Form.tsx
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Card, CardContent } from '../ui/card';
@@ -33,6 +33,19 @@ export const Form: React.FC<FormProps> = ({
   const [values, setValues] = useState<Record<string, any>>(initialValues);
   const [errors, setErrors] = useState<FormErrors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [isMobile, setIsMobile] = useState(false);
+
+  // 모바일 화면 감지
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // 값 변경 핸들러
   const handleChange = useCallback((name: string, value: any) => {
@@ -176,12 +189,17 @@ export const Form: React.FC<FormProps> = ({
     switch (field.type) {
       case 'select':
         return (
-          <div key={field.name} className="space-y-2">
-            <label htmlFor={field.name} className="block text-sm font-medium text-gray-700">
+          <div key={field.name} className={`space-y-2 ${isMobile ? 'mb-4' : ''}`}>
+            <label htmlFor={field.name} className={`block font-medium text-gray-700 ${isMobile ? 'text-base' : 'text-sm'}`}>
               {field.label}
               {field.required && <span className="text-red-500 ml-1">*</span>}
             </label>
-            <select {...commonProps}>
+            <select 
+              {...commonProps}
+              className={`w-full px-3 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                error && isTouched ? 'border-red-500' : ''
+              } ${isMobile ? 'text-base' : 'text-sm'} touch-manipulation`}
+            >
               <option value="">선택해주세요</option>
               {field.options?.map(option => (
                 <option key={option.value} value={option.value}>
@@ -190,33 +208,35 @@ export const Form: React.FC<FormProps> = ({
               ))}
             </select>
             {error && isTouched && (
-              <p className="text-sm text-red-600">{error}</p>
+              <p className={`text-red-600 ${isMobile ? 'text-sm' : 'text-xs'}`}>{error}</p>
             )}
           </div>
         );
 
       case 'textarea':
         return (
-          <div key={field.name} className="space-y-2">
-            <label htmlFor={field.name} className="block text-sm font-medium text-gray-700">
+          <div key={field.name} className={`space-y-2 ${isMobile ? 'mb-4' : ''}`}>
+            <label htmlFor={field.name} className={`block font-medium text-gray-700 ${isMobile ? 'text-base' : 'text-sm'}`}>
               {field.label}
               {field.required && <span className="text-red-500 ml-1">*</span>}
             </label>
             <textarea
               {...commonProps}
-              rows={4}
-              className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${error && isTouched ? 'border-red-500' : ''}`}
+              rows={isMobile ? 3 : 4}
+              className={`w-full px-3 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                error && isTouched ? 'border-red-500' : ''
+              } ${isMobile ? 'text-base' : 'text-sm'} touch-manipulation`}
             />
             {error && isTouched && (
-              <p className="text-sm text-red-600">{error}</p>
+              <p className={`text-red-600 ${isMobile ? 'text-sm' : 'text-xs'}`}>{error}</p>
             )}
           </div>
         );
 
       case 'checkbox':
         return (
-          <div key={field.name} className="space-y-2">
-            <label className="flex items-center space-x-2">
+          <div key={field.name} className={`space-y-2 ${isMobile ? 'mb-4' : ''}`}>
+            <label className="flex items-center space-x-3">
               <input
                 type="checkbox"
                 id={field.name}
@@ -225,50 +245,63 @@ export const Form: React.FC<FormProps> = ({
                 onChange={(e) => handleChange(field.name, e.target.checked)}
                 onBlur={() => handleBlur(field.name)}
                 disabled={loading}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                className={`rounded border-gray-300 text-blue-600 focus:ring-blue-500 ${
+                  isMobile ? 'w-5 h-5' : 'w-4 h-4'
+                } touch-manipulation`}
               />
-              <span className="text-sm text-gray-700">{field.label}</span>
+              <span className={`text-gray-700 ${isMobile ? 'text-base' : 'text-sm'}`}>{field.label}</span>
             </label>
             {error && isTouched && (
-              <p className="text-sm text-red-600">{error}</p>
+              <p className={`text-red-600 ${isMobile ? 'text-sm' : 'text-xs'}`}>{error}</p>
             )}
           </div>
         );
 
       default:
         return (
-          <div key={field.name} className="space-y-2">
-            <label htmlFor={field.name} className="block text-sm font-medium text-gray-700">
+          <div key={field.name} className={`space-y-2 ${isMobile ? 'mb-4' : ''}`}>
+            <label htmlFor={field.name} className={`block font-medium text-gray-700 ${isMobile ? 'text-base' : 'text-sm'}`}>
               {field.label}
               {field.required && <span className="text-red-500 ml-1">*</span>}
             </label>
             <Input
               {...commonProps}
               type={field.type}
-              className={error && isTouched ? 'border-red-500' : ''}
+              className={`${error && isTouched ? 'border-red-500' : ''} ${
+                isMobile ? 'py-3 text-base' : 'py-2 text-sm'
+              } touch-manipulation`}
             />
             {error && isTouched && (
-              <p className="text-sm text-red-600">{error}</p>
+              <p className={`text-red-600 ${isMobile ? 'text-sm' : 'text-xs'}`}>{error}</p>
             )}
           </div>
         );
     }
-  }, [values, errors, touched, loading, handleChange, handleBlur]);
+  }, [values, errors, touched, loading, handleChange, handleBlur, isMobile]);
 
   const formContent = (
     <div className={className}>
-      {title && <h2 className="text-xl font-semibold mb-6">{title}</h2>}
+      {title && <h2 className={`font-semibold mb-6 ${isMobile ? 'text-lg text-center' : 'text-xl'}`}>{title}</h2>}
       
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className={`space-y-${isMobile ? '4' : '6'}`}>
         {fields.map(renderField)}
         
-        <div className="flex justify-end space-x-3 pt-4">
+        <div className={`flex pt-6 ${
+          isMobile 
+            ? 'flex-col space-y-3' 
+            : 'justify-end space-x-3'
+        }`}>
           {onCancel && (
             <Button
               type="button"
               variant="outline"
               onClick={onCancel}
               disabled={loading}
+              className={`${
+                isMobile 
+                  ? 'w-full py-3 text-base touch-manipulation' 
+                  : 'px-4 py-2 text-sm'
+              }`}
             >
               {cancelText}
             </Button>
@@ -276,7 +309,11 @@ export const Form: React.FC<FormProps> = ({
           <Button
             type="submit"
             disabled={loading}
-            className="bg-blue-600 hover:bg-blue-700"
+            className={`bg-blue-600 hover:bg-blue-700 ${
+              isMobile 
+                ? 'w-full py-3 text-base touch-manipulation' 
+                : 'px-4 py-2 text-sm'
+            }`}
           >
             {loading ? '처리 중...' : submitText}
           </Button>
@@ -288,7 +325,7 @@ export const Form: React.FC<FormProps> = ({
   if (showCard) {
     return (
       <Card>
-        <CardContent className="p-6">
+        <CardContent className={`${isMobile ? 'p-4' : 'p-6'}`}>
           {formContent}
         </CardContent>
       </Card>

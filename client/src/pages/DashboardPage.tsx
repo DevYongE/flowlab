@@ -135,61 +135,76 @@ const DashboardPage: React.FC = () => {
 
   return (
     <MainLayout>
-      <div className="space-y-6">
-        <h1 className="text-3xl font-bold text-gray-800">📊 대시보드</h1>
+      <div className="space-y-4 md:space-y-6">
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-800">📊 대시보드</h1>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
           <Card>
-            <CardContent className="p-6">
-              <h2 className="text-xl font-semibold mb-4">📈 전체 프로젝트 현황</h2>
+            <CardContent className="p-4 md:p-6">
+              <h2 className="text-lg md:text-xl font-semibold mb-4">📈 전체 프로젝트 현황</h2>
               {loadingStatus ? (
-                <div className="flex items-center justify-center h-[300px]">
-                  <div className="text-gray-500">프로젝트 현황 로딩 중...</div>
+                <div className="flex items-center justify-center h-[200px] md:h-[300px]">
+                  <div className="text-gray-500 text-sm md:text-base">프로젝트 현황 로딩 중...</div>
                 </div>
               ) : statusSummary.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={window.innerWidth < 768 ? 200 : 300}>
                   <BarChart 
                     data={statusSummary}
-                    margin={{ top: 5, right: 20, left: -10, bottom: 5 }}
+                    margin={{ 
+                      top: 5, 
+                      right: window.innerWidth < 768 ? 10 : 20, 
+                      left: window.innerWidth < 768 ? -20 : -10, 
+                      bottom: 5 
+                    }}
                   >
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="status" />
-                    <YAxis unit="개" allowDecimals={false} />
-                    <Tooltip cursor={{fill: 'rgba(239, 246, 255, 0.5)'}}/>
-                    <Legend />
+                    <XAxis 
+                      dataKey="status" 
+                      tick={{ fontSize: window.innerWidth < 768 ? 12 : 14 }}
+                    />
+                    <YAxis 
+                      unit="개" 
+                      allowDecimals={false}
+                      tick={{ fontSize: window.innerWidth < 768 ? 12 : 14 }}
+                    />
+                    <Tooltip 
+                      cursor={{fill: 'rgba(239, 246, 255, 0.5)'}}
+                      contentStyle={{ fontSize: window.innerWidth < 768 ? '12px' : '14px' }}
+                    />
+                    <Legend wrapperStyle={{ fontSize: window.innerWidth < 768 ? '12px' : '14px' }} />
                     <Bar dataKey="count" name="프로젝트 수" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="flex items-center justify-center h-[300px]">
-                  <div className="text-gray-500">프로젝트 현황 데이터가 없습니다.</div>
+                <div className="flex items-center justify-center h-[200px] md:h-[300px]">
+                  <div className="text-gray-500 text-sm md:text-base">프로젝트 현황 데이터가 없습니다.</div>
                 </div>
               )}
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-6">
-              <h2 className="text-xl font-semibold mb-4">📢 최신 공지사항</h2>
+            <CardContent className="p-4 md:p-6">
+              <h2 className="text-lg md:text-xl font-semibold mb-4">📢 최신 공지사항</h2>
               {loadingNotices ? (
-                <div className="flex items-center justify-center h-[300px]">
-                  <div className="text-gray-500">공지사항 로딩 중...</div>
+                <div className="flex items-center justify-center h-[200px] md:h-[300px]">
+                  <div className="text-gray-500 text-sm md:text-base">공지사항 로딩 중...</div>
                 </div>
               ) : notices.length > 0 ? (
-                <ul className="space-y-3">
+                <ul className="space-y-2 md:space-y-3">
                   {notices.map((notice) => (
                     <li 
                       key={notice.notice_id}
                       onClick={() => navigate(`/notices/detail/${notice.notice_id}`)}
-                      className="flex justify-between items-center p-3 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
+                      className="flex flex-col md:flex-row md:justify-between md:items-center p-3 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors touch-manipulation"
                     >
-                      <span className="font-medium text-gray-700 truncate">{notice.title}</span>
-                      <span className="text-sm text-gray-500">{notice.createdAt}</span>
+                      <span className="font-medium text-gray-700 text-sm md:text-base mb-1 md:mb-0 truncate">{notice.title}</span>
+                      <span className="text-xs md:text-sm text-gray-500 self-start md:self-auto">{notice.createdAt}</span>
                     </li>
                   ))}
                 </ul>
               ) : (
-                <div className="flex items-center justify-center h-[300px] text-gray-500">
+                <div className="flex items-center justify-center h-[200px] md:h-[300px] text-gray-500 text-sm md:text-base">
                   표시할 공지사항이 없습니다.
                 </div>
               )}
@@ -198,18 +213,30 @@ const DashboardPage: React.FC = () => {
         </div>
 
         <Card>
-          <CardContent className="p-6">
-            <h2 className="text-xl font-semibold mb-2">🗂️ WBS (주간 일정)</h2>
-            <div className="flex flex-col md:flex-row gap-6 items-start">
+          <CardContent className="p-4 md:p-6">
+            <h2 className="text-lg md:text-xl font-semibold mb-4">🗂️ WBS (주간 일정)</h2>
+            <div className="flex flex-col gap-4 md:gap-6 items-start">
               <div className="w-full">
-                <div className="flex justify-between items-center mb-2">
-                  <button onClick={() => setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth(), calendarDate.getDate() - 7))} className="px-2 py-1 rounded hover:bg-gray-200">◀</button>
-                  <span className="font-bold text-lg">{weekDates[0].getFullYear()}년 {weekDates[0].getMonth() + 1}월 {weekDates[0].getDate()}일 ~ {weekDates[6].getMonth() + 1}월 {weekDates[6].getDate()}일</span>
-                  <button onClick={() => setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth(), calendarDate.getDate() + 7))} className="px-2 py-1 rounded hover:bg-gray-200">▶</button>
+                <div className="flex justify-between items-center mb-4">
+                  <button 
+                    onClick={() => setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth(), calendarDate.getDate() - 7))} 
+                    className="px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors touch-manipulation text-sm md:text-base"
+                  >
+                    ◀
+                  </button>
+                  <span className="font-bold text-sm md:text-lg text-center flex-1 mx-2">
+                    {weekDates[0].getFullYear()}년 {weekDates[0].getMonth() + 1}월 {weekDates[0].getDate()}일 ~ {weekDates[6].getMonth() + 1}월 {weekDates[6].getDate()}일
+                  </span>
+                  <button 
+                    onClick={() => setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth(), calendarDate.getDate() + 7))} 
+                    className="px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors touch-manipulation text-sm md:text-base"
+                  >
+                    ▶
+                  </button>
                 </div>
-                <div className="grid grid-cols-7 gap-2">
+                <div className="grid grid-cols-7 gap-1 md:gap-2">
                   {['일', '월', '화', '수', '목', '금', '토'].map((d) => (
-                    <div key={d} className="text-center text-xs font-semibold text-gray-500">{d}</div>
+                    <div key={d} className="text-center text-xs font-semibold text-gray-500 p-1">{d}</div>
                   ))}
                   {weekDates.map((d, i) => {
                     const isToday = d.toDateString() === new Date().toDateString();
@@ -217,9 +244,11 @@ const DashboardPage: React.FC = () => {
                     return (
                       <div
                         key={i}
-                        className={`min-h-20 flex flex-col items-center justify-start rounded-lg border px-1 py-1 ${isToday ? 'bg-blue-100 border-blue-400 text-blue-700 font-bold' : 'bg-white border-gray-200'}`}
+                        className={`min-h-16 md:min-h-20 flex flex-col items-center justify-start rounded-lg border px-1 py-1 ${
+                          isToday ? 'bg-blue-100 border-blue-400 text-blue-700 font-bold' : 'bg-white border-gray-200'
+                        }`}
                       >
-                        <span className="mb-1">{d.getDate()}</span>
+                        <span className="mb-1 text-xs md:text-sm">{d.getDate()}</span>
                         {loadingProjects ? (
                           <span className="text-xs text-gray-400">로딩...</span>
                         ) : projectsForDay.length === 0 ? (
@@ -227,8 +256,8 @@ const DashboardPage: React.FC = () => {
                         ) : (
                           projectsForDay.map(proj => (
                             <div key={proj.id} className="w-full mb-1 px-1 py-0.5 rounded bg-green-50 border border-green-200 text-xs text-green-800 flex flex-col items-start">
-                              <span className="font-semibold truncate w-full">{proj.name}</span>
-                              <span className="text-[10px] text-gray-500">{proj.startDate} ~ {proj.endDate}</span>
+                              <span className="font-semibold truncate w-full text-xs">{proj.name}</span>
+                              <span className="text-[10px] text-gray-500 hidden md:block">{proj.startDate} ~ {proj.endDate}</span>
                             </div>
                           ))
                         )}

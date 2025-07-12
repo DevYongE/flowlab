@@ -1,5 +1,5 @@
 // client/src/components/common/DataTable.tsx
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Card, CardContent } from '../ui/card';
@@ -37,6 +37,19 @@ export const DataTable = <T extends Record<string, any>>({
   const [searchTerm, setSearchTerm] = useState('');
   const [sortColumn, setSortColumn] = useState<keyof T | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [isMobile, setIsMobile] = useState(false);
+
+  // 모바일 화면 감지
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // 검색 필터링
   const filteredData = useMemo(() => {
@@ -82,6 +95,38 @@ export const DataTable = <T extends Record<string, any>>({
     const { page, totalPages } = pagination;
     const pages = [];
     
+    // 모바일에서는 간단한 이전/다음 버튼만 표시
+    if (isMobile) {
+      return (
+        <div className="flex flex-col items-center space-y-3 mt-4">
+          <div className="text-sm text-gray-700 text-center">
+            {page} / {totalPages} 페이지 (총 {pagination.total}개)
+          </div>
+          <div className="flex space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page === 1}
+              onClick={() => onPageChange(page - 1)}
+              className="touch-manipulation"
+            >
+              이전
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page === totalPages}
+              onClick={() => onPageChange(page + 1)}
+              className="touch-manipulation"
+            >
+              다음
+            </Button>
+          </div>
+        </div>
+      );
+    }
+    
+    // 데스크톱에서는 전체 페이지네이션 표시
     // 이전 페이지 버튼
     pages.push(
       <Button
@@ -137,6 +182,68 @@ export const DataTable = <T extends Record<string, any>>({
       </div>
     );
   };
+
+  // 모바일 카드 뷰 렌더링
+  const renderMobileCards = () => (
+    <div className="space-y-4">
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <span className="ml-2">로딩 중...</span>
+        </div>
+      ) : sortedData.length === 0 ? (
+        <div className="text-center py-12 text-gray-500">
+          {emptyMessage}
+        </div>
+      ) : (
+        sortedData.map((record, index) => (
+          <div 
+            key={String(record[rowKey]) || index}
+            className={`${onRowClick ? 'cursor-pointer' : ''}`}
+            onClick={() => onRowClick?.(record)}
+          >
+            <Card className="hover:shadow-md transition-shadow">
+              <CardContent className="p-4">
+                <div className="space-y-2">
+                  {columns.map((column) => (
+                    <div key={String(column.key)} className="flex justify-between items-start">
+                      <span className="text-sm font-medium text-gray-500 min-w-0 flex-1">
+                        {column.title}:
+                      </span>
+                      <span className="text-sm text-gray-900 text-right min-w-0 flex-1">
+                        {column.render
+                          ? column.render(record[column.key], record)
+                          : String(record[column.key] || '-')}
+                      </span>
+                    </div>
+                  ))}
+                  {actions.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t">
+                      {actions.map((action, actionIndex) => (
+                        <Button
+                          key={actionIndex}
+                          variant={action.variant || 'outline'}
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            action.onClick(record);
+                          }}
+                          className="touch-manipulation"
+                        >
+                          {action.icon && <span className="mr-1">{action.icon}</span>}
+                          {action.label}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        ))
+      )}
+    </div>
+  );
 
   // 테이블 헤더 렌더링
   const renderHeader = () => (
@@ -252,10 +359,10 @@ export const DataTable = <T extends Record<string, any>>({
   const tableContent = (
     <div>
       {/* 헤더 */}
-      <div className="flex items-center justify-between mb-4">
-        {title && <h2 className="text-xl font-semibold">{title}</h2>}
+      <div className={`flex items-center justify-between mb-4 ${isMobile ? 'flex-col space-y-3' : ''}`}>
+        {title && <h2 className={`text-xl font-semibold ${isMobile ? 'text-center' : ''}`}>{title}</h2>}
         {searchable && (
-          <div className="w-64">
+          <div className={`${isMobile ? 'w-full' : 'w-64'}`}>
             <Input
               type="text"
               placeholder={searchPlaceholder}
@@ -267,13 +374,17 @@ export const DataTable = <T extends Record<string, any>>({
         )}
       </div>
 
-      {/* 테이블 */}
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          {renderHeader()}
-          {renderBody()}
-        </table>
-      </div>
+      {/* 테이블 또는 카드 */}
+      {isMobile ? (
+        renderMobileCards()
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            {renderHeader()}
+            {renderBody()}
+          </table>
+        </div>
+      )}
 
       {/* 페이지네이션 */}
       {renderPagination()}
@@ -283,7 +394,7 @@ export const DataTable = <T extends Record<string, any>>({
   if (showCard) {
     return (
       <Card>
-        <CardContent className="p-6">
+        <CardContent className={`${isMobile ? 'p-4' : 'p-6'}`}>
           {tableContent}
         </CardContent>
       </Card>
