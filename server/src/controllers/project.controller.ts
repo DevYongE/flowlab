@@ -993,7 +993,7 @@ export const clearProjectWbs = async (req: Request, res: Response): Promise<void
   }
 };
 
-// 프로젝트 결과물 파일 생성
+// 프로젝트 결과물 파일 생성 (Excel)
 export const generateProjectFile = async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
   const { projectData, requirements } = req.body;
@@ -1022,38 +1022,185 @@ export const generateProjectFile = async (req: Request, res: Response): Promise<
       return;
     }
 
-    // 간단한 프로젝트 결과물 생성 (예시)
-    const projectSummary = {
-      프로젝트명: projectData.name,
-      구분: projectData.category,
-      유형: projectData.type,
-      기간: `${projectData.startDate} ~ ${projectData.endDate}`,
-      시스템정보: {
-        OS: projectData.os,
-        메모리: projectData.memory,
-      },
-      버전정보: projectData.details,
-      요구사항목록: requirements.map((req: any) => ({
-        내용: req.content,
-        상태: req.status,
-        진행률: req.progress,
-        작성자: req.authorName,
-        등록일: req.registeredAt,
-        완료일: req.completedAt,
-      })),
-      생성일시: new Date().toISOString(),
-    };
-
-    // JSON 파일로 다운로드 가능하도록 설정
-    const jsonString = JSON.stringify(projectSummary, null, 2);
-    const filename = `${projectData.name}_결과물.json`;
+    // Excel 파일 생성
+    const ExcelJS = require('exceljs');
+    const workbook = new ExcelJS.Workbook();
     
-    res.setHeader('Content-Type', 'application/octet-stream');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.send(jsonString);
+    // 프로젝트 정보 시트 생성
+    const projectSheet = workbook.addWorksheet('프로젝트 정보');
+    
+    // 프로젝트 정보 헤더 스타일
+    const headerStyle = {
+      font: { color: { argb: 'FFFFFFFF' }, bold: true, size: 12 },
+      fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4472C4' } },
+      alignment: { horizontal: 'center', vertical: 'middle' }
+    };
+    
+    // 프로젝트 기본 정보
+    projectSheet.addRow(['프로젝트 기본 정보']).font = { bold: true, size: 14 };
+    projectSheet.addRow(['']);
+    projectSheet.addRow(['항목', '내용']);
+    projectSheet.getRow(3).eachCell((cell: any) => {
+      cell.style = headerStyle;
+    });
+    
+    projectSheet.addRow(['프로젝트명', projectData.name]);
+    projectSheet.addRow(['구분', projectData.category]);
+    projectSheet.addRow(['유형', projectData.type]);
+    projectSheet.addRow(['시작일', projectData.startDate]);
+    projectSheet.addRow(['종료일', projectData.endDate]);
+    projectSheet.addRow(['OS', projectData.os || '-']);
+    projectSheet.addRow(['메모리', projectData.memory || '-']);
+    projectSheet.addRow(['진행률', `${projectData.progress || 0}%`]);
+    projectSheet.addRow(['작성자', projectData.authorName || '-']);
+    projectSheet.addRow(['']);
+    
+    // 시스템 정보
+    if (projectData.details) {
+      projectSheet.addRow(['시스템 정보']).font = { bold: true, size: 12 };
+      projectSheet.addRow(['']);
+      projectSheet.addRow(['항목', '버전']);
+      projectSheet.getRow(projectSheet.rowCount).eachCell((cell: any) => {
+        cell.style = headerStyle;
+      });
+      
+      if (projectData.details.javaVersion) projectSheet.addRow(['Java', projectData.details.javaVersion]);
+      if (projectData.details.springVersion) projectSheet.addRow(['Spring', projectData.details.springVersion]);
+      if (projectData.details.reactVersion) projectSheet.addRow(['React', projectData.details.reactVersion]);
+      if (projectData.details.vueVersion) projectSheet.addRow(['Vue', projectData.details.vueVersion]);
+      if (projectData.details.tomcatVersion) projectSheet.addRow(['Tomcat', projectData.details.tomcatVersion]);
+      if (projectData.details.centricVersion) projectSheet.addRow(['Centric', projectData.details.centricVersion]);
+    }
+    
+    // 컬럼 너비 조정
+    projectSheet.getColumn(1).width = 20;
+    projectSheet.getColumn(2).width = 40;
+    
+    // WBS 정보 시트 생성
+    const wbsSheet = workbook.addWorksheet('WBS 정보');
+    
+    // WBS 헤더
+    const wbsHeaders = ['레벨', '내용', '상태', '진행률', '마감일', '작성자', '등록일', '완료일'];
+    wbsSheet.addRow(wbsHeaders);
+    wbsSheet.getRow(1).eachCell((cell: any) => {
+      cell.style = headerStyle;
+    });
+    
+    // WBS 데이터 처리 (계층구조 표현)
+    const processWbsData = (items: any[], level = 0, parentId = null) => {
+      return items
+        .filter(item => item.parent_id === parentId)
+        .sort((a, b) => (a.order || 0) - (b.order || 0))
+        .forEach(item => {
+          const indent = '  '.repeat(level);
+          wbsSheet.addRow([
+            level + 1,
+            `${indent}${item.content}`,
+            item.status || '미정',
+            `${item.progress || 0}%`,
+            item.deadline || '-',
+            item.authorName || '-',
+            item.registeredAt ? new Date(item.registeredAt).toLocaleDateString() : '-',
+            item.completedAt ? new Date(item.completedAt).toLocaleDateString() : '-'
+          ]);
+          
+          // 하위 항목 처리
+          processWbsData(items, level + 1, item.id);
+        });
+    };
+    
+    processWbsData(requirements);
+    
+    // WBS 컬럼 너비 조정
+    wbsSheet.getColumn(1).width = 8;  // 레벨
+    wbsSheet.getColumn(2).width = 50; // 내용
+    wbsSheet.getColumn(3).width = 12; // 상태
+    wbsSheet.getColumn(4).width = 12; // 진행률
+    wbsSheet.getColumn(5).width = 15; // 마감일
+    wbsSheet.getColumn(6).width = 15; // 작성자
+    wbsSheet.getColumn(7).width = 15; // 등록일
+    wbsSheet.getColumn(8).width = 15; // 완료일
+    
+    // 간트 차트 데이터 시트 생성
+    const ganttSheet = workbook.addWorksheet('간트 차트 데이터');
+    
+    // 간트 차트 헤더
+    const ganttHeaders = ['작업명', '시작일', '종료일', '기간(일)', '진행률', '상태', '담당자'];
+    ganttSheet.addRow(ganttHeaders);
+    ganttSheet.getRow(1).eachCell((cell: any) => {
+      cell.style = headerStyle;
+    });
+    
+    // 간트 차트 데이터 생성
+    requirements.forEach((req: any) => {
+      const startDate = req.registeredAt ? new Date(req.registeredAt) : new Date();
+      const endDate = req.deadline ? new Date(req.deadline) : new Date();
+      const duration = req.deadline ? Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+      
+      ganttSheet.addRow([
+        req.content,
+        startDate.toLocaleDateString(),
+        endDate.toLocaleDateString(),
+        duration,
+        `${req.progress || 0}%`,
+        req.status || '미정',
+        req.authorName || '-'
+      ]);
+    });
+    
+    // 간트 차트 컬럼 너비 조정
+    ganttSheet.getColumn(1).width = 40; // 작업명
+    ganttSheet.getColumn(2).width = 15; // 시작일
+    ganttSheet.getColumn(3).width = 15; // 종료일
+    ganttSheet.getColumn(4).width = 12; // 기간
+    ganttSheet.getColumn(5).width = 12; // 진행률
+    ganttSheet.getColumn(6).width = 12; // 상태
+    ganttSheet.getColumn(7).width = 15; // 담당자
+    
+    // 요약 시트 생성
+    const summarySheet = workbook.addWorksheet('프로젝트 요약');
+    
+    // 요약 정보
+    summarySheet.addRow(['프로젝트 요약 보고서']).font = { bold: true, size: 16 };
+    summarySheet.addRow(['']);
+    summarySheet.addRow(['생성일시', new Date().toLocaleString()]);
+    summarySheet.addRow(['']);
+    
+    // 통계 정보
+    const totalTasks = requirements.length;
+    const completedTasks = requirements.filter((req: any) => req.status === 'DONE' || req.status === '완료').length;
+    const inProgressTasks = requirements.filter((req: any) => req.status === 'IN_PROGRESS' || req.status === '진행중').length;
+    const pendingTasks = requirements.filter((req: any) => req.status === 'TODO' || req.status === '미결').length;
+    
+    summarySheet.addRow(['작업 통계']).font = { bold: true, size: 12 };
+    summarySheet.addRow(['']);
+    summarySheet.addRow(['항목', '개수', '비율']);
+    summarySheet.getRow(summarySheet.rowCount).eachCell((cell: any) => {
+      cell.style = headerStyle;
+    });
+    
+    summarySheet.addRow(['전체 작업', totalTasks, '100%']);
+    summarySheet.addRow(['완료', completedTasks, `${Math.round(completedTasks / totalTasks * 100)}%`]);
+    summarySheet.addRow(['진행중', inProgressTasks, `${Math.round(inProgressTasks / totalTasks * 100)}%`]);
+    summarySheet.addRow(['대기', pendingTasks, `${Math.round(pendingTasks / totalTasks * 100)}%`]);
+    
+    // 컬럼 너비 조정
+    summarySheet.getColumn(1).width = 20;
+    summarySheet.getColumn(2).width = 15;
+    summarySheet.getColumn(3).width = 15;
+    
+    // Excel 파일을 버퍼로 생성
+    const buffer = await workbook.xlsx.writeBuffer();
+    
+    // 파일 다운로드 설정
+    const filename = `${projectData.name}_프로젝트_결과물.xlsx`;
+    
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+    res.send(buffer);
 
   } catch (error) {
-    console.error('프로젝트 파일 생성 실패:', error);
-    res.status(500).json({ message: '프로젝트 파일 생성 실패', error });
+    console.error('프로젝트 Excel 파일 생성 실패:', error);
+    res.status(500).json({ message: '프로젝트 Excel 파일 생성 실패', error });
   }
 }; 

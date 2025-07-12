@@ -571,31 +571,33 @@ const ProjectDetailPage = () => {
   const filteredNotes = getFilteredAndSortedNotes();
   const isProjectComplete = project.type === 'COMPLETE' || project.type === '완료';
   
-  // 파일 생성 버튼 핸들러
+  // Excel 파일 생성 버튼 핸들러
   const handleGenerateFile = async () => {
     try {
       const response = await axios.post(`/projects/${project.id}/generate-file`, {
         projectData: project,
         requirements: filteredNotes
       }, {
-        responseType: 'blob' // 파일 다운로드를 위한 설정
+        responseType: 'blob' // Excel 파일 다운로드를 위한 설정
       });
       
-      // 파일 다운로드 처리
-      const blob = new Blob([response.data], { type: 'application/json' });
+      // Excel 파일 다운로드 처리
+      const blob = new Blob([response.data], { 
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+      });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${project.name}_결과물.json`;
+      a.download = `${project.name}_프로젝트_결과물.xlsx`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
       
-      alert('프로젝트 결과물이 성공적으로 생성되었습니다.');
+      alert('프로젝트 Excel 결과물이 성공적으로 생성되었습니다.');
     } catch (error) {
-      console.error('파일 생성 실패:', error);
-      alert('파일 생성에 실패했습니다.');
+      console.error('Excel 파일 생성 실패:', error);
+      alert('Excel 파일 생성에 실패했습니다.');
     }
   };
 
@@ -899,16 +901,17 @@ const ProjectDetailPage = () => {
           <div className="flex justify-between items-center mb-4">
             <h1 className="text-3xl font-bold">{project.name}</h1>
             <div className="flex gap-2">
-              {/* 완료된 프로젝트에만 파일 생성 버튼 표시 */}
+              {/* 완료된 프로젝트에만 Excel 파일 생성 버튼 표시 */}
               {isProjectComplete && (
                 <button
                   onClick={handleGenerateFile}
                   className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 flex items-center gap-2"
+                  title="프로젝트 정보, WBS, 간트차트가 포함된 Excel 파일을 생성합니다"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
-                  파일 생성
+                  Excel 파일 생성
                 </button>
               )}
               {canEditProject && (
