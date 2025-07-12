@@ -137,7 +137,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ projectId, refreshTrigger }) =>
   }, [projectId, refreshTrigger]);
 
   // 간트 바 스타일 계산 - 마감일까지 표시하고 완료 부분은 색상으로 구분
-  function getBarStyle(startStr: string, deadlineStr: string, completed: boolean, completedStr?: string | null, rowIndex: number = 0) {
+  function getBarStyle(startStr: string, deadlineStr: string, completed: boolean, rowIndex: number = 0) {
     try {
       const startDate = parseISO(startStr);
       const deadlineDate = parseISO(deadlineStr);
