@@ -40,7 +40,21 @@ const LoginPage: React.FC = () => {
         login(user);
         
         showSuccessToast('로그인되었습니다.');
-        navigate('/dashboard');
+        
+        // 쿠키 설정을 위해 잠시 대기 후 이동
+        setTimeout(() => {
+          // 쿠키가 설정되었는지 확인
+          const accessToken = document.cookie.split('; ').find(row => row.startsWith('accessToken='));
+          const refreshToken = document.cookie.split('; ').find(row => row.startsWith('refreshToken='));
+          
+          console.log('🍪 Login success - Cookie check:', {
+            accessToken: !!accessToken,
+            refreshToken: !!refreshToken,
+            allCookies: document.cookie
+          });
+          
+          navigate('/dashboard');
+        }, 500);
       } else {
         handleApiError(res.data.message || '로그인에 실패했습니다.');
       }

@@ -50,7 +50,7 @@ instance.interceptors.response.use(
       sessionStorage.removeItem('token');
       sessionStorage.removeItem('user');
       
-      if (window.location.pathname !== '/login') {
+      if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
         showErrorToast('인증이 만료되었습니다. 다시 로그인해주세요.');
         setTimeout(() => {
           window.location.href = '/login';
@@ -60,8 +60,18 @@ instance.interceptors.response.use(
       return Promise.reject(error);
     }
     
-    // 401 에러 시 토큰 갱신 시도 (refresh 요청 제외)
-    if (error.response.status === 401 && !originalRequest._retry && !originalRequest.url?.includes('/auth/refresh')) {
+    // 로그인 요청 실패 시 refresh 로직 건너뛰기
+    if (originalRequest.url?.includes('/auth/login') && error.response.status === 401) {
+      return Promise.reject(error);
+    }
+    
+    // 401 에러 시 토큰 갱신 시도 (refresh 요청 및 로그인 페이지 제외)
+    if (error.response.status === 401 && !originalRequest._retry && 
+        !originalRequest.url?.includes('/auth/refresh') && 
+        !originalRequest.url?.includes('/auth/login') &&
+        window.location.pathname !== '/login' &&
+        window.location.pathname !== '/register') {
+      
       originalRequest._retry = true;
       
       try {
@@ -77,7 +87,7 @@ instance.interceptors.response.use(
         sessionStorage.removeItem('user');
         
         // 로그인 페이지로 리다이렉트
-        if (window.location.pathname !== '/login') {
+        if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
           showErrorToast('인증이 만료되었습니다. 다시 로그인해주세요.');
           setTimeout(() => {
             window.location.href = '/login';

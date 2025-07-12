@@ -83,6 +83,9 @@ export const loginUser = async (req: Request, res: Response) => {
     const { accessToken, refreshToken } = generateTokens(tokenPayload);
     setCookies(res, accessToken, refreshToken);
     
+    console.log('🍪 Login - Setting cookies for user:', user.id);
+    console.log('🍪 Environment:', process.env.NODE_ENV);
+    
     res.status(200).json({
       success: true,
       message: '로그인 성공',
@@ -104,12 +107,18 @@ export const refreshToken = async (req: Request, res: Response) => {
   try {
     const { refreshToken: token } = req.cookies;
     
+    console.log('🔄 Refresh token request - Cookie present:', !!token);
+    console.log('🔄 All cookies:', req.cookies);
+    
     if (!token) {
+      console.log('❌ No refresh token in cookies');
       res.status(401).json({ message: '리프레시 토큰이 없습니다.' });
       return;
     }
     
     const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET || 'dev-refresh-secret') as any;
+    
+    console.log('✅ Refresh token valid for user:', decoded.id);
     
     const { accessToken, refreshToken: newRefreshToken } = generateTokens({
       id: decoded.id,
@@ -121,8 +130,11 @@ export const refreshToken = async (req: Request, res: Response) => {
     
     setCookies(res, accessToken, newRefreshToken);
     
+    console.log('🍪 Refresh - New tokens set for user:', decoded.id);
+    
     res.json({ message: '토큰이 갱신되었습니다.' });
   } catch (error) {
+    console.log('❌ Refresh token verification failed:', error);
     res.status(401).json({ message: '유효하지 않은 리프레시 토큰입니다.' });
   }
 };

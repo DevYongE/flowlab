@@ -4,6 +4,7 @@ import { Card, CardContent } from '../components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import axios from '../lib/axios';
 import { useNavigate } from 'react-router-dom';
+import Cookies from 'js-cookie';
 
 interface StatusSummary {
   status: string;
@@ -31,37 +32,62 @@ const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // 프로젝트 현황 데이터 가져오기
-    axios.get<StatusSummary[]>('/projects/status-summary')
-      .then(res => {
-        const statusOrder = ['미완료', '진행중', '완료'];
-        const fetchedData: StatusSummary[] = res.data;
-        const dataMap = new Map(fetchedData.map((item) => [item.status, item]));
-        const sortedData: StatusSummary[] = statusOrder.map(status => 
-            dataMap.get(status) || { status, count: 0 }
-        );
-        setStatusSummary(sortedData);
-      })
-      .catch(err => console.error('프로젝트 현황 로딩 실패:', err));
+    // 쿠키가 설정될 시간을 주기 위해 약간의 지연 후 API 요청
+    const loadDashboardData = async () => {
+      // 쿠키가 설정되었는지 확인
+      const hasAccessToken = Cookies.get('accessToken');
+      const hasSessionToken = sessionStorage.getItem('token');
+      
+      console.log('🍪 Dashboard - Cookie check:', {
+        hasAccessToken: !!hasAccessToken,
+        hasSessionToken: !!hasSessionToken,
+        allCookies: document.cookie
+      });
+      
+      if (!hasAccessToken && !hasSessionToken) {
+        console.log('⏳ Dashboard - No tokens found, waiting...');
+        // 쿠키가 없으면 잠시 대기
+        setTimeout(loadDashboardData, 200);
+        return;
+      }
+      
+      console.log('✅ Dashboard - Tokens found, loading data...');
+      
+      // 프로젝트 현황 데이터 가져오기
+      axios.get<StatusSummary[]>('/projects/status-summary')
+        .then(res => {
+          const statusOrder = ['미완료', '진행중', '완료'];
+          const fetchedData: StatusSummary[] = res.data;
+          const dataMap = new Map(fetchedData.map((item) => [item.status, item]));
+          const sortedData: StatusSummary[] = statusOrder.map(status => 
+              dataMap.get(status) || { status, count: 0 }
+          );
+          setStatusSummary(sortedData);
+        })
+        .catch(err => console.error('프로젝트 현황 로딩 실패:', err));
 
-    // 최신 공지사항 데이터 가져오기
-    axios.get('/notices/latest')
-      .then(res => setNotices(res.data))
-      .catch(err => console.error('최신 공지사항 로딩 실패:', err));
+      // 최신 공지사항 데이터 가져오기
+      axios.get('/notices/latest')
+        .then(res => setNotices(res.data))
+        .catch(err => console.error('최신 공지사항 로딩 실패:', err));
 
-    // 프로젝트 목록 및 첫 번째 프로젝트의 WBS 불러오기
-    setLoadingProjects(true);
-    axios.get<Project[]>('/projects')
-      .then(res => {
-        if (Array.isArray(res.data)) {
-          setProjects(res.data);
-        } else {
-          setProjects([]);
-          console.error('프로젝트 목록 응답이 배열이 아님:', res.data);
-        }
-      })
-      .catch(() => setProjects([]))
-      .finally(() => setLoadingProjects(false));
+      // 프로젝트 목록 및 첫 번째 프로젝트의 WBS 불러오기
+      setLoadingProjects(true);
+      axios.get<Project[]>('/projects')
+        .then(res => {
+          if (Array.isArray(res.data)) {
+            setProjects(res.data);
+          } else {
+            setProjects([]);
+            console.error('프로젝트 목록 응답이 배열이 아님:', res.data);
+          }
+        })
+        .catch(() => setProjects([]))
+        .finally(() => setLoadingProjects(false));
+    };
+    
+    // 컴포넌트 마운트 시 즉시 실행
+    loadDashboardData();
   }, []);
 
   const getWeekDates = (date: Date) => {
