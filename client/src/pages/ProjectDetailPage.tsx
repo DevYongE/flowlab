@@ -76,6 +76,7 @@ const ProjectDetailPage = () => {
   const [noteAssignees, setNoteAssignees] = useState<{[key: number]: any[]}>({});
   const [showAssigneeModal, setShowAssigneeModal] = useState(false);
   const [selectedNoteForAssign, setSelectedNoteForAssign] = useState<DevNote | null>(null);
+  const [showProjectAssignModal, setShowProjectAssignModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'requirements' | 'wbs' | 'gantt'>('requirements');
 
   const fetchProject = async () => {
@@ -554,10 +555,47 @@ const ProjectDetailPage = () => {
     }
   };
 
+  const openProjectAssignModal = () => {
+    setShowProjectAssignModal(true);
+  };
+
+  const closeProjectAssignModal = () => {
+    setShowProjectAssignModal(false);
+    setSelectedUserId('');
+  };
+
   if (!project) return <div>로딩 중...</div>;
   
   const canEditProject = isAdmin() || currentUser?.id === project.author_id;
+  const canAssignProject = isAdmin() || currentUser?.role_code === 'MANAGER';
   const filteredNotes = getFilteredAndSortedNotes();
+  const isProjectComplete = project.type === 'COMPLETE' || project.type === '완료';
+  
+  // 파일 생성 버튼 핸들러
+  const handleGenerateFile = async () => {
+    try {
+      const response = await axios.post(`/projects/${project.id}/generate-file`, {
+        projectData: project,
+        requirements: filteredNotes
+      });
+      
+      // 파일 다운로드 처리
+      const blob = new Blob([response.data], { type: 'application/octet-stream' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${project.name}_결과물.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      
+      alert('프로젝트 결과물이 성공적으로 생성되었습니다.');
+    } catch (error) {
+      console.error('파일 생성 실패:', error);
+      alert('파일 생성에 실패했습니다.');
+    }
+  };
 
   // 탭 렌더링 함수
   const renderTabButtons = () => (
@@ -612,100 +650,33 @@ const ProjectDetailPage = () => {
   // 요구사항 탭 컨텐츠
   const renderRequirementsTab = () => (
     <>
-      {/* 프로젝트 할당 섹션 */}
-      <div id="assign-section" className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-        <h3 className="text-lg font-semibold mb-3 text-blue-800">👥 프로젝트 할당</h3>
-        <div className="flex gap-2 items-center mb-3">
-          <select
-            className="border rounded p-2 flex-1"
-            value={selectedUserId}
-            onChange={e => setSelectedUserId(e.target.value)}
-          >
-            <option value="">회원 선택</option>
-            {companyUsers.map(u => (
-              <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
-            ))}
-          </select>
-          <div className="flex gap-1">
-            <button 
-              className="bg-red-500 text-white px-3 py-2 rounded hover:bg-red-600 disabled:bg-gray-400 text-sm font-semibold" 
-              onClick={() => handleAssignUser('PL')}
-              disabled={!selectedUserId}
-              title="프로젝트 리더"
+            {/* 프로젝트 할당 버튼 - 매니저 권한만 */}
+      {canAssignProject && (
+        <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="text-lg font-semibold text-blue-800">👥 프로젝트 할당</h3>
+              <p className="text-sm text-gray-600">
+                할당된 회원: {assignedUsers.length}명
+                {assignedUsers.length > 0 && (
+                  <span className="ml-2">
+                    ({assignedUsers.map(u => u.name).join(', ')})
+                  </span>
+                )}
+              </p>
+            </div>
+            <button
+              onClick={openProjectAssignModal}
+              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 flex items-center gap-2"
             >
-              PL
-            </button>
-            <button 
-              className="bg-green-500 text-white px-3 py-2 rounded hover:bg-green-600 disabled:bg-gray-400 text-sm" 
-              onClick={() => handleAssignUser('PLANNER')}
-              disabled={!selectedUserId}
-              title="기획자"
-            >
-              기획
-            </button>
-            <button 
-              className="bg-purple-500 text-white px-3 py-2 rounded hover:bg-purple-600 disabled:bg-gray-400 text-sm" 
-              onClick={() => handleAssignUser('DESIGNER')}
-              disabled={!selectedUserId}
-              title="디자이너"
-            >
-              디자인
-            </button>
-            <button 
-              className="bg-orange-500 text-white px-3 py-2 rounded hover:bg-orange-600 disabled:bg-gray-400 text-sm" 
-              onClick={() => handleAssignUser('DEVELOPER')}
-              disabled={!selectedUserId}
-              title="개발자"
-            >
-              개발
-            </button>
-            <button 
-              className="bg-gray-500 text-white px-3 py-2 rounded hover:bg-gray-600 disabled:bg-gray-400 text-sm" 
-              onClick={() => handleAssignUser('MEMBER')}
-              disabled={!selectedUserId}
-              title="일반 멤버"
-            >
-              멤버
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              프로젝트 할당
             </button>
           </div>
         </div>
-        {/* 할당된 회원 목록 */}
-        <div>
-          <span className="font-semibold text-blue-800">할당된 회원:</span>
-          {assignedUsers.length === 0 ? (
-            <span className="ml-2 text-gray-400">없음</span>
-          ) : (
-            <div className="mt-2 flex flex-wrap gap-2">
-              {assignedUsers.map((u: any) => (
-                <div key={u.id} className="inline-flex items-center bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
-                  <span className={`inline-block w-2 h-2 rounded-full mr-2 ${
-                    u.role === 'PL' ? 'bg-red-500' :
-                    u.role === 'PLANNER' ? 'bg-green-500' :
-                    u.role === 'DESIGNER' ? 'bg-purple-500' :
-                    u.role === 'DEVELOPER' ? 'bg-orange-500' :
-                    'bg-gray-500'
-                  }`}></span>
-                  <span className="font-semibold mr-1">
-                    {u.role === 'PL' ? 'PL' :
-                     u.role === 'PLANNER' ? '기획' :
-                     u.role === 'DESIGNER' ? '디자인' :
-                     u.role === 'DEVELOPER' ? '개발' :
-                     '멤버'}
-                  </span>
-                  {u.name} ({u.email})
-                  <button 
-                    className="ml-2 text-red-500 hover:text-red-700 text-xs"
-                    onClick={() => handleRemoveUser(u.id)}
-                    title="할당 해제"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
+      )}
 
       {/* 요구사항 관리 섹션 */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
@@ -925,16 +896,30 @@ const ProjectDetailPage = () => {
         <div className="bg-white p-6 rounded-lg shadow-lg mb-6">
           <div className="flex justify-between items-center mb-4">
             <h1 className="text-3xl font-bold">{project.name}</h1>
-            {canEditProject && (
-              <div className="flex gap-2">
-                <button onClick={() => navigate(`/projects/edit/${project.id}`)} className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600">
-                  수정
+            <div className="flex gap-2">
+              {/* 완료된 프로젝트에만 파일 생성 버튼 표시 */}
+              {isProjectComplete && (
+                <button
+                  onClick={handleGenerateFile}
+                  className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  파일 생성
                 </button>
-                <button onClick={handleProjectDelete} className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
-                  삭제
-                </button>
-              </div>
-            )}
+              )}
+              {canEditProject && (
+                <>
+                  <button onClick={() => navigate(`/projects/edit/${project.id}`)} className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600">
+                    수정
+                  </button>
+                  <button onClick={handleProjectDelete} className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
+                    삭제
+                  </button>
+                </>
+              )}
+            </div>
           </div>
 
           
@@ -1178,6 +1163,125 @@ const ProjectDetailPage = () => {
                       분석 중...
                     </>
                   ) : '분석하기'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 프로젝트 할당 모달 */}
+        {showProjectAssignModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl">
+              <h3 className="text-lg font-semibold mb-4">👥 프로젝트 할당 관리</h3>
+              
+              {/* 새로운 할당 추가 */}
+              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                <h4 className="text-md font-medium mb-3">새로운 할당 추가</h4>
+                <div className="flex gap-2 items-center mb-3">
+                  <select
+                    className="border rounded p-2 flex-1"
+                    value={selectedUserId}
+                    onChange={e => setSelectedUserId(e.target.value)}
+                  >
+                    <option value="">회원 선택</option>
+                    {companyUsers.map(u => (
+                      <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
+                    ))}
+                  </select>
+                  <div className="flex gap-1">
+                    <button 
+                      className="bg-red-500 text-white px-3 py-2 rounded hover:bg-red-600 disabled:bg-gray-400 text-sm font-semibold" 
+                      onClick={() => handleAssignUser('PL')}
+                      disabled={!selectedUserId}
+                      title="프로젝트 리더"
+                    >
+                      PL
+                    </button>
+                    <button 
+                      className="bg-green-500 text-white px-3 py-2 rounded hover:bg-green-600 disabled:bg-gray-400 text-sm" 
+                      onClick={() => handleAssignUser('PLANNER')}
+                      disabled={!selectedUserId}
+                      title="기획자"
+                    >
+                      기획
+                    </button>
+                    <button 
+                      className="bg-purple-500 text-white px-3 py-2 rounded hover:bg-purple-600 disabled:bg-gray-400 text-sm" 
+                      onClick={() => handleAssignUser('DESIGNER')}
+                      disabled={!selectedUserId}
+                      title="디자이너"
+                    >
+                      디자인
+                    </button>
+                    <button 
+                      className="bg-orange-500 text-white px-3 py-2 rounded hover:bg-orange-600 disabled:bg-gray-400 text-sm" 
+                      onClick={() => handleAssignUser('DEVELOPER')}
+                      disabled={!selectedUserId}
+                      title="개발자"
+                    >
+                      개발
+                    </button>
+                    <button 
+                      className="bg-gray-500 text-white px-3 py-2 rounded hover:bg-gray-600 disabled:bg-gray-400 text-sm" 
+                      onClick={() => handleAssignUser('MEMBER')}
+                      disabled={!selectedUserId}
+                      title="일반 멤버"
+                    >
+                      멤버
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* 할당된 회원 목록 */}
+              <div className="mb-4">
+                <h4 className="text-md font-medium mb-3">할당된 회원 목록</h4>
+                {assignedUsers.length === 0 ? (
+                  <p className="text-gray-500 text-center py-4">할당된 회원이 없습니다.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {assignedUsers.map((u: any) => (
+                      <div key={u.id} className="flex items-center justify-between bg-gray-100 p-3 rounded">
+                        <div className="flex items-center gap-3">
+                          <span className={`inline-block w-3 h-3 rounded-full ${
+                            u.role === 'PL' ? 'bg-red-500' :
+                            u.role === 'PLANNER' ? 'bg-green-500' :
+                            u.role === 'DESIGNER' ? 'bg-purple-500' :
+                            u.role === 'DEVELOPER' ? 'bg-orange-500' :
+                            'bg-gray-500'
+                          }`}></span>
+                          <span className="font-semibold text-sm">
+                            {u.role === 'PL' ? 'PL' :
+                             u.role === 'PLANNER' ? '기획' :
+                             u.role === 'DESIGNER' ? '디자인' :
+                             u.role === 'DEVELOPER' ? '개발' :
+                             '멤버'}
+                          </span>
+                          <span className="text-gray-800">{u.name}</span>
+                          <span className="text-gray-500 text-sm">({u.email})</span>
+                        </div>
+                        <button 
+                          className="text-red-500 hover:text-red-700 text-sm px-2 py-1 rounded hover:bg-red-50"
+                          onClick={() => handleRemoveUser(u.id)}
+                          title="할당 해제"
+                        >
+                          할당 해제
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* 모달 닫기 버튼 */}
+              <div className="flex justify-end">
+                <button 
+                  type="button" 
+                  onClick={closeProjectAssignModal} 
+                  className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+                >
+                  닫기
                 </button>
               </div>
             </div>

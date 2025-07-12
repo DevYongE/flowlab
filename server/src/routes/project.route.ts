@@ -21,7 +21,8 @@ import {
   removeUserFromProject,
   removeUserFromDevNote,
   bulkCreateDevNotes,
-  clearProjectWbs // WBS 전체 삭제 함수 추가
+  clearProjectWbs, // WBS 전체 삭제 함수 추가
+  generateProjectFile // 프로젝트 파일 생성 함수 추가
 } from '../controllers/project.controller';
 import { authenticate } from '../middlewares/auth.middleware';
 import { requireAdmin } from '../middlewares/admin.middleware';
@@ -43,6 +44,7 @@ router.delete('/:projectId/wbs/clear', authenticate, clearProjectWbs); // WBS �
 router.post('/', authenticate, createProject);
 router.put('/:id', authenticate, updateProject);
 router.delete('/:id', authenticate, deleteProject);
+router.post('/:id/generate-file', authenticate, generateProjectFile);
 
 // DevNote routes
 router.post('/:projectId/notes', authenticate, createDevNote);

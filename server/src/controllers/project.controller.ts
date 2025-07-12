@@ -54,6 +54,43 @@ function toCategoryCode(category: string) {
   return category;
 }
 
+// 프로젝트 자동 완료 체크 함수
+async function checkAndUpdateProjectCompletion(projectId: number): Promise<void> {
+  try {
+    // 프로젝트의 모든 요구사항 조회
+    const allNotesQuery = `
+      SELECT COUNT(*) as total_count,
+             COUNT(CASE WHEN status = 'DONE' THEN 1 END) as completed_count
+      FROM dev_notes 
+      WHERE project_id = :projectId
+    `;
+    
+    const result = await sequelize.query(allNotesQuery, { 
+      replacements: { projectId }, 
+      type: QueryTypes.SELECT 
+    });
+    
+    const stats = (result as any[])[0];
+    const totalCount = parseInt(stats.total_count);
+    const completedCount = parseInt(stats.completed_count);
+    
+    console.log(`📊 프로젝트 ${projectId} 요구사항 현황: ${completedCount}/${totalCount} 완료`);
+    
+    // 요구사항이 1개 이상 있고 모두 완료된 경우
+    if (totalCount > 0 && completedCount === totalCount) {
+      // 프로젝트 타입을 '완료'로 변경
+      await sequelize.query(
+        `UPDATE projects SET type = 'COMPLETE' WHERE id = :projectId AND type != 'COMPLETE'`,
+        { replacements: { projectId }, type: QueryTypes.UPDATE }
+      );
+      
+      console.log(`✅ 프로젝트 ${projectId}가 자동으로 완료 상태로 변경되었습니다.`);
+    }
+  } catch (error) {
+    console.error('프로젝트 자동 완료 체크 실패:', error);
+  }
+}
+
 // 프로젝트 목록 조회
 export const getProjects = async (req: Request, res: Response): Promise<void> => {
   const currentUserId = req.user?.id;
@@ -524,6 +561,12 @@ export const updateDevNote = async (req: Request, res: Response): Promise<void> 
          WHERE dn.id = :noteId`,
         { replacements: { noteId }, type: QueryTypes.SELECT }
       );
+
+      // 요구사항이 완료되었을 때 프로젝트 자동 완료 체크
+      if (status === 'DONE' || progress === 100) {
+        await checkAndUpdateProjectCompletion(updatedNote.project_id);
+      }
+      
       res.json((noteWithDetails as any[])[0]);
     } else {
       res.status(404).json({ message: '업데이트된 노트를 찾을 수 없습니다.' });
@@ -927,5 +970,67 @@ export const clearProjectWbs = async (req: Request, res: Response): Promise<void
   } catch (error) {
     console.error('WBS 전체 삭제 오류:', error);
     res.status(500).json({ message: 'WBS 전체 삭제에 실패했습니다.', error });
+  }
+};
+
+// 프로젝트 결과물 파일 생성
+export const generateProjectFile = async (req: Request, res: Response): Promise<void> => {
+  const { id } = req.params;
+  const { projectData, requirements } = req.body;
+  
+  try {
+    // 프로젝트 데이터 검증
+    if (!projectData || !requirements) {
+      res.status(400).json({ message: '프로젝트 데이터와 요구사항이 필요합니다.' });
+      return;
+    }
+
+    // 프로젝트가 완료 상태인지 확인
+    const projectQuery = await sequelize.query(
+      'SELECT type FROM projects WHERE id = :id',
+      { replacements: { id }, type: QueryTypes.SELECT }
+    );
+
+    if (!Array.isArray(projectQuery) || projectQuery.length === 0) {
+      res.status(404).json({ message: '프로젝트를 찾을 수 없습니다.' });
+      return;
+    }
+
+    const project = projectQuery[0] as any;
+    if (project.type !== 'COMPLETE') {
+      res.status(400).json({ message: '완료된 프로젝트만 파일을 생성할 수 있습니다.' });
+      return;
+    }
+
+    // 간단한 프로젝트 결과물 생성 (예시)
+    const projectSummary = {
+      프로젝트명: projectData.name,
+      구분: projectData.category,
+      유형: projectData.type,
+      기간: `${projectData.startDate} ~ ${projectData.endDate}`,
+      시스템정보: {
+        OS: projectData.os,
+        메모리: projectData.memory,
+      },
+      버전정보: projectData.details,
+      요구사항목록: requirements.map((req: any) => ({
+        내용: req.content,
+        상태: req.status,
+        진행률: req.progress,
+        작성자: req.authorName,
+        등록일: req.registeredAt,
+        완료일: req.completedAt,
+      })),
+      생성일시: new Date().toISOString(),
+    };
+
+    // JSON 형태로 반환
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="${projectData.name}_결과물.json"`);
+    res.json(projectSummary);
+
+  } catch (error) {
+    console.error('프로젝트 파일 생성 실패:', error);
+    res.status(500).json({ message: '프로젝트 파일 생성 실패', error });
   }
 }; 
