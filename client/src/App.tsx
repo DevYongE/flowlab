@@ -14,6 +14,10 @@ import WbsPage from './pages/WbsPage';
 import QaPage from './pages/QaPage';
 import QaDetailPage from './pages/QaDetailPage';
 import QaEditPage from './pages/QaEditPage';
+import BoardPage from './pages/BoardPage';
+import BoardDetailPage from './pages/BoardDetailPage';
+import BoardWritePage from './pages/BoardWritePage';
+import BoardEditPage from './pages/BoardEditPage';
 
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
@@ -47,6 +51,10 @@ export default function App() {
           <Route path="/qa" element={<QaPage />} />
           <Route path="/qa/questions/:id" element={<QaDetailPage />} />
           <Route path="/qa/questions/:id/edit" element={<QaEditPage />} />
+          <Route path="/board" element={<BoardPage />} />
+          <Route path="/board/:id" element={<BoardDetailPage />} />
+          <Route path="/board/write" element={<BoardWritePage />} />
+          <Route path="/board/edit/:id" element={<BoardEditPage />} />
           <Route path="/admin/users" element={<AdminUserPage />} />
         </>
       ) : (

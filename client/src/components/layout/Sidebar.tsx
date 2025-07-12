@@ -10,6 +10,7 @@ const menu = [
   { icon: '🧱', label: '프로젝트', to: '/projects' },
   { icon: '🗂️', label: 'WBS보드', to: '/wbs' },
   { icon: '❓', label: 'QA게시판', to: '/qa' },
+  { icon: '🗣️', label: '자유게시판', to: '/board' },
 ];
 
 const adminMenu = [
