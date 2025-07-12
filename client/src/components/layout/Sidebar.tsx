@@ -61,7 +61,7 @@ const Sidebar: React.FC<SidebarProps> = memo(({ isMini, isMobile = false, onClos
       {isMobile && (
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center justify-center">
-            <img src={flowLabLogo} alt="FlowLab Logo" className="h-16 w-48 object-contain" />
+            <img src={flowLabLogo} alt="FlowLab Logo" className="h-20 w-56 object-contain" />
           </div>
           <button
             onClick={onClose}
@@ -77,7 +77,7 @@ const Sidebar: React.FC<SidebarProps> = memo(({ isMini, isMobile = false, onClos
       {!isMobile && (
         <div>
           <div className={`flex items-center justify-center mb-8`}>
-            <img src={flowLabLogo} alt="FlowLab Logo" className={`object-contain ${isMini ? 'h-12 w-16' : 'h-20 w-52'}`} />
+            <img src={flowLabLogo} alt="FlowLab Logo" className={`object-contain ${isMini ? 'h-16 w-18' : 'h-24 w-56'}`} />
           </div>
           {!isMini && (
             <div className="text-xs text-gray-400 mb-2">
