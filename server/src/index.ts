@@ -21,17 +21,7 @@ import sequelize from './config/db';
 
 const app = express();
 
-// CORS 설정 강화
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'https://flowlab.vercel.app',
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-}));
-
-app.use(express.json());
-app.use(cookieParser());
-
+// CORS 설정
 const allowedOrigins = [
   'http://localhost:5173', // 로컬 개발용
   'https://flowlab.vercel.app', // Vercel 고정 도메인
@@ -40,15 +30,17 @@ const allowedOrigins = [
   'https://flowlab-acanbs8tk-yonges-projects.vercel.app'  // 최신 Vercel 배포 주소
 ];
 
-// 🕵️‍♂️ CORS 디버깅용 로그 추가
-console.log('Server starting with allowedOrigins:', allowedOrigins);
+console.log('🚀 Server starting with allowedOrigins:', allowedOrigins);
 
-app.use(
-  cors({
-    origin: allowedOrigins,
-    credentials: true,
-  })
-);
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+
+app.use(express.json());
+app.use(cookieParser());
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/positions', positionRouter);
