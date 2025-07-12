@@ -41,7 +41,7 @@ export const authenticate = (req: Request, res: Response, next: NextFunction): v
         res.cookie('accessToken', newAccessToken, {
           httpOnly: true,
           secure: process.env.NODE_ENV === 'production',
-          sameSite: 'strict',
+          sameSite: process.env.NODE_ENV === 'production' ? 'none' as const : 'lax' as const,
           maxAge: 30 * 60 * 1000,
         });
         

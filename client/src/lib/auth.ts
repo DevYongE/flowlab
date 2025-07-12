@@ -50,4 +50,18 @@ export const refreshToken = async (): Promise<boolean> => {
     console.error('토큰 갱신 실패:', error);
     return false;
   }
+};
+
+// 디버깅을 위한 쿠키 상태 확인 함수
+export const debugCookies = () => {
+  const accessToken = Cookies.get('accessToken');
+  const refreshToken = Cookies.get('refreshToken');
+  
+  console.log('🍪 Cookie Debug:', {
+    accessToken: accessToken ? 'Present' : 'Missing',
+    refreshToken: refreshToken ? 'Present' : 'Missing',
+    allCookies: document.cookie,
+  });
+  
+  return { accessToken, refreshToken };
 }; 

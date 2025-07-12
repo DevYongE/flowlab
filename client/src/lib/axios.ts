@@ -44,8 +44,24 @@ instance.interceptors.response.use(
       return Promise.reject(error);
     }
     
-    // 401 에러 시 토큰 갱신 시도
-    if (error.response.status === 401 && !originalRequest._retry) {
+    // refresh 요청 자체가 실패한 경우 즉시 로그아웃
+    if (originalRequest.url?.includes('/auth/refresh') && error.response.status === 401) {
+      console.log('🔒 Refresh token expired, logging out...');
+      sessionStorage.removeItem('token');
+      sessionStorage.removeItem('user');
+      
+      if (window.location.pathname !== '/login') {
+        showErrorToast('인증이 만료되었습니다. 다시 로그인해주세요.');
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 1000);
+      }
+      
+      return Promise.reject(error);
+    }
+    
+    // 401 에러 시 토큰 갱신 시도 (refresh 요청 제외)
+    if (error.response.status === 401 && !originalRequest._retry && !originalRequest.url?.includes('/auth/refresh')) {
       originalRequest._retry = true;
       
       try {
@@ -56,6 +72,7 @@ instance.interceptors.response.use(
         return instance(originalRequest);
       } catch (refreshError) {
         // 리프레시 토큰도 만료된 경우 로그아웃 처리
+        console.log('🔒 Refresh failed, logging out...');
         sessionStorage.removeItem('token');
         sessionStorage.removeItem('user');
         

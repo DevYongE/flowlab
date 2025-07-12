@@ -26,17 +26,20 @@ const generateTokens = (payload: any) => {
 
 // 쿠키 설정 함수
 const setCookies = (res: Response, accessToken: string, refreshToken: string) => {
-  res.cookie('accessToken', accessToken, {
+  const cookieOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' as const : 'lax' as const,
+    domain: process.env.NODE_ENV === 'production' ? undefined : undefined,
+  };
+  
+  res.cookie('accessToken', accessToken, {
+    ...cookieOptions,
     maxAge: 30 * 60 * 1000, // 30분
   });
   
   res.cookie('refreshToken', refreshToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    ...cookieOptions,
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7일
   });
 };
