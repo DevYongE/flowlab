@@ -3,11 +3,12 @@ import { useState, useEffect } from 'react';
 import axios from '../../lib/axios';
 import { FaUserEdit, FaTrash, FaKey, FaExchangeAlt, FaUserTie, FaInfoCircle, FaPlus } from 'react-icons/fa';
 import AdminCompanyPage from './AdminCompanyPage';
+import { isAdmin } from '../../lib/auth';
 
 const TABS = [
   { key: 'users', label: '회원관리' },
-  { key: 'roles', label: '권한관리' },
-  { key: 'companies', label: '기업관리' },
+  { key: 'roles', label: '권한관리', adminOnly: true },
+  { key: 'companies', label: '기업관리', adminOnly: true },
 ];
 
 const AdminUserPage = () => {
@@ -147,7 +148,7 @@ const AdminUserPage = () => {
         <h1 className="text-2xl font-bold mb-6">👤 관리자</h1>
         {/* 탭 버튼 */}
         <div className="flex gap-2 mb-6">
-          {TABS.map(t => (
+          {TABS.filter(t => !t.adminOnly || isAdmin()).map(t => (
             <button
               key={t.key}
               className={`px-4 py-2 rounded-t-md font-semibold border-b-2 ${tab === t.key ? 'border-blue-600 text-blue-700 bg-white' : 'border-transparent text-gray-400 bg-gray-100'}`}
@@ -200,11 +201,15 @@ const AdminUserPage = () => {
                       <td className="py-2 px-3 text-center">{user.status || (user.is_active ? '활성' : '비활성')}</td>
                       <td className="py-2 px-3 text-center">
                         <button title="상세" className="text-blue-500 hover:text-blue-700 mx-1" onClick={() => handleOpen('detail', user)}><FaInfoCircle /></button>
-                        <button title="수정" className="text-green-500 hover:text-green-700 mx-1" onClick={() => handleOpen('edit', user)}><FaUserEdit /></button>
-                        <button title="삭제" className="text-red-500 hover:text-red-700 mx-1" onClick={() => handleDelete(user)}><FaTrash /></button>
-                        <button title="권한부여" className="text-purple-500 hover:text-purple-700 mx-1" onClick={() => handleOpen('role', user)}><FaKey /></button>
-                        <button title="부서이동" className="text-yellow-600 hover:text-yellow-800 mx-1" onClick={() => handleOpen('dept', user)}><FaExchangeAlt /></button>
-                        <button title="직급관리" className="text-pink-500 hover:text-pink-700 mx-1" onClick={() => handleOpen('position', user)}><FaUserTie /></button>
+                        {isAdmin() && (
+                          <>
+                            <button title="수정" className="text-green-500 hover:text-green-700 mx-1" onClick={() => handleOpen('edit', user)}><FaUserEdit /></button>
+                            <button title="삭제" className="text-red-500 hover:text-red-700 mx-1" onClick={() => handleDelete(user)}><FaTrash /></button>
+                            <button title="권한부여" className="text-purple-500 hover:text-purple-700 mx-1" onClick={() => handleOpen('role', user)}><FaKey /></button>
+                            <button title="부서이동" className="text-yellow-600 hover:text-yellow-800 mx-1" onClick={() => handleOpen('dept', user)}><FaExchangeAlt /></button>
+                            <button title="직급관리" className="text-pink-500 hover:text-pink-700 mx-1" onClick={() => handleOpen('position', user)}><FaUserTie /></button>
+                          </>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -313,8 +318,11 @@ const AdminUserPage = () => {
                     await axios.patch(`/users/${selectedUser.id}/role`, { role_code });
                     await fetchUsers();
                     handleClose();
-                  } catch (err) {
-                    alert('권한 변경 실패');
+                    alert('권한이 변경되었습니다.');
+                  } catch (err: any) {
+                    const errorMessage = err.response?.data?.message || '권한 변경 실패';
+                    alert(errorMessage);
+                    console.error('권한 변경 실패:', err);
                   }
                 }}>
                   <h2 className="text-lg font-bold mb-2">권한 부여</h2>
@@ -378,12 +386,12 @@ const AdminUserPage = () => {
           </>
         )}
         {/* 기업관리 탭 내용 */}
-        {tab === 'companies' && (
+        {tab === 'companies' && isAdmin() && (
           <div className="bg-white rounded shadow p-4">
             <AdminCompanyPage />
           </div>
         )}
-        {tab === 'roles' && (
+        {tab === 'roles' && isAdmin() && (
           <div className="bg-white rounded shadow p-4 mb-4">
             <h2 className="text-lg font-bold mb-4 flex items-center gap-2"><FaKey /> 권한관리</h2>
             <table className="w-full text-sm mb-4">

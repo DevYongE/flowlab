@@ -9,7 +9,7 @@ export const getUsers = async (req: Request, res: Response) => {
   try {
     const { company_code } = req.query;
     let query = `
-      SELECT u.id, u.name, u.email, d.department_name, p.name AS position_name, r.name AS role_name, u.position_code
+      SELECT u.id, u.name, u.email, d.department_name, p.name AS position_name, r.name AS role_name, u.position_code, u.role_code, u.company_code
       FROM users u
       LEFT JOIN departments d ON u.department = d.id
       LEFT JOIN positions p ON u.position_code = p.position_code
@@ -198,16 +198,75 @@ export const updateUserRole = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { role_code } = req.body;
-    await sequelize.query(
+    const currentUserRole = req.user?.role;
+    const currentUserId = req.user?.id;
+
+    console.log('🔑 [updateUserRole] 권한 변경 요청:', { 
+      targetUserId: id, 
+      newRole: role_code, 
+      currentUserRole, 
+      currentUserId 
+    });
+
+    // 관리자 권한 체크
+    if (currentUserRole !== 'ADMIN') {
+      res.status(403).json({ message: '권한 변경은 관리자만 가능합니다.' });
+      return;
+    }
+
+    // 필수 필드 검증
+    if (!role_code) {
+      res.status(400).json({ message: '변경할 권한 코드가 필요합니다.' });
+      return;
+    }
+
+    // 대상 사용자 존재 확인
+    const [targetUser]: any = await sequelize.query(
+      'SELECT id, role_code FROM users WHERE id = :id',
+      { replacements: { id }, type: QueryTypes.SELECT }
+    );
+
+    if (!targetUser) {
+      res.status(404).json({ message: '사용자를 찾을 수 없습니다.' });
+      return;
+    }
+
+    // 권한 코드 유효성 체크
+    const validRoles = await sequelize.query(
+      'SELECT role_code FROM roles WHERE role_code = :role_code',
+      { replacements: { role_code }, type: QueryTypes.SELECT }
+    );
+
+    if (!Array.isArray(validRoles) || validRoles.length === 0) {
+      res.status(400).json({ message: `존재하지 않는 권한 코드입니다: ${role_code}` });
+      return;
+    }
+
+    // 자기 자신의 권한은 변경할 수 없음
+    if (currentUserId === id) {
+      res.status(400).json({ message: '자신의 권한은 변경할 수 없습니다.' });
+      return;
+    }
+
+    // 권한 변경 실행
+    const result = await sequelize.query(
       `UPDATE users SET role_code=:role_code WHERE id=:id`,
       {
         replacements: { role_code, id },
         type: QueryTypes.UPDATE,
       }
     );
+
+    console.log('✅ [updateUserRole] 권한 변경 완료:', { 
+      targetUserId: id, 
+      oldRole: targetUser.role_code, 
+      newRole: role_code 
+    });
+
     res.status(200).json({ message: '권한이 변경되었습니다.' });
     return;
   } catch (err) {
+    console.error('❌ [updateUserRole] 권한 변경 실패:', err);
     res.status(500).json({ message: '권한 변경 실패', error: err });
     return;
   }
