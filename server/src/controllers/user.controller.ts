@@ -231,14 +231,11 @@ export const updateUserRole = async (req: Request, res: Response) => {
       return;
     }
 
-    // 권한 코드 유효성 체크
-    const validRoles = await sequelize.query(
-      'SELECT role_code FROM roles WHERE role_code = :role_code',
-      { replacements: { role_code }, type: QueryTypes.SELECT }
-    );
-
-    if (!Array.isArray(validRoles) || validRoles.length === 0) {
-      res.status(400).json({ message: `존재하지 않는 권한 코드입니다: ${role_code}` });
+    // 권한 코드 유효성 체크 (하드코딩된 값으로 검증)
+    const validRoleCodes = ['ADMIN', 'MANAGER', 'DEVELOPER', 'MEMBER'];
+    
+    if (!validRoleCodes.includes(role_code)) {
+      res.status(400).json({ message: `유효하지 않은 권한 코드입니다: ${role_code}` });
       return;
     }
 
