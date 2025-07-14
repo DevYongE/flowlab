@@ -454,12 +454,18 @@ export const getOngoingProjects = async (req: Request, res: Response): Promise<v
 export const createDevNote = async (req: Request, res: Response): Promise<void> => {
   const authorId = req.user?.id;
   const currentUserRole = req.user?.role;
+  
+  console.log('[createDevNote] 시작 - 사용자 ID:', authorId, '권한:', currentUserRole);
+  
   try {
     const { projectId } = req.params;
     const status = toStatusCode(req.body.status);
     const { content, deadline, progress, completedAt, parent_id, order } = req.body;
-      console.log('[createDevNote] req.body:', req.body);
-      console.log('[createDevNote] params:', req.params);
+    
+    console.log('[createDevNote] req.body:', req.body);
+    console.log('[createDevNote] params:', req.params);
+    console.log('[createDevNote] projectId:', projectId);
+    console.log('[createDevNote] status:', status);
 
       const projectRows = await sequelize.query('SELECT author_id FROM projects WHERE id = :project_id', { replacements: { project_id: projectId }, type: QueryTypes.SELECT });
       console.log('[createDevNote] projectRows:', projectRows);
@@ -469,20 +475,52 @@ export const createDevNote = async (req: Request, res: Response): Promise<void> 
       if (Array.isArray(projectRows) && projectRows.length > 0) {
         projectAuthorId = (projectRows[0] as any).author_id;
       } else {
+        console.log('[createDevNote] 프로젝트를 찾을 수 없음 - projectId:', projectId);
         res.status(404).json({ message: '프로젝트를 찾을 수 없습니다.' });
         return;
       }
 
-      if (currentUserRole !== 'ADMIN' && authorId !== projectAuthorId) {
+      console.log('[createDevNote] 프로젝트 작성자 ID:', projectAuthorId);
+      console.log('[createDevNote] 현재 사용자 ID:', authorId);
+      console.log('[createDevNote] 현재 사용자 권한:', currentUserRole);
+
+      // 권한 체크: ADMIN, MANAGER이거나 프로젝트 작성자이거나 할당된 회원
+      let hasPermission = false;
+      
+      if (currentUserRole === 'ADMIN' || currentUserRole === 'MANAGER') {
+        hasPermission = true;
+      } else if (authorId === projectAuthorId) {
+        hasPermission = true;
+      } else {
+        // 할당된 회원인지 확인
+        const assigneeCheck = await sequelize.query(
+          'SELECT user_id FROM project_assignees WHERE project_id = :project_id AND user_id = :user_id',
+          { replacements: { project_id: projectId, user_id: authorId }, type: QueryTypes.SELECT }
+        );
+        hasPermission = Array.isArray(assigneeCheck) && assigneeCheck.length > 0;
+      }
+
+      console.log('[createDevNote] 권한 체크 결과:', {
+        currentUserRole,
+        authorId,
+        projectAuthorId,
+        hasPermission
+      });
+
+      if (!hasPermission) {
+        console.log('[createDevNote] 권한 없음 - 현재 사용자:', authorId, '프로젝트 작성자:', projectAuthorId);
         res.status(403).json({ message: '이 프로젝트에 요구사항을 추가할 권한이 없습니다.' });
         return;
       }
       console.log('[createDevNote] Inserting dev_note:', { projectId, content, deadline, status, progress, authorId, parent_id, order });
 
-      const rows = await sequelize.query(
-        'INSERT INTO dev_notes (project_id, content, deadline, status, progress, author_id, parent_id, "order", completed_at) VALUES (:projectId, :content, :deadline, :status, :progress, :authorId, :parent_id, :order, :completedAt) RETURNING *',
-        { replacements: { projectId, content, deadline, status, progress, authorId, parent_id: parent_id ?? null, order: order ?? null, completedAt: completedAt ?? null }, type: QueryTypes.SELECT }
-      );
+      const insertQuery = 'INSERT INTO dev_notes (project_id, content, deadline, status, progress, author_id, parent_id, "order", completed_at) VALUES (:projectId, :content, :deadline, :status, :progress, :authorId, :parent_id, :order, :completedAt) RETURNING *';
+      const replacements = { projectId, content, deadline, status, progress, authorId, parent_id: parent_id ?? null, order: order ?? null, completedAt: completedAt ?? null };
+      
+      console.log('[createDevNote] SQL 쿼리:', insertQuery);
+      console.log('[createDevNote] replacements:', replacements);
+      
+      const rows = await sequelize.query(insertQuery, { replacements, type: QueryTypes.SELECT });
       console.log('[createDevNote] Insert result rows:', rows);
 
       let note = null;

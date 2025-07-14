@@ -184,18 +184,31 @@ const ProjectDetailPage = () => {
       alert('내용을 입력하세요.');
       return;
     }
+    
+    console.log('현재 사용자 정보:', currentUser);
+    console.log('프로젝트 정보:', project);
+    
     try {
-      await axios.post(`/projects/${id}/notes`, {
+      console.log('요구사항 추가 요청 데이터:', {
         ...newNote,
         status: newNote.status,
         completedAt: newNote.completedAt || null,
       });
+      
+      const response = await axios.post(`/projects/${id}/notes`, {
+        ...newNote,
+        status: newNote.status,
+        completedAt: newNote.completedAt || null,
+      });
+      
+      console.log('요구사항 추가 성공:', response.data);
       setNewNote({ content: '', deadline: '', status: 'TODO', progress: 0, completedAt: '' });
       setShowModal(false);
       fetchProject();
-    } catch (error) {
+    } catch (error: any) {
       console.error('노트 추가 실패:', error);
-      alert('노트 추가에 실패했습니다.');
+      const errorMessage = error.response?.data?.message || error.message || '노트 추가에 실패했습니다.';
+      alert(`노트 추가 실패: ${errorMessage}`);
     }
   };
 
