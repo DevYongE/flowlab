@@ -83,15 +83,19 @@ const WbsMainPage: React.FC = () => {
             <div className="container mx-auto p-4">
                 <div className="flex justify-between items-center mb-6">
                     <h1 className="text-3xl font-bold">🗂️ WBS 보드</h1>
-                    {activeProjectId && ( // 프로젝트가 선택되었을 때만 AI 버튼 표시
+                    <div className="flex gap-2">
                         <button
                             onClick={handleAIAssist}
-                            className="bg-purple-600 text-white p-2 rounded-full hover:bg-purple-700 flex items-center justify-center transition-transform transform hover:scale-110"
-                            title="AI로 WBS 생성"
+                            className={`bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 flex items-center gap-2 transition-all ${
+                                !activeProjectId ? 'opacity-50 cursor-not-allowed' : ''
+                            }`}
+                            title={activeProjectId ? "AI로 WBS 생성" : "프로젝트를 먼저 선택해주세요"}
+                            disabled={!activeProjectId}
                         >
-                            <Sparkles className="h-5 w-5" />
+                            <Sparkles className="h-4 w-4" />
+                            AI WBS 생성
                         </button>
-                    )}
+                    </div>
                 </div>
 
                 <div className="flex border-b mb-6">

@@ -698,25 +698,25 @@ const ProjectDetailPage = () => {
       {/* 요구사항 관리 섹션 */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
         <div className="p-4 border-b border-gray-200">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold text-gray-800">📋 요구사항 관리</h3>
-            <div className="flex gap-2">
-              <button 
-                onClick={handleAIAssist}
-                className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 flex items-center gap-2"
-                title="AI로 요구사항 분석"
-              >
-                <Sparkles className="h-4 w-4" />
-                AI 분석
-              </button>
-              <button 
-                onClick={openAddModal}
-                className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
-              >
-                + 요구사항 추가
-              </button>
+                      <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">📋 요구사항 관리</h3>
+              <div className="flex gap-2">
+                <button 
+                  onClick={handleAIAssist}
+                  className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 flex items-center gap-2 shadow-lg"
+                  title="AI로 요구사항 분석 및 자동 생성"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  🤖 AI 분석
+                </button>
+                <button 
+                  onClick={openAddModal}
+                  className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
+                >
+                  + 요구사항 추가
+                </button>
+              </div>
             </div>
-          </div>
           
           {/* 검색 및 필터 */}
           <div className="flex gap-4 mb-4">

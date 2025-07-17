@@ -505,7 +505,7 @@ WBS는 다음과 같은 3단계 구조로 작성해주세요:
                     </h1>
                     <div className="flex gap-2">
                         <Button 
-                            className="ml-4 relative" 
+                            className="ml-4 relative bg-purple-600 hover:bg-purple-700 text-white shadow-lg" 
                             onClick={handleAIAnalysisClick} 
                             disabled={isAnalyzing || !project}
                             variant={isAnalyzing ? "outline" : "default"}
@@ -520,7 +520,7 @@ WBS는 다음과 같은 3단계 구조로 작성해주세요:
                             <span className={isAnalyzing ? "ml-6" : ""}>
                                 {isAnalyzing ? '🤖 AI 분석 중...' : 
                                  !project ? '⏳ 로딩 중...' :
-                                 '🤖 AI 분석'}
+                                 '🤖 AI WBS 생성'}
                             </span>
                         </Button>
                     </div>
