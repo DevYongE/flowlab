@@ -7,6 +7,7 @@ import { Button } from '../components/ui/button';
 // 달력 라이브러리 임포트 (간단한 달력 구현)
 import { addMonths, subMonths, format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, parseISO, isWithinInterval } from 'date-fns';
 import GanttChart from '../components/wbs/GanttChart';
+import { Sparkles } from 'lucide-react';
 
 // 탭 타입 정의
 type TabType = 'tree' | 'gantt' | 'schedule';
@@ -50,6 +51,12 @@ const WbsPage: React.FC = () => {
         includeTimeline: true,
         detailLevel: 'medium' as 'basic' | 'medium' | 'detailed'
     });
+
+    // 요구사항(DevNote) 목록을 AI 프롬프트로 전달하여 WBS 재구성
+    const [showRebuildModal, setShowRebuildModal] = useState(false);
+    const [rebuildLoading, setRebuildLoading] = useState(false);
+    const [rebuildDeleteOld, setRebuildDeleteOld] = useState(true);
+    const [rebuildResult, setRebuildResult] = useState<string | null>(null);
 
     useEffect(() => {
         if (projectId) {
@@ -285,6 +292,45 @@ WBS는 다음과 같은 3단계 구조로 작성해주세요:
         }
     };
 
+    // 요구사항(DevNote) 목록을 AI 프롬프트로 전달하여 WBS 재구성
+    const handleRebuildWbs = async () => {
+        if (!projectId) return;
+        setRebuildLoading(true);
+        setRebuildResult(null);
+        try {
+            // 1. 기존 요구사항(DevNote) 목록 가져오기
+            const devNotesRes = await axios.get(`/projects/${projectId}`);
+            const devNotes = devNotesRes.data?.devNotes || [];
+            if (!devNotes.length) {
+                setRebuildResult('요구사항(DevNote)이 없습니다.');
+                setRebuildLoading(false);
+                return;
+            }
+            // 2. 프롬프트 구성
+            let prompt = '아래 요구사항(DevNote) 목록을 논리적으로 그룹핑/계층화하여 WBS(Work Breakdown Structure) 트리(최상위~하위)로 만들어주세요.\n\n';
+            devNotes.forEach((note: any, idx: number) => {
+                prompt += `${idx + 1}. ${note.content}\n`;
+            });
+            prompt += '\n- 각 항목은 content, deadline(YYYY-MM-DD, 없으면 null), parent_id(최상위 null), order(동일레벨 순서) 필드를 포함해야 합니다.';
+            // 3. 기존 WBS 삭제(옵션)
+            if (rebuildDeleteOld) {
+                await axios.delete(`/projects/${projectId}/wbs/clear`);
+            }
+            // 4. AI WBS 생성 및 저장
+            const aiRes = await axios.post('/ai/generate-wbs', {
+                projectId,
+                prompt,
+                projectDescription: prompt
+            });
+            setRebuildResult(`✅ WBS ${aiRes.data.itemsCreated || 0}개 생성 완료!`);
+            setRefreshWbsTrigger(prev => prev + 1);
+        } catch (err: any) {
+            setRebuildResult('❌ 오류: ' + (err.response?.data?.message || err.message));
+        } finally {
+            setRebuildLoading(false);
+        }
+    };
+
     if (!projectId) {
         return <div>잘못된 접근입니다.</div>;
     }
@@ -504,13 +550,13 @@ WBS는 다음과 같은 3단계 구조로 작성해주세요:
                         WBS
                     </h1>
                     <div className="flex gap-2">
+                        {/* 기존 AI 분석 버튼 */}
                         <Button 
                             className="ml-4 relative bg-purple-600 hover:bg-purple-700 text-white shadow-lg" 
                             onClick={handleAIAnalysisClick} 
                             disabled={isAnalyzing || !project}
                             variant={isAnalyzing ? "outline" : "default"}
-                            title={!project ? "프로젝트 정보를 불러오는 중..." : 
-                                   "현재 요구사항들을 분석하여 WBS를 생성합니다"}
+                            title={!project ? "프로젝트 정보를 불러오는 중..." : "현재 요구사항들을 분석하여 WBS를 생성합니다"}
                         >
                             {isAnalyzing && (
                                 <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
@@ -518,10 +564,18 @@ WBS는 다음과 같은 3단계 구조로 작성해주세요:
                                 </div>
                             )}
                             <span className={isAnalyzing ? "ml-6" : ""}>
-                                {isAnalyzing ? '🤖 AI 분석 중...' : 
-                                 !project ? '⏳ 로딩 중...' :
-                                 '🤖 AI WBS 생성'}
+                                {isAnalyzing ? '🤖 AI 분석 중...' : !project ? '⏳ 로딩 중...' : '🤖 AI WBS 생성'}
                             </span>
+                        </Button>
+                        {/* 새로 추가: 요구사항 기반 WBS 재구성 버튼 */}
+                        <Button
+                            className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg flex items-center gap-2"
+                            onClick={() => setShowRebuildModal(true)}
+                            disabled={!project}
+                            title="현재 등록된 요구사항(DevNote) 기반으로 WBS를 자동 계층화합니다."
+                        >
+                            <Sparkles className="h-4 w-4" />
+                            AI WBS 재구성(요구사항 기반)
                         </Button>
                     </div>
                 </div>
@@ -698,6 +752,31 @@ WBS는 다음과 같은 3단계 구조로 작성해주세요:
                                     )}
                                 </Button>
                             </div>
+                        </div>
+                    </div>
+                )}
+                {/* 요구사항 기반 WBS 재구성 모달 */}
+                {showRebuildModal && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+                            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                                <Sparkles className="h-5 w-5 text-blue-600" />
+                                AI WBS 재구성 (요구사항 기반)
+                            </h3>
+                            <p className="text-sm text-gray-600 mb-4">현재 프로젝트에 등록된 요구사항(DevNote)들을 AI가 논리적으로 그룹핑/계층화하여 WBS 트리로 자동 생성합니다.</p>
+                            <label className="flex items-center mb-4">
+                                <input type="checkbox" checked={rebuildDeleteOld} onChange={e => setRebuildDeleteOld(e.target.checked)} className="mr-2" />
+                                기존 WBS(DevNote) 모두 삭제 후 생성
+                            </label>
+                            <div className="flex gap-2 mt-4">
+                                <Button onClick={handleRebuildWbs} disabled={rebuildLoading} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white">
+                                    {rebuildLoading ? 'AI 생성 중...' : 'AI로 WBS 재구성'}
+                                </Button>
+                                <Button onClick={() => setShowRebuildModal(false)} disabled={rebuildLoading} className="flex-1 bg-gray-500 hover:bg-gray-600 text-white">
+                                    취소
+                                </Button>
+                            </div>
+                            {rebuildResult && <div className="mt-4 text-center text-sm">{rebuildResult}</div>}
                         </div>
                     </div>
                 )}
