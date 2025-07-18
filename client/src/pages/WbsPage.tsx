@@ -569,13 +569,13 @@ WBS는 다음과 같은 3단계 구조로 작성해주세요:
                         </Button>
                         {/* 새로 추가: 요구사항 기반 WBS 재구성 버튼 */}
                         <Button
-                            className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg flex items-center gap-2"
+                            className="bg-red-600 hover:bg-red-700 text-white shadow-lg flex items-center gap-2 text-lg font-bold p-4"
                             onClick={() => setShowRebuildModal(true)}
                             disabled={!project}
                             title="현재 등록된 요구사항(DevNote) 기반으로 WBS를 자동 계층화합니다."
                         >
-                            <Sparkles className="h-4 w-4" />
-                            AI WBS 재구성(요구사항 기반)
+                            <Sparkles className="h-6 w-6" />
+                            🔥 AI WBS 재구성(요구사항 기반) 🔥
                         </Button>
                     </div>
                 </div>
